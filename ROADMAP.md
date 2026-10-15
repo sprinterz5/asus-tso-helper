@@ -24,6 +24,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | Battery health, charge / discharge watts | — | sysfs power_supply | `backend.battery_status` |
 | CPU / GPU temperature, fan RPM | Sensors | hwmon, nvidia-smi only when the dGPU is awake | `backend.sensors` |
 | Tray icon and menu, autostart, single instance | — | QSystemTrayIcon, QLocalServer | `ui.Tray`, `ui.main` |
+| First-run Setup | — | Checks ASUS laptop, asusd, supergfxd, Terra repo (moves off the dead lukenukem COPR), tuned-ppd → power-profiles-daemon (asusctl issue #724), key rule, Python modules, swayidle, lsof, NVIDIA driver (info only), KDE (info). Fixes everything in one pkexec script for dnf / pacman / apt / zypper, output shown live. Opens at start when something required or recommended is missing; also Extra → Setup | `setup.py` |
 | BIOS and Driver Updates window | Updates.cs | BIOS from the same ASUS API (EZ Flash rows only); instead of Windows drivers: kernel, NVIDIA driver, asusctl, supergfxctl (PackageKit = what Discover can install, upstream in the tooltip), fwupd firmware, this app (GitHub releases). "Install Updates" downloads only the red rows (each with all its packages: every kernel-* or every NVIDIA package, never split) through PackageKit and installs them on restart (offline update, as Discover; online fallback where offline updates are missing). No password on Fedora: PackageKit allows system updates for the active user | `updates.py` |
 | New app version notice | AutoUpdateCheck | GitHub latest release at start and daily: red "Download Update" version label, tray notification | `ui.check_app_update` |
 | Icons | Icons8 | Lucide (ISC, `assets/icons/LICENSE`); app and tray icon: white S on a circle in the GPU mode colour (`tools/make_icons.py`) | `widgets.icon` |
@@ -57,7 +58,9 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 ### Priority 1: important and easy
 | # | Feature | How | Notes |
 |---|---|---|---|
-| 1 | **Release** | GitHub repo, GPL-3.0, README, credits (seerge/G-Helper, Icons8), RPM/COPR requiring `asusctl`, `supergfxctl`, `python3-pyside6`, `python3-evdev`, `swayidle`; first-run setup in one polkit prompt | — |
+| 1 | **Donations** | GitHub Sponsors with Open Source Collective as fiscal host (Stripe and PayPal receiving are unavailable in Kazakhstan); apply once the repo is public, then set `DONATE_URL` and `.github/FUNDING.yml` | — |
+| 2 | **Cardwire backend** | asus-linux deprecated supergfxd; its successor [Cardwire](https://opengamingcollective.github.io/cardwire/) (Terra, experimental) blocks the dGPU with eBPF/LSM instead of unloading drivers, so modes switch without logout or driver unload. Add it as a second GPU backend once it is stable; keep supergfxd meanwhile | — |
+| 3 | **Release** | GitHub repo, GPL-3.0, README, credits (seerge/G-Helper, Icons8), RPM/COPR requiring `asusctl`, `supergfxctl`, `python3-pyside6`, `python3-evdev`, `swayidle`; first-run setup in one polkit prompt | — |
 
 ### Priority 2: useful, needs root
 | # | Feature | How | Notes |

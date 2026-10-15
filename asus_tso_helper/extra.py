@@ -245,6 +245,12 @@ class ExtraWindow(QtWidgets.QWidget):
         self.services_start.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.services_start.clicked.connect(lambda: (self.main.start_services(), QtCore.QTimer.singleShot(3000, self.refresh)))
         sl.addWidget(self.services_start)
+        self.setup_button = w.RButton("Setup", "cog", secondary=True, radius=2)
+        self.setup_button.setFixedSize(90, 26)
+        self.setup_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.setup_button.setToolTip("Check and install what this laptop needs (one password)")
+        self.setup_button.clicked.connect(self.main.on_setup)
+        sl.addWidget(self.setup_button)
         root.addWidget(services)
 
         self.root = root

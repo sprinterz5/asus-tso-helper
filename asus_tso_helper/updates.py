@@ -119,6 +119,21 @@ def repo_updates():
     return found
 
 
+def github_latest(repo):
+    try:
+        data = fetch_json(f"https://api.github.com/repos/{repo}/releases/latest")
+    except (OSError, ValueError):
+        return None
+    return {"version": data.get("tag_name", "").lstrip("v"), "date": (data.get("published_at") or "")[:10],
+            "url": data.get("html_url", "")}
+
+
+# asusctl moved from GitLab to the Open Gaming Collective on GitHub (6.5.0+); supergfxctl stayed
+# on GitLab and is deprecated upstream in favour of Cardwire
+UPSTREAM = {"asusctl": lambda: github_latest("OpenGamingCollective/asusctl"),
+            "supergfxctl": lambda: gitlab_latest("supergfxctl")}
+
+
 def gitlab_latest(project):
     try:
         data = fetch_json(f"https://gitlab.com/api/v4/projects/asus-linux%2F{project}/releases?per_page=1")
@@ -132,12 +147,7 @@ def gitlab_latest(project):
 
 def app_latest():
     """Latest release of this app on GitHub, or None (no network, or not published yet)."""
-    try:
-        data = fetch_json(f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest")
-    except (OSError, ValueError):
-        return None
-    return {"version": data.get("tag_name", "").lstrip("v"), "date": (data.get("published_at") or "")[:10],
-            "url": data.get("html_url", "")}
+    return github_latest(GITHUB_REPO)
 
 
 def fetch_linux(app_version):
@@ -176,7 +186,7 @@ def fetch_linux(app_version):
                               ["akmod-nvidia", "xorg-x11-drv-nvidia", "nvidia-driver", "nvidia-utils",
                                "nvidia-open", "nvidia-dkms"], family=lambda n: "nvidia" in n))
     for project, title in (("asusctl", "asusctl (asusd)"), ("supergfxctl", "supergfxctl (supergfxd)")):
-        upstream = gitlab_latest(project)
+        upstream = UPSTREAM[project]()
         rows.append(from_repo("ASUS", title, package_version(project), [project], upstream,
                               upstream["url"] if upstream else "", family=lambda n, p=project: n.startswith(p)))
     ok, out = hw.run("fwupdmgr", "get-updates", "--json", timeout=30) if shutil.which("fwupdmgr") else (False, "")

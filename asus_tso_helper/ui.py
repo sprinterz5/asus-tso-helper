@@ -19,13 +19,15 @@ from . import hotkeys
 from . import modes
 from . import shortcuts
 from . import updates
+from . import setup
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
 from . import widgets as w
 from .widgets import ECO, STANDARD, TURBO, CUSTOM, GRAY
 
 APP = "asus-tso-helper"
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 HOMEPAGE = "https://github.com/sprinterz5/asus-tso-helper"
+DONATE_URL = ""  # PayPal donation link; Credits shows a support link once it is set
 CONFIG_DIR = os.path.join(os.path.expanduser("~/.config"), APP)
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 AUTOSTART = os.path.expanduser(f"~/.config/autostart/{APP}.desktop")
@@ -161,6 +163,8 @@ class MainWindow(QtWidgets.QWidget):
         self.extra = None
         self.fans = None
         self.updates = None
+        self.setup = None
+        self.version = VERSION
         self.mode_busy = False
         self.last_profile = None
         self.full_hover = False
@@ -1049,6 +1053,29 @@ class MainWindow(QtWidgets.QWidget):
                                           QtGui.QIcon(w.APP_ICON), 8000)
         self.bg(updates.app_latest, then=done)
 
+    def on_setup(self):
+        if self.setup is None:
+            self.setup = setup.SetupWindow(self)
+        else:
+            self.setup.refresh()
+        self.setup.show()
+        self.setup.raise_()
+        self.setup.activateWindow()
+
+    def first_run_setup(self):
+        """Opens Setup at start when something required or recommended is missing (until 'Later'
+        for this version)."""
+        if self.cfg.get("setup_later") == VERSION:
+            return
+        self.bg(setup.checks, then=lambda rows: setup.needs_setup(rows) and self.on_setup())
+
+    def after_setup(self):
+        """Setup changed services, packages or the key rule: pick them up."""
+        self.refresh_slow()
+        self.hotkeys.start()
+        if self.extra is not None:
+            self.extra.refresh()
+
     def on_extra(self):
         if self.extra is None:
             self.extra = ExtraWindow(self)
@@ -1321,6 +1348,9 @@ class MainWindow(QtWidgets.QWidget):
             "its interface, layout and behaviour are his work.<br>"
             "Hardware control goes through <a href='https://asus-linux.org'>asusctl / supergfxctl</a>.<br>"
             "Icons: <a href='https://lucide.dev'>Lucide</a> (ISC).<br><br>"
+            + (f"Like it? <a href='{DONATE_URL}'>Support the project</a>, "
+               "and support <a href='https://github.com/seerge/g-helper'>G-Helper</a> too.<br><br>"
+               if DONATE_URL else "") +
             "Not affiliated with or endorsed by ASUS. ASUS, ROG and TUF are trademarks of ASUSTeK Computer Inc.")
 
     def on_startup(self, on):
@@ -1462,4 +1492,5 @@ def main():
         window.apply_theme()
     if "--minimized" not in sys.argv or not tray_ok:
         window.show()
+    QtCore.QTimer.singleShot(1500, window.first_run_setup)
     sys.exit(app.exec())
