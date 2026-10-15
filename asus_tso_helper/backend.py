@@ -11,6 +11,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import sys
 
 PROFILE_SYSFS = "/sys/firmware/acpi/platform_profile"
 ARMOURY = "/sys/class/firmware-attributes/asus-armoury/attributes"
@@ -84,6 +85,42 @@ def osd(icon, text):
 
 
 KWIN_PLACE = os.path.join(os.path.dirname(__file__), "assets", "kwin", "place.js")
+APPIMAGE = os.environ.get("APPIMAGE")  # set by the AppImage runtime: the .AppImage file itself
+
+
+def launcher():
+    """Command that starts this app: the AppImage file, the installed command, or the launcher
+    of a source checkout. Inside an AppImage the code lives in a temporary mount instead."""
+    if APPIMAGE:
+        return APPIMAGE
+    return shutil.which("asus-tso-helper") or os.path.abspath(sys.argv[0])
+
+
+DESKTOP_FILE = os.path.expanduser("~/.local/share/applications/asus-tso-helper.desktop")
+ICON_FILE = os.path.expanduser("~/.local/share/icons/hicolor/256x256/apps/asus-tso-helper.png")
+
+
+def integrate_desktop():
+    """AppImage: a menu entry and icon pointing at the .AppImage file, like an installed app
+    (the GlobalShortcuts portal and notifications also need the .desktop file). Rewritten only
+    when something changed, e.g. the file was moved."""
+    if not APPIMAGE:
+        return
+    src = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(src, "assets", "asus-tso-helper.png"), "rb") as f:
+        icon = f.read()
+    with open(os.path.join(src, "assets", "asus-tso-helper.desktop")) as f:
+        entry = f.read().replace("@EXEC@", f'"{APPIMAGE}"').replace("@ICON@", "asus-tso-helper")
+    for path, data in ((ICON_FILE, icon), (DESKTOP_FILE, entry.encode())):
+        try:
+            with open(path, "rb") as f:
+                if f.read() == data:
+                    continue
+        except OSError:
+            pass
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(data)
 
 
 def kwin_place_window():

@@ -6,8 +6,7 @@ Its interface is seerge's work. This project brings it to Linux on top of
 [asusctl](https://asus-linux.org) and [Cardwire](https://opengamingcollective.github.io/cardwire/).
 
 > **Early preview.** Developed and tested on an ASUS TUF Gaming A15 (FA507NV) with Fedora 44 and
-> KDE Plasma 6 (Wayland). A first-run setup and packages (AppImage, COPR, AUR) are on the way;
-> see [ROADMAP.md](ROADMAP.md).
+> KDE Plasma 6 (Wayland). Packages for COPR and AUR are on the way; see [ROADMAP.md](ROADMAP.md).
 
 <p>
   <img src="docs/main.png" width="300" alt="Main window">
@@ -48,7 +47,25 @@ Its interface is seerge's work. This project brings it to Linux on top of
 Anything that needs root (the key rule, services, packages) is done from inside the app, behind
 one password prompt.
 
-## Running from source
+## Install
+
+Download `asus-tso-helper-x86_64.AppImage` from the
+[latest release](https://github.com/sprinterz5/asus-tso-helper/releases/latest), then:
+
+```bash
+chmod +x asus-tso-helper-x86_64.AppImage
+```
+
+```bash
+./asus-tso-helper-x86_64.AppImage
+```
+
+On first start it adds itself to the app menu, and the Setup window offers to install what the
+laptop still needs (asusd, Cardwire) behind one password prompt. New versions install from the
+app itself: click the red version label. The AppImage runs on distributions with glibc 2.34 or
+newer (Fedora 35+, Ubuntu 22.04+, Debian 12+, Arch).
+
+### From source
 
 ```bash
 git clone https://github.com/sprinterz5/asus-tso-helper
@@ -57,6 +74,8 @@ git clone https://github.com/sprinterz5/asus-tso-helper
 ```bash
 ./asus-tso-helper/asus-tso-helper
 ```
+
+Build the AppImage yourself with `packaging/appimage/build-in-podman.sh` (needs podman).
 
 ## GPU modes
 

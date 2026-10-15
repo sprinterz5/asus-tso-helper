@@ -130,7 +130,6 @@ def script(rows):
     family = distro()
     todo = {r["key"] for r in rows if not r["ok"] and r["fix"]}
     lines = ["set -u", 'step() { echo; echo "== $1"; }']
-    rule = f"/etc/udev/rules.d/{hotkeys.RULE_NAME}"
     if family == "fedora":
         pkgs = []
         if "terra" in todo:
@@ -184,9 +183,7 @@ def script(rows):
                   "fi",
                   "command -v cardwire >/dev/null && { systemctl enable cardwired; systemctl restart cardwired; }"]
     if "keys" in todo:
-        src = hotkeys.RULE_SRC
-        lines += ["step 'Laptop keys'", f"install -m 644 '{src}' {rule} && udevadm control --reload && "
-                  "udevadm trigger -s input"]
+        lines += ["step 'Laptop keys'", hotkeys.rule_script().rstrip("\n")]
     lines += ["echo", "echo '== Done'"]
     return "\n".join(lines) + "\n"
 

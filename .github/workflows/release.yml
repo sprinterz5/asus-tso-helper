@@ -1,0 +1,31 @@
+# A tag like v0.4.0 builds the AppImage and publishes it as a GitHub release; the app's
+# self-update downloads the asset by its fixed name and checks GitHub's SHA-256 digest.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  appimage:
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux_2_34_x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag matches the app version
+        run: test "v$(sed -n 's/^VERSION = "\(.*\)"/\1/p' asus_tso_helper/ui.py)" = "$GITHUB_REF_NAME"
+
+      - name: Build
+        run: packaging/appimage/build.sh
+
+      - name: Release notes from CHANGELOG.md
+        run: awk -v v="${GITHUB_REF_NAME#v}" '/^## /{p = ($2 == v)} p && !/^## /' CHANGELOG.md > notes.md
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/asus-tso-helper-x86_64.AppImage
+          body_path: notes.md

@@ -20,12 +20,13 @@ from . import modes
 from . import shortcuts
 from . import updates
 from . import setup
+from . import selfupdate
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
 from . import widgets as w
 from .widgets import ECO, STANDARD, TURBO, CUSTOM, GRAY
 
 APP = "asus-tso-helper"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 HOMEPAGE = "https://github.com/sprinterz5/asus-tso-helper"
 DONATE_URL = ""  # PayPal donation link; Credits shows a support link once it is set
 CONFIG_DIR = os.path.join(os.path.expanduser("~/.config"), APP)
@@ -443,9 +444,10 @@ class MainWindow(QtWidgets.QWidget):
         version = QtWidgets.QLabel(f"Version: {VERSION}")
         version.setObjectName("version")
         version.setCursor(QtCore.Qt.PointingHandCursor)
-        version.mousePressEvent = lambda _: QtGui.QDesktopServices.openUrl(QtCore.QUrl(self.release_url))
+        version.mousePressEvent = lambda _: self.on_version_clicked()
         self.version_label = version
         self.release_url = HOMEPAGE
+        self.latest_release = None
         lay.addWidget(version)
         lay.addStretch()
         return p
@@ -1036,6 +1038,7 @@ class MainWindow(QtWidgets.QWidget):
         'Download Update' link, like G-Helper's labelVersion."""
         def done(latest):
             if latest and updates.newer(latest["version"], VERSION):
+                self.latest_release = latest
                 self.release_url = latest["url"] or HOMEPAGE + "/releases"
                 self.version_label.setText(f"Download Update: {latest['version']}")
                 f = self.version_label.font()
@@ -1049,6 +1052,45 @@ class MainWindow(QtWidgets.QWidget):
                     self.tray.showMessage(APP, f"Version {latest['version']} is available.",
                                           QtGui.QIcon(w.APP_ICON), 8000)
         self.bg(updates.app_latest, then=done)
+
+    # -- self-update (AppImage) ------------------------------------------------------------
+    def on_version_clicked(self):
+        if self.can_self_update():
+            self.self_update()
+        else:
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl(self.release_url))
+
+    def can_self_update(self):
+        return bool(self.latest_release and selfupdate.possible()
+                    and selfupdate.asset_of(self.latest_release))
+
+    def self_update(self):
+        """AutoUpdateControl.AutoUpdate: download, swap the AppImage, restart."""
+        version = self.latest_release["version"]
+        answer = QtWidgets.QMessageBox.question(
+            self, "Update", f"Update to {version} now? The app restarts by itself.\n\n"
+            f"What changed: {self.release_url}")
+        if answer != QtWidgets.QMessageBox.Yes:
+            return
+        asset = selfupdate.asset_of(self.latest_release)
+        label = self.version_label
+        label.setText("Downloading update ...")
+
+        def progress(percent):
+            self.bridge.done.emit(lambda p: label.setText(f"Downloading update: {p}%"), percent)
+
+        def job():
+            ok, path = selfupdate.download(asset, progress)
+            return selfupdate.install(path) if ok else (ok, path)
+
+        def done(result):
+            if not result[0]:
+                label.setText(f"Download Update: {version}")
+                QtWidgets.QMessageBox.warning(self, "Update", result[1])
+                return
+            selfupdate.restart()
+            QtWidgets.QApplication.quit()
+        self.bg(job, then=done)
 
     def on_setup(self):
         if self.setup is None:
@@ -1231,7 +1273,7 @@ class MainWindow(QtWidgets.QWidget):
         timeout = int(self.cfg.get("kbd_timeout_ac" if hw.ac_online() else "kbd_timeout_bat", 0))
         if timeout <= 0 or not self.idle_available:
             return
-        me = os.path.abspath(sys.argv[0])
+        me = hw.launcher()
         self.idle_proc = QtCore.QProcess(self)
         self.idle_proc.start("swayidle", ["-w", "timeout", str(timeout), f"'{me}' --kbd-idle off",
                                           "resume", f"'{me}' --kbd-idle on"])
@@ -1361,11 +1403,11 @@ class MainWindow(QtWidgets.QWidget):
     def on_startup(self, on):
         if on:
             os.makedirs(os.path.dirname(AUTOSTART), exist_ok=True)
-            # the installed command when there is one, so autostart survives moving the source
-            launcher = shutil.which(APP) or os.path.abspath(sys.argv[0])
+            # the AppImage file or the installed command, so autostart survives moving the source
+            icon = "asus-tso-helper" if hw.APPIMAGE else os.path.join(w.ASSETS, "asus-tso-helper.png")
             with open(AUTOSTART, "w") as f:
                 f.write("[Desktop Entry]\nType=Application\nName=asus-tso-helper\n"
-                        f"Exec=\"{launcher}\" --minimized\nIcon={os.path.join(w.ASSETS, 'asus-tso-helper.png')}\n"
+                        f"Exec=\"{hw.launcher()}\" --minimized\nIcon={icon}\n"
                         "X-GNOME-Autostart-enabled=true\n")
         elif os.path.exists(AUTOSTART):
             os.remove(AUTOSTART)
@@ -1457,6 +1499,7 @@ def main():
     app.setDesktopFileName(APP)
     app.setQuitOnLastWindowClosed(False)
     hw.kwin_place_window()
+    hw.integrate_desktop()
     app.setStyle("Fusion")
     font = app.font()
     font.setPointSizeF(9)  # Segoe UI 9pt
@@ -1478,6 +1521,8 @@ def main():
 
     tray_ok = QtWidgets.QSystemTrayIcon.isSystemTrayAvailable()
     window = MainWindow(tray_ok)
+    if os.path.exists(AUTOSTART):
+        window.on_startup(True)  # points at this copy (e.g. an AppImage that was moved)
 
     def on_connection():
         conn = server.nextPendingConnection()

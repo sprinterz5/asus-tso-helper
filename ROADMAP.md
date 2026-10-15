@@ -31,6 +31,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | First-run Setup | — | Checks ASUS laptop, asusd, Cardwire (installs it, replacing switcheroo-control; moves supergfxd back to Hybrid and disables it), Terra repo (moves off the dead lukenukem COPR), tuned-ppd → power-profiles-daemon (asusctl issue #724), key rule, Python modules, swayidle, NVIDIA driver (info only), KDE (info). Fixes everything in one pkexec script for dnf / pacman / apt / zypper, output shown live. Opens at start when something required or recommended is missing; also Extra → Setup | `setup.py` |
 | BIOS and Driver Updates window | Updates.cs | BIOS from the same ASUS API (EZ Flash rows only); instead of Windows drivers: kernel, NVIDIA driver, asusctl, Cardwire (PackageKit = what Discover can install, upstream in the tooltip), fwupd firmware, this app (GitHub releases). "Install Updates" downloads only the red rows (each with all its packages: every kernel-* or every NVIDIA package, never split) through PackageKit and installs them on restart (offline update, as Discover; online fallback where offline updates are missing). No password on Fedora: PackageKit allows system updates for the active user | `updates.py` |
 | New app version notice | AutoUpdateCheck | GitHub latest release at start and daily: red "Download Update" version label, tray notification | `ui.check_app_update` |
+| AppImage + one-click update | AutoUpdateControl | Built in manylinux_2_34 (podman locally, GitHub Actions on a `v*` tag): python-appimage's Python 3.12, PySide6-Essentials (unused Qt modules dropped), evdev, dbus-python. The label or the Updates row downloads the new AppImage next to the running one, checks GitHub's SHA-256 digest, renames it over and restarts. On start it writes its menu entry and icon; root steps get file contents inline, since root cannot read the FUSE mount | `packaging/appimage/`, `selfupdate.py`, `backend.integrate_desktop` |
 | Icons | Icons8 | Lucide (ISC, `assets/icons/LICENSE`); app and tray icon: white S on a circle in the GPU mode colour (`tools/make_icons.py`) | `widgets.icon` |
 | Banner when asusd / cardwired are not running | — | Click to start them (polkit), or Setup when not installed | `ui.show_services` |
 
@@ -64,11 +65,10 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 ### Priority 1: needed before a public release
 | # | Feature | How | Seen in |
 |---|---|---|---|
-| 1 | **AppImage + in-app update** with changelog | GitHub Actions on tag; the app already finds new releases, it has to download and swap itself | g-helper-linux |
-| 2 | **Translations** (Russian first) | Qt translations, strings follow G-Helper's resources | G-Helper, g-helper-linux (38 languages) |
-| 3 | **Refresh rate outside KDE** | `gdctl` (GNOME 48+), `wlr-randr` (Sway, Hyprland) next to kscreen-doctor | g-helper-linux |
-| 4 | **Donations** | GitHub Sponsors with Open Source Collective as fiscal host (Stripe and PayPal receiving are unavailable in Kazakhstan); apply once the repo is public, then set `DONATE_URL` and `.github/FUNDING.yml` | G-Helper |
-| 5 | **Release** | GitHub repo, RPM/COPR requiring `asusctl`, `cardwire`, `python3-pyside6`, `python3-evdev`, `swayidle` | — |
+| 1 | **Translations** (Russian first) | Qt translations, strings follow G-Helper's resources | G-Helper, g-helper-linux (38 languages) |
+| 2 | **Refresh rate outside KDE** | `gdctl` (GNOME 48+), `wlr-randr` (Sway, Hyprland) next to kscreen-doctor | g-helper-linux |
+| 3 | **Donations** | GitHub Sponsors with Open Source Collective as fiscal host (Stripe and PayPal receiving are unavailable in Kazakhstan); apply once the repo is public, then set `DONATE_URL` and `.github/FUNDING.yml` | G-Helper |
+| 4 | **Release** | GitHub repo, RPM/COPR requiring `asusctl`, `cardwire`, `python3-pyside6`, `python3-evdev`, `swayidle` | — |
 
 ### Priority 2: useful
 | # | Feature | How | Notes |

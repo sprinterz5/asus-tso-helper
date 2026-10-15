@@ -7,7 +7,6 @@ If the app exits, the grab ends with it and the keys go back to normal.
 """
 import os
 import select
-import shlex
 import subprocess
 import threading
 
@@ -21,7 +20,7 @@ except ImportError:  # python3-evdev missing: Key Bindings stay off
 
 DEVICE_NAME = "Asus WMI hotkeys"
 RULE_NAME = "70-asus-tso-helper.rules"
-RULE_SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "udev", RULE_NAME)
+RULE_SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", RULE_NAME)
 
 # key name in config -> (label, WMI scancode); Extra.cs labels and InputDispatcher codes
 KEYS = {
@@ -108,11 +107,20 @@ def install_swayidle():
     return run_as_root(SWAYIDLE_INSTALL)
 
 
+def rule_script():
+    """Root shell lines that write the udev rule. Its text goes inline: an AppImage's files sit
+    in a FUSE mount that root cannot read."""
+    with open(RULE_SRC) as f:
+        text = f.read()
+    if not text.endswith("\n"):
+        text += "\n"
+    return (f"cat > /etc/udev/rules.d/{RULE_NAME} <<'ASUS_TSO_RULE' && chmod 644 /etc/udev/rules.d/{RULE_NAME} && "
+            f"udevadm control --reload && udevadm trigger -s input || exit 1\n{text}ASUS_TSO_RULE\n")
+
+
 def install_rule():
     """Let the logged-in user read the hotkey device; installs swayidle in the same prompt."""
-    script = (f"install -m 644 {shlex.quote(RULE_SRC)} /etc/udev/rules.d/{RULE_NAME} && "
-              "udevadm control --reload && udevadm trigger -s input && { " + SWAYIDLE_INSTALL + "; true; }")
-    return run_as_root(script)
+    return run_as_root(rule_script() + "{ " + SWAYIDLE_INSTALL + "; } || true\n")
 
 
 # friendlier names for keys the user adds themselves (evdev name otherwise)

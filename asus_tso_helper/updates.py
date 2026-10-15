@@ -125,7 +125,9 @@ def github_latest(repo):
     except (OSError, ValueError):
         return None
     return {"version": data.get("tag_name", "").lstrip("v"), "date": (data.get("published_at") or "")[:10],
-            "url": data.get("html_url", "")}
+            "url": data.get("html_url", ""),
+            "assets": [{"name": a.get("name"), "url": a.get("browser_download_url"), "size": a.get("size"),
+                        "digest": a.get("digest")} for a in data.get("assets") or []]}
 
 
 # asusctl moved from GitLab to the Open Gaming Collective on GitHub (6.5.0+), next to Cardwire.
@@ -499,6 +501,9 @@ class UpdatesWindow(QtWidgets.QWidget):
         QtWidgets.QMessageBox.warning(self, "Install Updates", f"{text}\n\n{tail}")
 
     def open_row(self, r):
+        if r["category"] == "App" and r["status"] == STATUS_NEW and self.main.can_self_update():
+            self.main.self_update()
+            return
         if r["category"] in ("System", "Graphics", "Firmware") or (r["category"] == "ASUS" and r["status"] == STATUS_NEW):
             if discover_updates():
                 return
