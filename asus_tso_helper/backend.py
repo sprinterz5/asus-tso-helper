@@ -142,8 +142,16 @@ def gpu_supported():
 
 
 def gpu_pending():
-    """"Reboot required" while a MUX change waits for the reboot."""
-    return "Reboot required" if _read(os.path.join(ARMOURY, "pending_reboot")) == "1" else None
+    """"Reboot required" while a MUX change waits for the reboot. asusd 6.5 keeps a MUX write
+    queued in memory and writes it to the firmware at shutdown, so the firmware's own
+    pending_reboot only shows writes made some other way."""
+    if _read(os.path.join(ARMOURY, "pending_reboot")) == "1":
+        return "Reboot required"
+    if has_mux():
+        queued = _bus_get("/xyz/ljones/asus_armoury/gpu_mux_mode", "xyz.ljones.AsusArmoury", "QueuedGpuValue")
+        if isinstance(queued, int) and queued >= 0:
+            return "Reboot required"
+    return None
 
 
 def set_gpu_mode(mode):

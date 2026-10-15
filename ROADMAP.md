@@ -17,7 +17,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | Custom modes (`+`, rename, remove) | Modes.cs | Base profile + own fan curves + power limits; the base mode is restored exactly afterwards | `modes.py` |
 | Mode remembered per power source | `performance_<ac>` | Stored in config and in asusd (`PlatformProfileOnAc/OnBattery`); custom modes too | `ui.remember_mode`, `ui.on_power_source` |
 | Toast on mode / Aura change by key | ToastForm | KDE OSD (`org.kde.osdService.showText`), tray notification elsewhere | `ui.toast`, `backend.osd` |
-| GPU Eco / Standard / Ultimate / Optimized | GPUModeControl | Eco / Standard: Cardwire (D-Bus `Mode`), at once, no logout. Ultimate: firmware MUX (`gpu_mux_mode`) through asusd, reboot (**not yet tested on hardware** since the Cardwire move); pending shown with a dashed button, cancel by picking the current mode | `ui.on_gpu`, `ui.switch_gpu`, `backend.set_gpu_mode` |
+| GPU Eco / Standard / Ultimate / Optimized | GPUModeControl | Eco / Standard: Cardwire (D-Bus `Mode`), at once, no logout. Ultimate: firmware MUX (`gpu_mux_mode`) through asusd, which queues the write and makes it at shutdown, reboot (tested: panel on the NVIDIA card after the reboot); pending shown with a dashed button, cancel by picking the current mode | `ui.on_gpu`, `ui.switch_gpu`, `backend.set_gpu_mode` |
 | Screen 60 Hz / max / Auto, Overdrive | ScreenControl | kscreen-doctor, asus-armoury `panel_overdrive` | `ui.on_screen` |
 | Keyboard: effect, colour, speed, brightness | Aura | asusctl aura | `ui.apply_aura` |
 | Battery charge limit, one-time 100% charge | BatteryControl | asusd charge limit | `ui.on_limit`, `ui.on_full_charge` |
