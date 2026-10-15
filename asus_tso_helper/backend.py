@@ -1,7 +1,7 @@
 """Hardware access for asus-tso-helper.
 
 Everything that changes the machine goes through the existing daemons' tools
-(asusctl -> asusd, supergfxctl -> supergfxd, kscreen-doctor -> KWin), so the app
+(asusctl -> asusd, Cardwire (D-Bus) -> cardwired, kscreen-doctor -> KWin), so the app
 never needs root. Reads come straight from sysfs where that is cheap and safe.
 """
 import glob
@@ -82,137 +82,89 @@ def osd(icon, text):
     return ok
 
 
-# --- GPU (supergfxd) -------------------------------------------------------------
+# --- GPU (Cardwire, MUX through asusd) ----------------------------------------------
+# Cardwire, supergfxd's successor from the same people, never unloads the NVIDIA driver: it
+# blocks new opens of the dGPU with eBPF/LSM, so Eco and Standard switch at once, without a
+# logout, and the dGPU powers down by itself once nothing uses it. Programs that already use it
+# keep it until they quit. Ultimate is the firmware MUX (asus-armoury gpu_mux_mode, 0 = the dGPU
+# drives the panel), set through asusd and applied on reboot.
+CARDWIRE = "org.opengamingcollective.cardwire"
+CARDWIRE_PATH = "/org/opengamingcollective/cardwire"
+CARDWIRE_MODES = ["Integrated", "Hybrid", "Manual", "Smart"]  # D-Bus Mode values 0..3
+
+
+def cardwire_mode():
+    ok, out = run("busctl", "--system", "get-property", CARDWIRE, CARDWIRE_PATH, CARDWIRE + ".Mode",
+                  "Mode", timeout=5)
+    m = re.match(r"u (\d+)", out) if ok else None
+    return CARDWIRE_MODES[int(m.group(1))] if m and int(m.group(1)) < len(CARDWIRE_MODES) else None
+
+
+def set_cardwire_mode(mode):
+    return run("busctl", "--system", "set-property", CARDWIRE, CARDWIRE_PATH, CARDWIRE + ".Mode",
+               "Mode", "u", str(CARDWIRE_MODES.index(mode)), timeout=30)
+
+
+def has_mux():
+    return os.path.exists(os.path.join(ARMOURY, "gpu_mux_mode"))
+
+
+def mux_dgpu():
+    return _read(os.path.join(ARMOURY, "gpu_mux_mode", "current_value")) == "0"
+
 
 def gpu_mode():
-    ok, out = run("supergfxctl", "-g", timeout=5)
-    return out if ok else None
+    """"Integrated" (Eco), "Hybrid" (Standard), "AsusMuxDgpu" (Ultimate), Cardwire's
+    "Manual" / "Smart", or None when Cardwire is not running."""
+    if has_mux() and mux_dgpu():
+        return "AsusMuxDgpu"
+    return cardwire_mode()
 
 
 def gpu_supported():
-    ok, out = run("supergfxctl", "-s", timeout=5)
-    if not ok:
-        return []
-    return [m.strip() for m in out.strip("[]").split(",") if m.strip()]
+    return ["Integrated", "Hybrid"] + (["AsusMuxDgpu"] if has_mux() else [])
 
 
 def gpu_pending():
-    ok, out = run("supergfxctl", "-p", timeout=5)
-    return out if ok and "No action" not in out else None
+    """"Reboot required" while a MUX change waits for the reboot."""
+    return "Reboot required" if _read(os.path.join(ARMOURY, "pending_reboot")) == "1" else None
 
 
-def gpu_pending_mode():
-    """Mode supergfxd will switch to after logout / reboot, or None."""
-    ok, out = run("supergfxctl", "-P", timeout=5)
-    out = out.strip() if ok else ""
-    return out if out and out not in ("Unknown", "None") else None
+def set_gpu_mode(mode):
+    """Eco / Standard at once through Cardwire. Ultimate and back: the MUX, after a reboot
+    (Cardwire is left in Standard for it; the caller sets the wanted mode after the reboot)."""
+    if mode == "AsusMuxDgpu":
+        set_cardwire_mode("Hybrid")
+        ok, out = set_armoury("gpu_mux_mode", 0)
+        return ok, "Reboot required" if ok else out
+    if has_mux() and mux_dgpu():
+        ok, out = set_armoury("gpu_mux_mode", 1)
+        return ok, "Reboot required" if ok else out
+    return set_cardwire_mode(mode)
 
 
-# --- Eco without logout ----------------------------------------------------------------
-# supergfxd waits for a logout before Eco because the desktop (KWin) keeps the dGPU open: it
-# drives the ports wired to it. With KWin limited to the GPU of the laptop panel and supergfxd's
-# "no_logind", Eco switches right away: supergfxd closes what still holds the dGPU, unloads
-# the driver and powers it off. The dGPU's own ports (HDMI on many laptops) stop working.
-# KWIN_DRM_DEVICES alone is not enough: KWin still opened /dev/nvidia0 through NVIDIA's EGL
-# library (glvnd loads every vendor), supergfxd killed it with kill -9, could not unload the
-# driver and hung in the kernel (reboot). KWin therefore also runs with Mesa's EGL only, and the
-# switch is allowed only once KWin was started with both (root lsof confirmed: nothing left but
-# nvidia-powerd, which supergfxd stops itself).
-ECO_IN_SESSION_READY = True
-SUPERGFX_CONF = "/etc/supergfxd.conf"
+# Leftovers of the supergfxd version's "Eco without logout": KWin limited to the panel's GPU
+# and Mesa's EGL. With Cardwire they only cost the HDMI port, so they go (next login).
 KWIN_ENV = os.path.expanduser("~/.config/plasma-workspace/env/asus-tso-helper-igpu.sh")
 KWIN_DROPIN = os.path.expanduser("~/.config/systemd/user/plasma-kwin_wayland.service.d/asus-tso-helper.conf")
-MESA_EGL = "/usr/share/glvnd/egl_vendor.d/50_mesa.json"
-KWIN_DROPIN_TEXT = f"""# asus-tso-helper "Eco without logout": KWin and the Xwayland it starts load only Mesa's EGL,
-# so NVIDIA's EGL library does not keep /dev/nvidia0 open inside KWin.
-# Turn it off in asus-tso-helper (Extra) or delete this file, then log out once.
-[Service]
-Environment=__EGL_VENDOR_LIBRARY_FILENAMES={MESA_EGL}
-"""
-KWIN_ENV_SCRIPT = """# asus-tso-helper "Eco without logout": KWin uses only the GPU that drives the laptop panel,
-# so the dGPU can be switched off inside the session. Ports wired to the dGPU do not work.
-# Turn it off in asus-tso-helper (Extra) or delete this file, then log out once.
-for status in /sys/class/drm/card*-eDP-*/status; do
-    [ "$(cat "$status" 2>/dev/null)" = connected ] || continue
-    card=${status%/status}
-    card=${card##*/}
-    export KWIN_DRM_DEVICES="/dev/dri/${card%%-*}"
-    break
-done
-"""
 
 
-def gfx_no_logind():
-    try:
-        with open(SUPERGFX_CONF) as f:
-            return bool(json.load(f).get("no_logind"))
-    except (OSError, ValueError):
-        return False
-
-
-def no_logind_script(on):
-    """Root part of Eco without logout: supergfxd stops waiting for a logout."""
-    value = "true" if on else "false"
-    return (f"sed -i -E 's/(\"no_logind\": *)(true|false)/\\1{value}/' {SUPERGFX_CONF} && "
-            "systemctl restart supergfxd")
-
-
-def eco_in_session_files():
-    return os.path.exists(KWIN_ENV) and os.path.exists(KWIN_DROPIN)
-
-
-def write_kwin_env(on):
-    for path, text in ((KWIN_ENV, KWIN_ENV_SCRIPT), (KWIN_DROPIN, KWIN_DROPIN_TEXT)):
-        if on:
-            if _read(path) == text.strip():
-                continue  # unchanged: keep its time, so KWin started since still counts
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w") as f:
-                f.write(text)
-        elif os.path.exists(path):
+def remove_kwin_limits():
+    """-> True when something was removed (takes effect at the next login)."""
+    removed = False
+    for path in (KWIN_ENV, KWIN_DROPIN):
+        try:
             os.remove(path)
-    run("systemctl", "--user", "daemon-reload", timeout=10)
-
-
-def _started_at(pid):
-    """Start time of a process (epoch seconds); /proc/<pid>/stat is readable even for KWin."""
-    try:
-        with open(f"/proc/{pid}/stat") as f:
-            ticks = int(f.read().rsplit(")", 1)[1].split()[19])
-        with open("/proc/stat") as f:
-            btime = next(int(line.split()[1]) for line in f if line.startswith("btime "))
-    except (OSError, ValueError, IndexError, StopIteration):
-        return None
-    return btime + ticks / os.sysconf("SC_CLK_TCK")
-
-
-def kwin_igpu_only():
-    """This session's KWin runs limited to the panel's GPU and Mesa's EGL: both files existed
-    before KWin started, and the session got KWIN_DRM_DEVICES. KWin's open files cannot be read
-    as the user, so this is what makes an in-session Eco switch safe."""
-    if not eco_in_session_files():
-        return False
-    ok, out = run("systemctl", "--user", "show-environment", timeout=5)
-    if not (ok and "KWIN_DRM_DEVICES=" in out):
-        return False
-    written = max(os.path.getmtime(KWIN_ENV), os.path.getmtime(KWIN_DROPIN))
-    pids = [p for p in os.listdir("/proc") if p.isdigit() and _read(f"/proc/{p}/comm") == "kwin_wayland"]
-    starts = [_started_at(p) for p in pids]
-    return bool(starts) and all(t is not None and t > written for t in starts)
-
-
-def dgpu_ports():
-    """External ports wired to the NVIDIA GPU, e.g. ["HDMI"] (empty while it is off)."""
-    names = {"HDMI": "HDMI", "DP": "DisplayPort", "DVI": "DVI"}
-    ports = []
-    for conn in sorted(glob.glob("/sys/class/drm/card*-*")):
-        if _read(os.path.join(conn, "device", "device", "vendor")) != "0x10de":  # connector -> card -> PCI
-            continue
-        kind = os.path.basename(conn).split("-", 1)[1].split("-")[0]
-        label = names.get(kind)
-        if label and label not in ports:
-            ports.append(label)
-    return sorted(ports, key=list(names.values()).index)
+            removed = True
+        except OSError:
+            pass
+    if removed:
+        try:
+            os.rmdir(os.path.dirname(KWIN_DROPIN))
+        except OSError:
+            pass
+        run("systemctl", "--user", "daemon-reload", timeout=10)
+    return removed
 
 
 DESKTOP_GPU_USERS = {"kwin_wayland", "kwin_x11", "Xwayland", "Xorg", "plasmashell", "gnome-shell",
@@ -261,15 +213,6 @@ def armoury_choices(name):
     if not raw:
         return None
     return [v for v in re.split(r"[;,\s]+", raw) if v]
-
-
-def dgpu_status():
-    ok, out = run("supergfxctl", "-S", timeout=5)
-    return out if ok else None
-
-
-def set_gpu_mode(mode):
-    return run("supergfxctl", "-m", mode, timeout=60)
 
 
 # --- fans and power limits (asusd) ---------------------------------------------------
@@ -560,7 +503,7 @@ def usb_c_charger():
 
 
 def services_running():
-    names = ("asusd", "supergfxd")
+    names = ("asusd", "cardwired")
     return [n for n in names if run("systemctl", "is-active", "--quiet", n, timeout=5)[0]]
 
 

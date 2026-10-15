@@ -180,25 +180,13 @@ class ExtraWindow(QtWidgets.QWidget):
             self.usbc.setChecked(bool(self.cfg.get("optimized_usbc")))
             self.usbc.toggled.connect(self.on_usbc)
             ol.addWidget(self.usbc)
-            # Extra.checkGpuApps: closing apps that hold the dGPU lets Eco switch without logout
+            # Extra.checkGpuApps: Eco blocks new users of the dGPU; running ones keep it awake
             self.gpu_apps = check("Stop all apps using GPU when switching to Eco", 2)
             self.gpu_apps.setChecked(bool(self.cfg.get("kill_gpu_apps")))
-            self.gpu_apps.setToolTip("Without it you are asked first. Has no effect while the desktop itself "
-                                     "uses the NVIDIA GPU: then Eco always needs a logout.")
+            self.gpu_apps.setToolTip("Programs already using the NVIDIA GPU keep it powered on until they "
+                                     "quit. Without this option you are asked first.")
             self.gpu_apps.toggled.connect(lambda on: (self.cfg.__setitem__("kill_gpu_apps", on), self.main.save()))
             ol.addWidget(self.gpu_apps)
-            self.eco_session = None
-        if main.optimized and hw.ECO_IN_SESSION_READY:
-            self.eco_session = check("Eco without logout", 2)
-            self.eco_session.setChecked(hw.gfx_no_logind() and hw.eco_in_session_files())
-            self.eco_session.toggled.connect(self.on_eco_session)
-            ol.addWidget(self.eco_session)
-            self.eco_note = QtWidgets.QLabel()
-            self.eco_note.setObjectName("tip")
-            self.eco_note.setWordWrap(True)
-            self.eco_note.setContentsMargins(22, 0, 0, 4)
-            ol.addWidget(self.eco_note)
-            self.show_eco_note()
         # rows that exist only when this laptop's firmware has the setting (asus-armoury)
         if hw.armoury_range("boot_sound") is not None or hw._read(f"{hw.ARMOURY}/boot_sound/current_value"):
             self.boot_sound = check("Boot Sound", 2)
@@ -256,66 +244,6 @@ class ExtraWindow(QtWidgets.QWidget):
         self.root = root
         self.build_bindings()
         self.refresh()
-
-    # -- Eco without logout ---------------------------------------------------------
-    def dgpu_ports_text(self):
-        ports = hw.dgpu_ports()
-        if ports:
-            self.cfg["dgpu_ports"] = ports
-            self.main.save()
-        ports = ports or self.cfg.get("dgpu_ports") or []
-        if not ports:
-            return "Ports wired to the dGPU won't work."
-        return " and ".join(ports) + " won't work (wired to the dGPU)."
-
-    def show_eco_note(self):
-        text = "Closes everything that uses the dGPU when switching. " + self.dgpu_ports_text()
-        if self.eco_session.isChecked() and not hw.kwin_igpu_only():
-            text += "\nLog out once to finish turning it on."
-        elif not self.eco_session.isChecked() and hw.kwin_igpu_only():
-            text += "\nLog out once to get the ports back."
-        self.eco_note.setText(text)
-
-    def on_eco_session(self, on):
-        if on:
-            answer = QtWidgets.QMessageBox.question(
-                self, "Eco without logout",
-                "Switching to Eco will close every program that uses the dGPU, without a logout.\n\n"
-                + self.dgpu_ports_text() + " This stays so in Standard mode too, until you turn "
-                "this option off.\n\nNeeds your password once and one logout. Turn it on?")
-            if answer != QtWidgets.QMessageBox.Yes:
-                self.set_eco_check(False)
-                return
-        self.eco_session.setEnabled(False)
-
-        def job():
-            ok, out = hotkeys.run_as_root(hw.no_logind_script(on))
-            if ok:
-                hw.write_kwin_env(on)
-            return ok, out
-
-        def done(result):
-            self.eco_session.setEnabled(True)
-            if not result[0]:
-                self.set_eco_check(not on)
-                self.main.report(result, "Eco without logout")
-            self.show_eco_note()
-            if result[0] and on != hw.kwin_igpu_only():
-                box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, "Eco without logout",
-                                            "Log out once to finish." if on else
-                                            "The ports work again after you log out.", parent=self)
-                now = box.addButton("Log out now", QtWidgets.QMessageBox.AcceptRole)
-                box.addButton("Later", QtWidgets.QMessageBox.RejectRole)
-                box.exec()
-                if box.clickedButton() is now:
-                    hw.run("busctl", "--user", "call", "org.kde.LogoutPrompt", "/LogoutPrompt",
-                           "org.kde.LogoutPrompt", "promptLogout", timeout=5)
-        self.main.bg(job, then=done)
-
-    def set_eco_check(self, on):
-        self.eco_session.blockSignals(True)
-        self.eco_session.setChecked(on)
-        self.eco_session.blockSignals(False)
 
     # -- key bindings (Extra.SetKeyCombo) -------------------------------------------
     def build_bindings(self):
@@ -440,7 +368,7 @@ class ExtraWindow(QtWidgets.QWidget):
         idx = self.speed.findData(hw.get_aura_speed() or self.cfg.get("aura_speed", "med"))
         self.speed.setCurrentIndex(max(idx, 0))
         running = hw.services_running()
-        self.services_label.setText(f"asusd / supergfxd running:  {len(running)}")
+        self.services_label.setText(f"asusd / cardwired running:  {len(running)}")
         self.services_start.setVisible(len(running) < 2)
         colour = (ECO if len(running) == 2 else STANDARD).name()
         self.services_label.setStyleSheet(f"color: {colour};")

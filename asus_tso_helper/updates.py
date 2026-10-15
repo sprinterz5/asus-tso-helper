@@ -2,7 +2,7 @@
 
 BIOS comes from the same ASUS support API G-Helper uses. ASUS's drivers are Windows-only, so
 "Drivers and Software" lists what matters on Linux instead: kernel, NVIDIA driver, asusctl,
-supergfxctl, firmware (fwupd) and this app. Updates for packages are what the system's own
+Cardwire, firmware (fwupd) and this app. Updates for packages are what the system's own
 repositories offer (PackageKit, the backend of Discover), so a red row is one the user can
 actually install; upstream releases are shown in the tooltip.
 """
@@ -128,21 +128,10 @@ def github_latest(repo):
             "url": data.get("html_url", "")}
 
 
-# asusctl moved from GitLab to the Open Gaming Collective on GitHub (6.5.0+); supergfxctl stayed
-# on GitLab and is deprecated upstream in favour of Cardwire
+# asusctl moved from GitLab to the Open Gaming Collective on GitHub (6.5.0+), next to Cardwire.
+# releases/latest skips pre-releases, so only stable versions are offered.
 UPSTREAM = {"asusctl": lambda: github_latest("OpenGamingCollective/asusctl"),
-            "supergfxctl": lambda: gitlab_latest("supergfxctl")}
-
-
-def gitlab_latest(project):
-    try:
-        data = fetch_json(f"https://gitlab.com/api/v4/projects/asus-linux%2F{project}/releases?per_page=1")
-    except (OSError, ValueError):
-        return None
-    if not data:
-        return None
-    return {"version": data[0].get("tag_name", ""), "date": (data[0].get("released_at") or "")[:10],
-            "url": (data[0].get("_links") or {}).get("self", "")}
+            "cardwire": lambda: github_latest("OpenGamingCollective/cardwire")}
 
 
 def app_latest():
@@ -185,7 +174,7 @@ def fetch_linux(app_version):
         rows.append(from_repo("Graphics", "NVIDIA driver", nvidia.strip(),
                               ["akmod-nvidia", "xorg-x11-drv-nvidia", "nvidia-driver", "nvidia-utils",
                                "nvidia-open", "nvidia-dkms"], family=lambda n: "nvidia" in n))
-    for project, title in (("asusctl", "asusctl (asusd)"), ("supergfxctl", "supergfxctl (supergfxd)")):
+    for project, title in (("asusctl", "asusctl (asusd)"), ("cardwire", "Cardwire (GPU modes)")):
         upstream = UPSTREAM[project]()
         rows.append(from_repo("ASUS", title, package_version(project), [project], upstream,
                               upstream["url"] if upstream else "", family=lambda n, p=project: n.startswith(p)))

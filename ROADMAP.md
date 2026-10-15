@@ -2,7 +2,7 @@
 
 asus-tso-helper aims to look and behave like [G-Helper](https://github.com/seerge/g-helper)
 on Linux. The reference is G-Helper's current `main` branch, not old screenshots.
-Hardware access goes through `asusd` (asusctl) and `supergfxd`. The goal is that a user never
+Hardware access goes through `asusd` (asusctl) and Cardwire (`cardwired`). The goal is that a user never
 has to edit system files by hand: anything that needs root happens behind a single polkit
 prompt the first time the app runs.
 
@@ -17,18 +17,18 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | Custom modes (`+`, rename, remove) | Modes.cs | Base profile + own fan curves + power limits; the base mode is restored exactly afterwards | `modes.py` |
 | Mode remembered per power source | `performance_<ac>` | Stored in config and in asusd (`PlatformProfileOnAc/OnBattery`); custom modes too | `ui.remember_mode`, `ui.on_power_source` |
 | Toast on mode / Aura change by key | ToastForm | KDE OSD (`org.kde.osdService.showText`), tray notification elsewhere | `ui.toast`, `backend.osd` |
-| GPU Eco / Standard / Ultimate / Optimized | GPUModeControl | supergfxd; pending logout shown with a dashed button, cancel by picking the current mode | `ui.on_gpu`, `ui.switch_gpu` |
+| GPU Eco / Standard / Ultimate / Optimized | GPUModeControl | Eco / Standard: Cardwire (D-Bus `Mode`), at once, no logout. Ultimate: firmware MUX (`gpu_mux_mode`) through asusd, reboot; pending shown with a dashed button, cancel by picking the current mode | `ui.on_gpu`, `ui.switch_gpu`, `backend.set_gpu_mode` |
 | Screen 60 Hz / max / Auto, Overdrive | ScreenControl | kscreen-doctor, asus-armoury `panel_overdrive` | `ui.on_screen` |
 | Keyboard: effect, colour, speed, brightness | Aura | asusctl aura | `ui.apply_aura` |
 | Battery charge limit, one-time 100% charge | BatteryControl | asusd charge limit | `ui.on_limit`, `ui.on_full_charge` |
 | Battery health, charge / discharge watts | — | sysfs power_supply | `backend.battery_status` |
 | CPU / GPU temperature, fan RPM | Sensors | hwmon, nvidia-smi only when the dGPU is awake | `backend.sensors` |
 | Tray icon and menu, autostart, single instance | — | QSystemTrayIcon, QLocalServer | `ui.Tray`, `ui.main` |
-| First-run Setup | — | Checks ASUS laptop, asusd, supergfxd, Terra repo (moves off the dead lukenukem COPR), tuned-ppd → power-profiles-daemon (asusctl issue #724), key rule, Python modules, swayidle, lsof, NVIDIA driver (info only), KDE (info). Fixes everything in one pkexec script for dnf / pacman / apt / zypper, output shown live. Opens at start when something required or recommended is missing; also Extra → Setup | `setup.py` |
-| BIOS and Driver Updates window | Updates.cs | BIOS from the same ASUS API (EZ Flash rows only); instead of Windows drivers: kernel, NVIDIA driver, asusctl, supergfxctl (PackageKit = what Discover can install, upstream in the tooltip), fwupd firmware, this app (GitHub releases). "Install Updates" downloads only the red rows (each with all its packages: every kernel-* or every NVIDIA package, never split) through PackageKit and installs them on restart (offline update, as Discover; online fallback where offline updates are missing). No password on Fedora: PackageKit allows system updates for the active user | `updates.py` |
+| First-run Setup | — | Checks ASUS laptop, asusd, Cardwire (installs it, replacing switcheroo-control; moves supergfxd back to Hybrid and disables it), Terra repo (moves off the dead lukenukem COPR), tuned-ppd → power-profiles-daemon (asusctl issue #724), key rule, Python modules, swayidle, NVIDIA driver (info only), KDE (info). Fixes everything in one pkexec script for dnf / pacman / apt / zypper, output shown live. Opens at start when something required or recommended is missing; also Extra → Setup | `setup.py` |
+| BIOS and Driver Updates window | Updates.cs | BIOS from the same ASUS API (EZ Flash rows only); instead of Windows drivers: kernel, NVIDIA driver, asusctl, Cardwire (PackageKit = what Discover can install, upstream in the tooltip), fwupd firmware, this app (GitHub releases). "Install Updates" downloads only the red rows (each with all its packages: every kernel-* or every NVIDIA package, never split) through PackageKit and installs them on restart (offline update, as Discover; online fallback where offline updates are missing). No password on Fedora: PackageKit allows system updates for the active user | `updates.py` |
 | New app version notice | AutoUpdateCheck | GitHub latest release at start and daily: red "Download Update" version label, tray notification | `ui.check_app_update` |
 | Icons | Icons8 | Lucide (ISC, `assets/icons/LICENSE`); app and tray icon: white S on a circle in the GPU mode colour (`tools/make_icons.py`) | `widgets.icon` |
-| Banner when asusd / supergfxd are not running | — | Click to start them (polkit) | `ui.show_services` |
+| Banner when asusd / cardwired are not running | — | Click to start them (polkit), or Setup when not installed | `ui.show_services` |
 
 ### Fans + Power
 | Feature | Here | Code |
@@ -49,8 +49,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | Backlight: brightness, animation speed, Awake / Boot/Shutdown / Sleep | asusctl aura power |
 | Backlight timeout on AC / battery | swayidle (installed through polkit) |
 | Always on top, disable Overdrive, USB-C charger in Optimized | — |
-| Eco without logout (opt-in) | supergfxd `no_logind` + KWin limited to the panel's GPU (`KWIN_DRM_DEVICES`, plasma-workspace env script) **and** to Mesa's EGL (`__EGL_VENDOR_LIBRARY_FILENAMES` in a `plasma-kwin_wayland.service` drop-in). The first attempt without the EGL part let KWin keep `/dev/nvidia0`; supergfxd `kill -9`-ed KWin and hung unloading the driver (reboot). With both, root `lsof` showed only `nvidia-powerd` (stopped by supergfxd). The switch is refused unless KWin started after both files existed (`backend.kwin_igpu_only`). Ports wired to the dGPU (HDMI, DisplayPort here) stop working. |
-| Stop apps using the GPU when switching to Eco | Asks first unless the checkbox is set; does nothing if the desktop itself holds the dGPU |
+| Stop apps using the GPU when switching to Eco | Cardwire blocks only new users, so running ones would keep the dGPU awake: asks first unless the checkbox is set. The desktop keeps it open too, but that does not wake it |
 | Boot sound, memory assigned to GPU | Shown only where the firmware has them (asus-armoury `boot_sound`, `apu_mem`) |
 
 ## Planned
@@ -59,8 +58,8 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | # | Feature | How | Notes |
 |---|---|---|---|
 | 1 | **Donations** | GitHub Sponsors with Open Source Collective as fiscal host (Stripe and PayPal receiving are unavailable in Kazakhstan); apply once the repo is public, then set `DONATE_URL` and `.github/FUNDING.yml` | — |
-| 2 | **Cardwire backend** | asus-linux deprecated supergfxd; its successor [Cardwire](https://opengamingcollective.github.io/cardwire/) (Terra, experimental) blocks the dGPU with eBPF/LSM instead of unloading drivers, so modes switch without logout or driver unload. Add it as a second GPU backend once it is stable; keep supergfxd meanwhile | — |
-| 3 | **Release** | GitHub repo, GPL-3.0, README, credits (seerge/G-Helper, Icons8), RPM/COPR requiring `asusctl`, `supergfxctl`, `python3-pyside6`, `python3-evdev`, `swayidle`; first-run setup in one polkit prompt | — |
+| 2 | **Smart mode** (Cardwire) | dGPU blocked for everything except allowed apps (Steam games, "Launch using Discrete Graphics Card" in KDE) | Stable in Cardwire 0.12; would be a fifth GPU button or an Eco option |
+| 3 | **Release** | GitHub repo, GPL-3.0, README, credits (seerge/G-Helper, Icons8), RPM/COPR requiring `asusctl`, `cardwire`, `python3-pyside6`, `python3-evdev`, `swayidle`; first-run setup in one polkit prompt | — |
 
 ### Priority 2: useful, needs root
 | # | Feature | How | Notes |
@@ -99,7 +98,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 - Aura power on TUF (`power-tuf`): the shutdown flag cannot be turned back on once off.
 - GPU: the laptop panel is on the AMD iGPU (`card1-eDP-1`); HDMI and one DisplayPort
   (probably USB-C) are on the NVIDIA card. KWin opens every card with ports, and Xwayland gets
-  them too, so supergfxd waits for a logout before Eco. An open file does not wake the dGPU
+  them too, so supergfxd waited for a logout before Eco. An open file does not wake the dGPU
   (it stays `suspended`); apps that use it (e.g. Firefox's video decoder) do.
 - dGPU sleep: it suspends ~5 s after its last use. Polling `nvidia-smi` every 2 s kept it awake
   for good (the app was its own culprit). The temperature is now read every 12 s and only while
@@ -110,6 +109,11 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
   for root and `acpi_call` would need signing; Fedora builds without `ec_sys`. The real fix would
   be an asus-wmi hwmon patch upstream (the id is defined in the kernel as
   `ASUS_WMI_DEVID_DGPU_POWER_STATE`), and on some models it returns -65536 anyway.
-- supergfxd: Hybrid → Integrated always reports "Logout required"; with `no_logind: true` it
-  then switches in the background (kills what holds `/dev/nvidia0` with `kill -9`, unloads the
-  driver, removes the device).
+- GPU switching history: up to 0.2.1 (tag `v0.2.1-supergfxd`, branch `supergfxd`) the app used
+  supergfxd. Hybrid → Integrated always needed a logout; with `no_logind: true` it killed what
+  held `/dev/nvidia0` (`kill -9`), unloaded the driver and removed the device, and once hung in
+  the kernel when KWin held the dGPU through NVIDIA's EGL. The workaround (KWin limited to the
+  panel's GPU and Mesa's EGL) cost the HDMI port. asus-linux retired supergfxd for Cardwire,
+  which only blocks new opens with eBPF/LSM (needs `bpf` in `/sys/kernel/security/lsm`; Fedora
+  has it, also with Secure Boot) and leaves the driver loaded. Only stable Cardwire releases are
+  used (Terra; 0.12.3 as of 2026-10).

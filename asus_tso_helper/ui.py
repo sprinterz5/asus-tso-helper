@@ -1,4 +1,4 @@
-"""Main window and tray icon: the G-Helper (seerge/g-helper) layout, on top of asusd / supergfxd.
+"""Main window and tray icon: the G-Helper (seerge/g-helper) layout, on top of asusd / Cardwire.
 
 Panel order, sizes, texts and colours follow app/Settings.Designer.cs and app/Settings.cs.
 """
@@ -25,7 +25,7 @@ from . import widgets as w
 from .widgets import ECO, STANDARD, TURBO, CUSTOM, GRAY
 
 APP = "asus-tso-helper"
-VERSION = "0.2.1"
+VERSION = "0.3.0"
 HOMEPAGE = "https://github.com/sprinterz5/asus-tso-helper"
 DONATE_URL = ""  # PayPal donation link; Credits shows a support link once it is set
 CONFIG_DIR = os.path.join(os.path.expanduser("~/.config"), APP)
@@ -45,6 +45,7 @@ GPU_MODES = [("Integrated", "Eco", "leaf", ECO, "iGPU only",
 # nvidia-smi keeps the dGPU awake for a few seconds (it sleeps ~5 s after the last use); asking
 # every 2 s kept it awake forever. G-Helper falls back to the EC's GPU sensor, which Linux lacks.
 DGPU_TEMP_EVERY = 12
+SERVICE_TOOLS = {"asusd": "asusctl", "cardwired": "cardwire"}
 OPTIMIZED_TIP = "Switch to Eco on battery and to Standard when plugged in"
 AURA = [("static", "Static"), ("breathe", "Breathe"), ("rainbow-cycle", "Rainbow"), ("pulse", "Strobe")]
 
@@ -179,7 +180,7 @@ class MainWindow(QtWidgets.QWidget):
         root.setContentsMargins(5, 5, 6, 6)  # Padding(11)
         root.setSpacing(0)
 
-        # shown only when asusd / supergfxd are not running: one clear line instead of errors
+        # shown only when asusd / cardwired are not running: one clear line instead of errors
         self.banner = QtWidgets.QLabel("")
         self.banner.setObjectName("banner")
         self.banner.setWordWrap(True)
@@ -492,9 +493,9 @@ class MainWindow(QtWidgets.QWidget):
             return
         QtWidgets.QMessageBox.warning(self, APP, f"{what} failed:\n{out}")
 
-    # -- asusd / supergfxd status ------------------------------------------------------
+    # -- asusd / cardwired status ------------------------------------------------------
     def show_services(self, running):
-        missing = [n for n in ("asusd", "supergfxd") if n not in running]
+        missing = [n for n in ("asusd", "cardwired") if n not in running]
         if missing == self.services_missing:
             return
         self.services_missing = missing
@@ -513,6 +514,9 @@ class MainWindow(QtWidgets.QWidget):
     def start_services(self):
         missing = list(self.services_missing)
         if not missing:
+            return
+        if not all(shutil.which(SERVICE_TOOLS[n]) for n in missing if n in SERVICE_TOOLS):
+            self.on_setup()  # not installed: Setup installs them
             return
         self.banner.setText("Starting " + " and ".join(missing) + " ...")
         self.bg(hotkeys.run_as_root, "systemctl start " + " ".join(missing),
@@ -616,8 +620,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def refresh_slow(self):
         self.bg(hw.services_running, then=self.show_services)
-        self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_status(), hw.gpu_pending_mode()),
-                then=self.show_gpu)
+        self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power()), then=self.show_gpu)
         self.bg(lambda: (hw.screen_info(), hw.get_overdrive()), then=self.show_screen)
 
     def update_charge_label(self):
@@ -663,18 +666,24 @@ class MainWindow(QtWidgets.QWidget):
             self.tray.setToolTip(tip)
 
     def show_gpu(self, data):
-        mode, pending, status, pend_mode = data
-        self.dgpu_awake = (status or "").lower() == "active"
+        mode, pending, power = data
+        self.dgpu_awake = power == "active"
         if self.gpu_busy:
             return
         self.gpu_current = mode
-        # waiting for logout / reboot: supergfxd's pending mode, or what we asked for
-        target = pend_mode if pend_mode and pend_mode != mode else None
-        if not target and pending and self.gpu_target and self.gpu_target != mode:
-            target = self.gpu_target
-        if not pending and not target:
+        after = self.cfg.get("gpu_after_reboot")
+        if after and mode and mode != "AsusMuxDgpu" and not pending:
+            # back from Ultimate: the MUX is on the iGPU again, now the mode that was picked
+            self.cfg.pop("gpu_after_reboot")
+            save_config(self.cfg)
+            if after != mode:
+                self.switch_gpu(after)
+                return
+        # waiting for the reboot of a MUX change: what we asked for
+        target = self.gpu_target if pending and self.gpu_target != mode else None
+        if not target:
             self.gpu_target = None
-        self.show_gpu_pending(mode, target, pending)
+        self.show_gpu_pending(mode, target, pending if target else None)
         auto = bool(self.cfg.get("gpu_auto"))
         for key, b in self.gpu_buttons.items():
             b.set_activated(key == mode and not (auto and key in ("Integrated", "Hybrid")))
@@ -694,7 +703,7 @@ class MainWindow(QtWidgets.QWidget):
         for key, b in self.gpu_buttons.items():
             b.set_pending(key == target)
         if target or pending:
-            action = (pending or "Logout required to complete mode change").rstrip(".")
+            action = (pending or "Reboot required to complete mode change").rstrip(".")
             reboot = "reboot" in action.lower() or "restart" in action.lower()
             self.gpu_logout_reboot = reboot
             self.gpu_hover.set_rest(f"{action}. Click here to {'restart' if reboot else 'log out'} now, "
@@ -843,9 +852,12 @@ class MainWindow(QtWidgets.QWidget):
         if self.cfg.pop("gpu_auto", None):
             save_config(self.cfg)
         if mode == self.gpu_current:
-            if self.gpu_target:  # picking the current mode cancels a pending switch
+            if self.gpu_target:  # picking the current mode cancels a pending MUX change
                 self.gpu_target = None
-                self.switch_gpu(mode, cancel=True)
+                self.cfg.pop("gpu_after_reboot", None)
+                save_config(self.cfg)
+                self.bg(hw.set_armoury, "gpu_mux_mode", 0 if mode == "AsusMuxDgpu" else 1,
+                        then=lambda r: (self.report(r, "GPU mode"), self.refresh_slow()))
             else:
                 self.refresh_slow()
             return
@@ -856,6 +868,9 @@ class MainWindow(QtWidgets.QWidget):
             if answer != QtWidgets.QMessageBox.Yes:
                 self.refresh_slow()
                 return
+            if self.gpu_current == "AsusMuxDgpu":
+                self.cfg["gpu_after_reboot"] = mode  # Cardwire's mode, set after the reboot
+                save_config(self.cfg)
             self.switch_gpu(mode, reboot=True)
         else:
             close = []
@@ -866,31 +881,11 @@ class MainWindow(QtWidgets.QWidget):
                     return
             self.switch_gpu(mode, close=close)
 
-    def eco_in_session(self):
-        """Extra 'Eco without logout' is on: supergfxd switches without waiting for a logout."""
-        return hw.gfx_no_logind()
-
     def close_gpu_apps(self):
-        """Programs holding the NVIDIA GPU before Eco -> pids to close, or None to cancel.
-        Without 'Eco without logout' the desktop itself (KWin/Xwayland) holds it, so a logout is
-        needed whatever is closed; then nothing is closed. With it, everything is closed
-        (supergfxd would kill -9 the rest), unless 'Stop all apps' is off and the user cancels."""
-        apps, desktop = hw.gpu_apps()
-        in_session = self.eco_in_session()
-        if in_session and not hw.kwin_igpu_only():
-            # supergfxd would not wait: it would kill KWin and could hang unloading the driver
-            QtWidgets.QMessageBox.information(
-                self, "Eco without logout",
-                "Log out once to finish turning on \"Eco without logout\", then switch to Eco.")
-            return None
-        if desktop:
-            if in_session:
-                QtWidgets.QMessageBox.information(
-                    self, "Eco without logout",
-                    "The desktop still uses the dGPU. Log out once to finish turning on "
-                    "\"Eco without logout\", then switch to Eco.")
-                return None
-            return []
+        """Programs using the NVIDIA GPU before Eco -> pids to close, or None to cancel.
+        Cardwire only blocks new users: running ones keep the dGPU awake until they quit. The
+        desktop (KWin) keeps it open too, but that does not wake it, so it is left alone."""
+        apps, _desktop = hw.gpu_apps()
         if not apps:
             return []
         pids = [pid for pid, _ in apps]
@@ -899,13 +894,9 @@ class MainWindow(QtWidgets.QWidget):
         names = sorted({name for _, name in apps})
         box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Question, "Switch to Eco",
                                     "These programs use the NVIDIA GPU:\n\n  " + "\n  ".join(names), parent=self)
-        if in_session:
-            box.setInformativeText("Their GPU processes will be closed.")
-            close = box.addButton("Close and switch", QtWidgets.QMessageBox.AcceptRole)
-        else:
-            box.setInformativeText("Close their GPU processes to switch without a logout?")
-            close = box.addButton("Close and switch", QtWidgets.QMessageBox.AcceptRole)
-            box.addButton("Switch anyway", QtWidgets.QMessageBox.DestructiveRole)
+        box.setInformativeText("They keep it powered on until they are closed. Close them now?")
+        close = box.addButton("Close and switch", QtWidgets.QMessageBox.AcceptRole)
+        box.addButton("Switch anyway", QtWidgets.QMessageBox.DestructiveRole)
         cancel = box.addButton(QtWidgets.QMessageBox.Cancel)
         box.setDefaultButton(close)
         box.exec()
@@ -917,7 +908,6 @@ class MainWindow(QtWidgets.QWidget):
     def terminate(pids, wait=3.0):
         """SIGTERM, then give the programs a moment to let go of the GPU."""
         import signal
-        import time
         for pid in pids:
             try:
                 os.kill(pid, signal.SIGTERM)
@@ -928,37 +918,25 @@ class MainWindow(QtWidgets.QWidget):
             pids = [pid for pid in pids if os.path.exists(f"/proc/{pid}")]
             time.sleep(0.1)
 
-    def switch_gpu(self, mode, reboot=False, cancel=False, close=()):
+    def switch_gpu(self, mode, reboot=False, close=()):
         self.gpu_busy = True
-        in_session = not reboot and not cancel and self.eco_in_session()
-        if cancel:
-            # supergfxd finishes its current wait-for-logout first (two 30 s rounds)
-            self.gpu_head.title.setText("GPU Mode: Cancelling ...")
-            self.gpu_hover.set_rest("supergfxd is still waiting for the logout; cancelling can take up to a minute.")
-        else:
-            self.gpu_head.title.setText("GPU Mode: Changing ...")
-            self.gpu_hover.set_rest("Waiting for the GPU to be released; this can take up to a minute.")
+        self.gpu_head.title.setText("GPU Mode: Changing ...")
         for b in self.gpu_buttons.values():
             b.setEnabled(False)
 
         def done(result):
             ok, out = result
-            if ok and in_session:
-                # supergfxd still answers "Logout required" but switches in the background
-                self.wait_gpu(mode)
-                return
             self.gpu_busy = False
             for b in self.gpu_buttons.values():
                 b.setEnabled(True)
             if not ok:
+                self.cfg.pop("gpu_after_reboot", None)
+                save_config(self.cfg)
                 self.report(result, "GPU mode")
-            elif reboot:
-                subprocess.Popen(["systemctl", "reboot"])
-            elif out:
-                last = out.splitlines()[-1]
-                if any(w in last.lower() for w in ("logout", "log out", "reboot", "restart")):
-                    self.gpu_target = mode
-                    self.gpu_hover.set_rest(last)
+            elif "reboot" in (out or "").lower():
+                self.gpu_target = mode
+                if reboot:
+                    subprocess.Popen(["systemctl", "reboot"])
             self.refresh_slow()
 
         def job():
@@ -966,21 +944,6 @@ class MainWindow(QtWidgets.QWidget):
                 self.terminate(list(close))
             return hw.set_gpu_mode(mode)
         self.bg(job, then=done)
-
-    def wait_gpu(self, mode, tries=45):
-        """Eco without logout: poll until supergfxd reports the new mode."""
-        def check(current):
-            if current == mode or tries <= 0:
-                self.gpu_busy = False
-                for b in self.gpu_buttons.values():
-                    b.setEnabled(True)
-                if current != mode:
-                    self.report((False, "supergfxd did not finish the switch.\n"
-                                        "Details: journalctl -u supergfxd"), "GPU mode")
-                self.refresh_slow()
-            else:
-                QtCore.QTimer.singleShot(1000, lambda: self.wait_gpu(mode, tries - 1))
-        self.bg(hw.gpu_mode, then=check)
 
     def on_optimized(self):
         self.cfg["gpu_auto"] = True
@@ -991,14 +954,11 @@ class MainWindow(QtWidgets.QWidget):
     def apply_gpu_auto(self):
         plugged = hw.ac_online() and not (self.cfg.get("optimized_usbc") and hw.usb_c_charger())
         want = "Hybrid" if plugged else "Integrated"
-        if self.gpu_current in (None, want, "AsusMuxDgpu") or self.gpu_busy:
+        if self.gpu_current not in ("Integrated", "Hybrid") or self.gpu_current == want or self.gpu_busy:
             return
         close = []
-        if want == "Integrated" and self.eco_in_session():
-            apps, desktop = hw.gpu_apps()
-            if not hw.kwin_igpu_only() or desktop or (apps and not self.cfg.get("kill_gpu_apps")):
-                return  # not ready yet, or programs use the dGPU and may not be closed unasked
-            close = [pid for pid, _ in apps]
+        if want == "Integrated" and self.cfg.get("kill_gpu_apps"):
+            close = [pid for pid, _ in hw.gpu_apps()[0]]
         self.switch_gpu(want, close=close)
 
     def on_screen(self, key):
@@ -1065,6 +1025,10 @@ class MainWindow(QtWidgets.QWidget):
     def first_run_setup(self):
         """Opens Setup at start when something required or recommended is missing (until 'Later'
         for this version)."""
+        if hw.remove_kwin_limits() and self.tray:
+            self.tray.showMessage(APP, "Log out once to get the HDMI / USB-C video ports back: "
+                                  "\"Eco without logout\" is not needed with Cardwire.",
+                                  QtWidgets.QSystemTrayIcon.Information, 8000)
         if self.cfg.get("setup_later") == VERSION:
             return
         self.bg(setup.checks, then=lambda rows: setup.needs_setup(rows) and self.on_setup())
@@ -1345,8 +1309,8 @@ class MainWindow(QtWidgets.QWidget):
             self, "Credits",
             f"<b>{APP}</b> {VERSION}<br><br>"
             "A Linux port of <a href='https://github.com/seerge/g-helper'>G-Helper</a> by seerge (GPL-3.0): "
-            "its interface, layout and behaviour are his work.<br>"
-            "Hardware control goes through <a href='https://asus-linux.org'>asusctl / supergfxctl</a>.<br>"
+            "its interface, layout and behaviour are seerge's work.<br>"
+            "Hardware control goes through <a href='https://asus-linux.org'>asusctl</a> and <a href='https://opengamingcollective.github.io/cardwire/'>Cardwire</a>.<br>"
             "Icons: <a href='https://lucide.dev'>Lucide</a> (ISC).<br><br>"
             + (f"Like it? <a href='{DONATE_URL}'>Support the project</a>, "
                "and support <a href='https://github.com/seerge/g-helper'>G-Helper</a> too.<br><br>"

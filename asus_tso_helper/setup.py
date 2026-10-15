@@ -1,7 +1,7 @@
 """First-run setup: checks what the app needs and fixes it behind one password prompt.
 
 G-Helper has no such window because Windows ships ASUS's services; on Linux they come from the
-asus-linux project (asusd, supergfxd) and a few small tools. The fix is one root shell script
+asus-linux project (asusd), Cardwire (GPU modes) and a few small tools. The fix is one root shell script
 for the distribution's package manager, run through pkexec, with its output shown live.
 """
 import importlib.util
@@ -20,6 +20,7 @@ OLD_COPR = "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:lukenukem:asus-linu
 TERRA_INSTALL = ("dnf install -y --nogpgcheck --repofrompath "
                  "'terra,https://repos.fyralabs.com/terra$releasever' terra-release")
 NVIDIA_HOWTO = "https://rpmfusion.org/Howto/NVIDIA"
+CARDWIRE_DOCS = "https://opengamingcollective.github.io/cardwire/getting-started/installation.html"
 ASUS_LINUX = "https://asus-linux.org/guides/"
 
 
@@ -50,7 +51,7 @@ def is_asus():
 
 
 def has_dgpu():
-    """A discrete GPU supergfxd can manage (NVIDIA, or the dGPU switch in the firmware)."""
+    """A discrete GPU for Eco / Standard (NVIDIA, or the dGPU switch in the firmware)."""
     return hw.dgpu_power() is not None or os.path.exists(f"{hw.ARMOURY}/dgpu_disable")
 
 
@@ -79,14 +80,20 @@ def checks():
         terra = any(n.startswith("terra") for n in os.listdir("/etc/yum.repos.d"))
         rows.append(check("terra", "ASUS Linux repository (Terra)", terra, RECOMMENDED,
                           "The old COPR repository no longer gets updates; moves to Terra."
-                          if os.path.exists(OLD_COPR) else "Where asusctl and supergfxctl come from on Fedora."))
+                          if os.path.exists(OLD_COPR) else "Where asusctl and Cardwire come from on Fedora."))
     asusd = shutil.which("asusctl") is not None and service_active("asusd")
     rows.append(check("asusd", "asusd (modes, fans, keyboard, battery)", asusd, REQUIRED,
                       "" if asusd else "asusctl is missing or its service is not running."))
     if has_dgpu():
-        gfx = shutil.which("supergfxctl") is not None and service_active("supergfxd")
-        rows.append(check("supergfxd", "supergfxd (GPU modes)", gfx, RECOMMENDED,
-                          "" if gfx else "Needed for Eco / Standard / Ultimate."))
+        bpf = "bpf" in (hw._read("/sys/kernel/security/lsm") or "").split(",")
+        old = service_active("supergfxd")
+        gfx = shutil.which("cardwire") is not None and service_active("cardwired") and not old
+        detail = ("" if gfx else
+                  "Replaces supergfxd, which asus-linux retired: Eco and Standard switch at once, "
+                  "without a logout." if old else "Needed for Eco / Standard.")
+        if not bpf:
+            detail = "The kernel runs without BPF LSM, which Cardwire needs: see " + CARDWIRE_DOCS
+        rows.append(check("cardwire", "Cardwire (GPU modes)", gfx, RECOMMENDED, detail, fix=bpf))
     if family == "fedora" and rpm_installed("tuned-ppd"):
         rows.append(check("ppd", "Power profiles", False, RECOMMENDED,
                           "tuned-ppd fights asusd over the platform profile (asusctl issue #724); "
@@ -99,9 +106,6 @@ def checks():
                           "For key bindings and keyboard shortcuts."))
     rows.append(check("swayidle", "swayidle", shutil.which("swayidle") is not None, OPTIONAL,
                       "For the keyboard backlight timeout."))
-    if has_dgpu():
-        rows.append(check("lsof", "lsof", shutil.which("lsof") is not None, OPTIONAL,
-                          "supergfxd uses it to close programs on the dGPU before Eco."))
     nvidia_gpu = any(hw._read(v) == "0x10de" for v in __import__("glob").glob("/sys/bus/pci/devices/*/vendor"))
     if nvidia_gpu:
         driver = os.path.exists("/sys/module/nvidia") or hw.run("modinfo", "nvidia", timeout=5)[0]
@@ -131,41 +135,53 @@ def script(rows):
         if "terra" in todo:
             lines += ["step 'Terra repository'", f"{TERRA_INSTALL} || exit 1"]
             if os.path.exists(OLD_COPR):
-                lines += [f"rm -f '{OLD_COPR}'", "dnf upgrade -y asusctl supergfxctl"]
+                lines += [f"rm -f '{OLD_COPR}'", "dnf upgrade -y asusctl"]
         if "asusd" in todo:
             pkgs.append("asusctl")
-        if "supergfxd" in todo:
-            pkgs.append("supergfxctl")
         if "python" in todo:
             pkgs += ["python3-evdev", "python3-dbus"]
-        pkgs += [p for p in ("swayidle", "lsof") if p in todo]
+        pkgs += [p for p in ("swayidle",) if p in todo]
         if pkgs:
             lines += [f"step 'Installing {' '.join(pkgs)}'", f"dnf install -y {' '.join(pkgs)}"]
+        if "cardwire" in todo:
+            # Cardwire also answers switcheroo-control's D-Bus API, so it replaces that package
+            lines += ["step 'Cardwire'", "dnf install -y --allowerasing cardwire || exit 1"]
         if "ppd" in todo:
             lines += ["step 'power-profiles-daemon'",
                       "dnf swap -y tuned-ppd power-profiles-daemon --allowerasing && "
                       "systemctl enable --now power-profiles-daemon"]
     elif family == "arch":
         pkgs = (["asusctl"] if "asusd" in todo else []) + (["python-evdev", "python-dbus"] if "python" in todo else [])
-        pkgs += [p for p in ("swayidle", "lsof") if p in todo]
+        pkgs += [p for p in ("swayidle",) if p in todo]
         if pkgs:
             lines += [f"step 'Installing {' '.join(pkgs)}'", f"pacman -S --needed --noconfirm {' '.join(pkgs)}"]
-        if "supergfxd" in todo:
-            lines += ["step 'supergfxctl'", "pacman -Si supergfxctl >/dev/null 2>&1 && "
-                      "pacman -S --needed --noconfirm supergfxctl || echo 'supergfxctl is not in your repositories: "
-                      f"see {ASUS_LINUX}'"]
+        if "cardwire" in todo:
+            lines += ["step 'Cardwire'", "command -v cardwire >/dev/null || { pacman -Si cardwire >/dev/null 2>&1 && "
+                      "pacman -S --needed --noconfirm cardwire; } || echo 'Cardwire is in the AUR "
+                      f"(yay -S cardwire): see {CARDWIRE_DOCS}'"]
     elif family in ("debian", "suse"):
         tool = "apt-get install -y" if family == "debian" else "zypper --non-interactive install"
-        pkgs = (["python3-evdev", "python3-dbus"] if "python" in todo else []) + [p for p in ("swayidle", "lsof") if p in todo]
+        pkgs = (["python3-evdev", "python3-dbus"] if "python" in todo else []) + [p for p in ("swayidle",) if p in todo]
         if pkgs:
             lines += [f"step 'Installing {' '.join(pkgs)}'", f"{tool} {' '.join(pkgs)}"]
-        if todo & {"asusd", "supergfxd"}:
-            lines += [f"echo 'asusctl / supergfxctl are not packaged here: see {ASUS_LINUX}'"]
+        if "asusd" in todo:
+            lines += [f"echo 'asusctl is not packaged here: see {ASUS_LINUX}'"]
+        if "cardwire" in todo and family == "debian":
+            lines += [f"command -v cardwire >/dev/null || echo 'Cardwire: install the .deb from its releases page, see {CARDWIRE_DOCS}'"]
     # restart, not just start: after an upgrade the old daemon would keep running
     if todo & {"asusd", "terra"}:
         lines += ["step 'asusd'", "systemctl enable asusd 2>/dev/null; systemctl restart asusd"]
-    if "supergfxd" in todo or ("terra" in todo and shutil.which("supergfxctl")):
-        lines += ["step 'supergfxd'", "systemctl enable supergfxd 2>/dev/null; systemctl restart supergfxd"]
+    if "cardwire" in todo:
+        # supergfxd and Cardwire must not both manage the dGPU. supergfxd goes back to Hybrid
+        # first, so the dGPU is on the bus with its driver, then it is turned off for good.
+        lines += ["step 'cardwired'",
+                  "if systemctl is-active --quiet supergfxd; then",
+                  "  supergfxctl -g | grep -q Hybrid || supergfxctl -m Hybrid",
+                  "  sed -i -E 's/(\"no_logind\": *)true/\\1false/' /etc/supergfxd.conf 2>/dev/null",
+                  "  systemctl disable --now supergfxd",
+                  "  echo 1 > /sys/bus/pci/rescan",
+                  "fi",
+                  "command -v cardwire >/dev/null && { systemctl enable cardwired; systemctl restart cardwired; }"]
     if "keys" in todo:
         src = hotkeys.RULE_SRC
         lines += ["step 'Laptop keys'", f"install -m 644 '{src}' {rule} && udevadm control --reload && "
