@@ -22,6 +22,10 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | Keyboard: effect, colour, speed, brightness | Aura | asusctl aura | `ui.apply_aura` |
 | Battery charge limit, one-time 100% charge | BatteryControl | asusd charge limit | `ui.on_limit`, `ui.on_full_charge` |
 | Battery health, charge / discharge watts | — | sysfs power_supply | `backend.battery_status` |
+| Time left / to full, battery cycles | (ROG Control Center) | UPower's estimate next to the charge; cycles on hover when the battery reports them | `backend.battery_time`, `backend.battery_cycles` |
+| One-time charge to 100% through asusd | BatteryControl | asusd `OneShotFullCharge`: the limit comes back on unplug even without the app, at 100% the app restores it | `ui.on_full_charge` |
+| Keyboard brightness per power source | `keyboard_brightness_ac` | Remembered by polling (Fn+F2/F3 are firmware keys), restored on plug / unplug; idle-off is not remembered | `ui.remember_kbd_level` |
+| Main window opens at the tray icon | (window above the taskbar) | Wayland apps cannot place windows: a KWin script loaded over D-Bus at start puts it at the cursor, inside the work area | `assets/kwin/place.js`, `backend.kwin_place_window` |
 | CPU / GPU temperature, fan RPM | Sensors | hwmon, nvidia-smi only when the dGPU is awake | `backend.sensors` |
 | Tray icon and menu, autostart, single instance | — | QSystemTrayIcon, QLocalServer | `ui.Tray`, `ui.main` |
 | First-run Setup | — | Checks ASUS laptop, asusd, Cardwire (installs it, replacing switcheroo-control; moves supergfxd back to Hybrid and disables it), Terra repo (moves off the dead lukenukem COPR), tuned-ppd → power-profiles-daemon (asusctl issue #724), key rule, Python modules, swayidle, NVIDIA driver (info only), KDE (info). Fixes everything in one pkexec script for dnf / pacman / apt / zypper, output shown live. Opens at start when something required or recommended is missing; also Extra → Setup | `setup.py` |
@@ -35,6 +39,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 |---|---|---|
 | CPU / GPU fan curves (8 points), per-fan on/off | asusd fan curves, raw PWM | `fans.py`, `backend.set_fan_curve` |
 | Calibrate (real RPM per PWM, per mode) | Charts show real speed, not raw PWM | `FansWindow.calibrate` |
+| Power Mode per mode (Advanced tab) | G-Helper's Windows power slider = the CPU's EPP: Best Battery … Best Performance, kept per profile by asusd (`Profile*Epp`). asusd applies any EPP the moment it is set, so the current profile's value is written again afterwards | `backend.set_profile_epp` |
 | Factory defaults (saved snapshot / G-Helper defaults) | Snapshot taken on first start | `snapshot_factory_curves` |
 | Clamp to grid | As in G-Helper | `FanChart` |
 | SPL / sPPT / fPPT | asus-armoury, kept per mode and per power source by asusd | `SliderPanel`, `constrain_ppt` |
@@ -45,35 +50,41 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 |---|---|
 | Key bindings: FN+F4 and any other laptop key (Add → Laptop key) | evdev grab of "Asus WMI hotkeys" + uinput passthrough; udev rule installed through polkit |
 | Key bindings: any keyboard shortcut (Add → Keyboard shortcut) | xdg GlobalShortcuts portal |
-| Actions: volume, backlight, screenshot, play, Aura, mode cycle, screen off, lock, brightness, touchpad, mic, calculator, open app, custom command | `hotkeys.ACTIONS`, `ui.on_hotkey` |
+| Actions: volume, backlight, screenshot, play, Aura, mode cycle, one action per mode (custom too, G-Helper's `keybind_profile_N`), screen off, lock, brightness, touchpad, mic, calculator, open app, custom command | `hotkeys.ACTIONS`, `ui.on_hotkey` |
 | Backlight: brightness, animation speed, Awake / Boot/Shutdown / Sleep | asusctl aura power |
 | Backlight timeout on AC / battery | swayidle (installed through polkit) |
 | Always on top, disable Overdrive, USB-C charger in Optimized | — |
 | Stop apps using the GPU when switching to Eco | Cardwire blocks only new users, so running ones would keep the dGPU awake: asks first unless the checkbox is set. The desktop keeps it open too, but that does not wake it |
 | Boot sound, memory assigned to GPU | Shown only where the firmware has them (asus-armoury `boot_sound`, `apu_mem`) |
+| Stop NVIDIA power daemon on battery | asusd `DisableNvidiaPowerdOnBattery` (idea from ROG Control Center) |
+| Diagnostics report | One text file for bug reports: versions, packages, services, asusd / firmware attributes, Cardwire, fan curves, settings (own commands hidden), asusd / cardwired journal; host name and home path redacted, no serial numbers (`diagnostics.py`) |
 
 ## Planned
 
-### Priority 1: important and easy
-| # | Feature | How | Notes |
+### Priority 1: needed before a public release
+| # | Feature | How | Seen in |
 |---|---|---|---|
-| 1 | **Donations** | GitHub Sponsors with Open Source Collective as fiscal host (Stripe and PayPal receiving are unavailable in Kazakhstan); apply once the repo is public, then set `DONATE_URL` and `.github/FUNDING.yml` | — |
-| 2 | **Smart mode** (Cardwire) | dGPU blocked for everything except allowed apps (Steam games, "Launch using Discrete Graphics Card" in KDE) | Stable in Cardwire 0.12; would be a fifth GPU button or an Eco option |
-| 3 | **Release** | GitHub repo, GPL-3.0, README, credits (seerge/G-Helper, Icons8), RPM/COPR requiring `asusctl`, `cardwire`, `python3-pyside6`, `python3-evdev`, `swayidle`; first-run setup in one polkit prompt | — |
+| 1 | **AppImage + in-app update** with changelog | GitHub Actions on tag; the app already finds new releases, it has to download and swap itself | g-helper-linux |
+| 2 | **Translations** (Russian first) | Qt translations, strings follow G-Helper's resources | G-Helper, g-helper-linux (38 languages) |
+| 3 | **Refresh rate outside KDE** | `gdctl` (GNOME 48+), `wlr-randr` (Sway, Hyprland) next to kscreen-doctor | g-helper-linux |
+| 4 | **Donations** | GitHub Sponsors with Open Source Collective as fiscal host (Stripe and PayPal receiving are unavailable in Kazakhstan); apply once the repo is public, then set `DONATE_URL` and `.github/FUNDING.yml` | G-Helper |
+| 5 | **Release** | GitHub repo, RPM/COPR requiring `asusctl`, `cardwire`, `python3-pyside6`, `python3-evdev`, `swayidle` | — |
 
-### Priority 2: useful, needs root
+### Priority 2: useful
 | # | Feature | How | Notes |
 |---|---|---|---|
-| 3 | CPU Boost on/off per mode (Fans → Advanced) | `/sys/devices/system/cpu/cpufreq/boost` | Grant write access in the first-run setup (udev/tmpfiles), no prompt per change |
-| 4 | GPU clock limits | `nvidia-smi -lgc / -lmc` (root) | Core/memory **offsets** depend on the driver version (NVML `SetClockOffsets`) |
-| 5 | Translations (Russian first) | Qt translations, strings follow G-Helper's resources | Lots of text, little risk |
+| 6 | **Smart mode** (Cardwire) | dGPU blocked for everything except allowed apps (Steam games, "Launch using Discrete Graphics Card" in KDE) | Stable in Cardwire 0.12; a fifth GPU button or an Eco option |
+| 7 | Hint when an app keeps the dGPU awake | Cardwire's `Gpu.Lsof`, e.g. Firefox's video decoder; tray tooltip "dGPU: active (firefox)" | ROG Control Center, g-helper-linux |
+| 8 | CPU Boost on/off per mode (Fans → Advanced) | `/sys/devices/system/cpu/cpufreq/boost` | Grant write access in Setup (udev/tmpfiles), no prompt per change |
+| 9 | GPU clock limits | `nvidia-smi -lgc / -lmc` (root) | Core/memory **offsets** depend on the driver version (NVML `SetClockOffsets`) |
+| 10 | MangoHud toggle as a key action | G-Helper's new FPS overlay; on Linux MangoHud does it | Only a key action, no overlay of our own |
 
 ### Priority 3: possible, but risky or of little use
 | # | Feature | Why it is low |
 |---|---|---|
-| 6 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
-| 8 | Hibernate after N minutes of sleep | Needs a swap partition; Fedora ships zram only |
-| 9 | Hint when an app keeps the dGPU awake | e.g. Firefox's video decoder (RDD process) holds `/dev/nvidia0` and drains the battery |
+| 11 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
+| 12 | Hibernate after N minutes of sleep | Needs a swap partition; Fedora ships zram only |
+| 13 | Temperatures in the tray icon, °F | Small; not in G-Helper |
 
 ## Not possible or not applicable
 
@@ -82,12 +93,14 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | AniMe Matrix, Slash lighting, XG Mobile, ROG Ally controls, mid fan, miniLED / OLED modes, NumberPad, status LED, M4 / Armoury key | Not present on TUF A15 (FA507NV); can be added for models that have them |
 | ELMB, keystone sound | No firmware attribute on this model |
 | ASUS / NVIDIA services, Modern Standby networking, clamshell, ACPI DEVS test | Windows-only concepts, or KDE already does it |
+| Audio effects (noise suppression, EQ), Logitech / ASUS mice (g-helper-linux) | Not about the laptop; separate tools do it better (EasyEffects, Piper / libratbag) |
+| Software Fn-lock remapper, deep sleep selector (g-helper-linux) | TUF A15 has a firmware Fn-lock; Rembrandt supports s2idle only |
 | Windows power plan per mode | asusd already links the CPU energy preference (EPP) to the profile |
 | PCIe ASPM toggle | Would need root on every change for little gain |
 
 ## Hardware notes (FA507NV, Fedora 44, KDE Wayland)
 
-- `asusd` 6.3.8. PPT limits are stored per profile **and** per power source. asusd's
+- `asusd` 6.5.0 (Terra). PPT limits are stored per profile **and** per power source. asusd's
   `PlatformProfile` numbers: Balanced = 0, Performance = 1, Quiet = 2.
 - Firmware power ranges: battery 15 / 35 / 35–65 W, AC up to 80 W; Dynamic Boost 5–25 W on AC
   (locked to 0 on battery); GPU temperature target 75–87 °C.

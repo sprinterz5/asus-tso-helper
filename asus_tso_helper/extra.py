@@ -3,10 +3,14 @@
 Only the parts that have a Linux backend on this hardware are shown, the same way G-Helper
 hides sections a model does not support. Backlight timeout and hibernation are not ported yet.
 """
+import os
+
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from . import backend as hw
+from . import diagnostics
 from . import hotkeys
+from . import modes
 from . import widgets as w
 from .widgets import ECO, STANDARD
 
@@ -187,6 +191,16 @@ class ExtraWindow(QtWidgets.QWidget):
                                      "quit. Without this option you are asked first.")
             self.gpu_apps.toggled.connect(lambda on: (self.cfg.__setitem__("kill_gpu_apps", on), self.main.save()))
             ol.addWidget(self.gpu_apps)
+        powerd = hw.platform_get("DisableNvidiaPowerdOnBattery")
+        if powerd is not None and os.path.exists("/usr/lib/systemd/system/nvidia-powerd.service"):
+            self.powerd = check("Stop NVIDIA power daemon on battery", 2)
+            self.powerd.setChecked(powerd)
+            self.powerd.setToolTip("nvidia-powerd runs Dynamic Boost, which the firmware turns off on "
+                                   "battery anyway; stopping it there saves a little power (asusd)")
+            self.powerd.toggled.connect(lambda on: self.main.bg(
+                hw.platform_set, "DisableNvidiaPowerdOnBattery", "b", on,
+                then=lambda r: self.main.report(r, "NVIDIA power daemon")))
+            ol.addWidget(self.powerd)
         # rows that exist only when this laptop's firmware has the setting (asus-armoury)
         if hw.armoury_range("boot_sound") is not None or hw._read(f"{hw.ARMOURY}/boot_sound/current_value"):
             self.boot_sound = check("Boot Sound", 2)
@@ -239,13 +253,54 @@ class ExtraWindow(QtWidgets.QWidget):
         self.setup_button.setToolTip("Check and install what this laptop needs (one password)")
         self.setup_button.clicked.connect(self.main.on_setup)
         sl.addWidget(self.setup_button)
+        self.diag_button = w.RButton("Diagnostics", secondary=True, radius=2)
+        self.diag_button.setFixedSize(90, 26)
+        self.diag_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.diag_button.setToolTip("Save a report for a bug report: versions, settings and logs, "
+                                    "without serial numbers or the computer's name")
+        self.diag_button.clicked.connect(self.on_diagnostics)
+        sl.addWidget(self.diag_button)
         root.addWidget(services)
 
         self.root = root
         self.build_bindings()
         self.refresh()
 
+    def on_diagnostics(self):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save diagnostics", os.path.expanduser("~/asus-tso-helper-report.txt"), "Text (*.txt)")
+        if not path:
+            return
+        self.diag_button.setEnabled(False)
+
+        def job():
+            try:
+                text = diagnostics.report(self.cfg, self.main.version)
+                with open(path, "w") as f:
+                    f.write(text)
+            except Exception as err:  # noqa: BLE001 - shown to the user instead of a dead button
+                return False, str(err)
+            return True, ""
+
+        def done(result):
+            self.diag_button.setEnabled(True)
+            if result[0]:
+                QtWidgets.QMessageBox.information(self, "Diagnostics", f"Saved to {path}.\n\n"
+                                                  "Have a look before sharing it, then attach it to the issue.")
+            else:
+                self.main.report(result, "Diagnostics")
+        self.main.bg(job, then=done)
+
     # -- key bindings (Extra.SetKeyCombo) -------------------------------------------
+    def actions(self):
+        """hotkeys.ACTIONS plus one action per mode (G-Helper's keybind_profile_N)."""
+        out = []
+        for action in hotkeys.ACTIONS:
+            out.append(action)
+            if action[0] == "performance":
+                out += [(f"mode:{key}", f"{label} Mode") for key, label, _ in modes.all_modes(self.cfg)]
+        return out
+
     def build_bindings(self):
         """FN+F4 always, G-Helper's other rows once seen, then the keys the user added."""
         while self.bind_grid.count():
@@ -279,7 +334,7 @@ class ExtraWindow(QtWidgets.QWidget):
         for key, label, removable in rows:
             name = QtWidgets.QLabel(label + ":")
             combo = w.RComboBox()
-            for action, text in hotkeys.ACTIONS:
+            for action, text in self.actions():
                 combo.addItem(text, action)
             stored = self.cfg.get(f"key_{key}")
             current = "" if stored == "none" else (stored or hotkeys.DEFAULT_ACTION.get(key, ""))

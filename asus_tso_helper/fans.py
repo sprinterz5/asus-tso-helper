@@ -561,6 +561,19 @@ class FansWindow(QtWidgets.QWidget):
         self.adv_tab = QtWidgets.QWidget()
         vl = QtWidgets.QVBoxLayout(self.adv_tab)
         vl.setContentsMargins(0, 0, 0, 9)
+        # G-Helper's "Power Mode" (Windows power slider) per mode = the CPU's EPP, kept by asusd
+        vl.addWidget(Title("cpu", "Power Mode"))
+        row = QtWidgets.QHBoxLayout()
+        row.setContentsMargins(7, 4, 7, 2)
+        self.epp = w.RComboBox()
+        for value, label in hw.EPP_CHOICES:
+            self.epp.addItem(label, value)
+        self.epp.setToolTip("How eagerly the CPU clocks up in this mode (energy performance preference).\n"
+                            "Custom modes share it with their base mode.")
+        self.epp.activated.connect(self.on_epp)
+        row.addWidget(self.epp, 1)
+        vl.addLayout(row)
+        vl.addSpacing(8)
         vl.addWidget(Title("cpu", "Undervolting"))
         note = QtWidgets.QLabel("CPU / iGPU undervolting (Curve Optimizer) needs the ryzen_smu kernel "
                                 "module and is not available in asus-tso-helper yet.\n\n"
@@ -693,6 +706,17 @@ class FansWindow(QtWidgets.QWidget):
         self.fill_modes()
         self.main.bg(lambda: hw.get_fan_curves(self.profile), then=self.show_curves)
         self.main.bg(self.read_power, then=self.show_power)
+        self.main.bg(hw.get_profile_epp, self.profile, then=self.show_epp)
+
+    def show_epp(self, value):
+        self.epp.setEnabled(value is not None)
+        index = self.epp.findData(value)  # 0 = "default": the kernel's choice, none selected
+        self.epp.setCurrentIndex(index)
+
+    def on_epp(self, _index):
+        if self.profile in hw.EPP_PROP:
+            self.main.bg(hw.set_profile_epp, self.profile, self.epp.currentData(),
+                         then=lambda r: self.main.report(r, "Power mode"))
 
     def read_power(self):
         enabled = bool(hw.get_ppt_enabled())

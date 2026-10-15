@@ -156,6 +156,8 @@ class MainWindow(QtWidgets.QWidget):
         self.bridge.done.connect(lambda cb, result: cb(result))
         self.last_ac = None
         self.dgpu_awake = False
+        self.bat_time = None
+        self.kbd_restoring = 0.0
         self.dgpu_temp = None
         self.dgpu_temp_at = 0.0
         self.gpu_current = None
@@ -556,6 +558,8 @@ class MainWindow(QtWidgets.QWidget):
                 self.on_power_source(ac)
             if not first and not ac and self.cfg.get("full_once"):
                 self.end_full_charge()
+            if not first:
+                self.restore_kbd_level(ac)
 
         profile = hw.get_profile()
         if not self.mode_busy and profile != self.last_profile:
@@ -584,10 +588,12 @@ class MainWindow(QtWidgets.QWidget):
         # dGPU temperature only while the window is open and the dGPU is awake anyway; asleep it
         # shows the last one (G-Helper 0.248, issue #5290), in Eco none
         now = time.monotonic()
-        power = hw.dgpu_power()
-        if power is None:
+        eco = self.gpu_current == "Integrated"
+        power = hw.dgpu_power(blocked=eco)
+        if power is None or eco:
             self.dgpu_temp = None
-        query = power == "active" and self.isVisible() and now - self.dgpu_temp_at >= DGPU_TEMP_EVERY
+        query = (power == "active" and not eco and self.isVisible()
+                 and now - self.dgpu_temp_at >= DGPU_TEMP_EVERY)
         if query:
             self.dgpu_temp_at = now
         self.bg(hw.sensors, query, then=self.show_sensors)
@@ -609,18 +615,24 @@ class MainWindow(QtWidgets.QWidget):
             elif self.bat["status"] == "Discharging":
                 text = f"Discharging: {self.bat['watts']:.1f}W"
         self.bat_head.info.setText(text)
+        if text:  # charging or discharging: UPower's estimate, off the GUI thread
+            self.bg(hw.battery_time, then=lambda t: (setattr(self, "bat_time", t), self.update_charge_label()))
+        else:
+            self.bat_time = None
         self.update_charge_label()
 
         level = hw.get_kbd_level()
         self.backlight_label.setText("")
         self.kbd_level = level
+        self.remember_kbd_level(ac, level)
 
         if self.bat and self.cfg.get("full_once") and self.bat["percent"] == 100:
             self.end_full_charge()
 
     def refresh_slow(self):
         self.bg(hw.services_running, then=self.show_services)
-        self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power()), then=self.show_gpu)
+        eco = self.gpu_current == "Integrated"
+        self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power(blocked=eco)), then=self.show_gpu)
         self.bg(lambda: (hw.screen_info(), hw.get_overdrive()), then=self.show_screen)
 
     def update_charge_label(self):
@@ -628,10 +640,16 @@ class MainWindow(QtWidgets.QWidget):
             text = "One time charge to 100%"
         elif self.battery_hover:
             health = hw.battery_health()
+            cycles = hw.battery_cycles()  # many ASUS batteries report 0
             text = f"Battery Health: {health:.1f}%" if health else ""
+            if text and cycles:
+                text += f", {cycles} cycles"
         else:
             bat = getattr(self, "bat", None)
             text = f"Charge: {bat['percent']}%" if bat and bat["percent"] is not None else ""
+            if text and self.bat_time:
+                kind, secs = self.bat_time
+                text += f" ({secs // 3600}h {secs % 3600 // 60:02d}m {kind})"
         self.charge_label.setText(text)
 
     def show_limit(self, value):
@@ -797,6 +815,23 @@ class MainWindow(QtWidgets.QWidget):
         if base in hw.ASUSD_PROFILE:
             self.bg(hw.set_source_profile, base, ac)
 
+    # keyboard_brightness / keyboard_brightness_ac in G-Helper: each power source keeps its own
+    # backlight level. Fn+F2/F3 are handled by the firmware, so a change is seen by polling.
+    def remember_kbd_level(self, ac, level):
+        if (level is None or time.monotonic() < self.kbd_restoring
+                or os.path.exists(hw.KBD_IDLE_FILE)):  # off because of the idle timeout
+            return
+        key = "kbd_ac" if ac else "kbd_bat"
+        if self.cfg.get(key) != level:
+            self.cfg[key] = level
+            save_config(self.cfg)
+
+    def restore_kbd_level(self, ac):
+        level = self.cfg.get("kbd_ac" if ac else "kbd_bat")
+        if level and level != self.kbd_level and not os.path.exists(hw.KBD_IDLE_FILE):
+            self.kbd_restoring = time.monotonic() + 3  # until the new level reads back
+            self.bg(hw.set_kbd_level, level)
+
     def on_power_source(self, ac):
         """Charger plugged or unplugged: the mode last used on this source comes back
         (custom modes too); with none remembered asusd's own choice stays."""
@@ -840,6 +875,8 @@ class MainWindow(QtWidgets.QWidget):
             self.tray.build_menu()
         if self.fans and self.fans.isVisible():
             self.fans.load()
+        if self.extra is not None:
+            self.extra.build_bindings()  # "<mode> Mode" key actions
 
     def on_fans(self):
         if self.fans is None:
@@ -1236,6 +1273,9 @@ class MainWindow(QtWidgets.QWidget):
             current = self.cfg.get("active_mode") or hw.get_profile()
             nxt = order[(order.index(current) + 1) % len(order)] if current in order else "balanced"
             self.on_profile(nxt, notify=True)
+        elif action.startswith("mode:"):
+            if action[5:] in [m[0] for m in modes.all_modes(self.cfg)]:
+                self.on_profile(action[5:], notify=True)
         elif action == "screen":
             spawn("kscreen-doctor", "--dpms", "off")
         elif action == "lock":
@@ -1295,7 +1335,8 @@ class MainWindow(QtWidgets.QWidget):
         self.slider.set_value(100)
         self.show_limit(100)
         self.full_button.set_activated(True)
-        self.bg(hw.set_charge_limit, 100, then=lambda r: self.report(r, "Charge limit"))
+        # asusd puts the limit back on unplug even without this app; at 100% the app does it
+        self.bg(hw.one_shot_full_charge, then=lambda r: self.report(r, "Charge limit"))
 
     def end_full_charge(self):
         limit = self.cfg.pop("limit_before_full", 80)
@@ -1415,6 +1456,7 @@ def main():
     app.setApplicationName(APP)
     app.setDesktopFileName(APP)
     app.setQuitOnLastWindowClosed(False)
+    hw.kwin_place_window()
     app.setStyle("Fusion")
     font = app.font()
     font.setPointSizeF(9)  # Segoe UI 9pt

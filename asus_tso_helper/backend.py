@@ -8,6 +8,7 @@ import glob
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 
@@ -80,6 +81,21 @@ def osd(icon, text):
     ok, _ = run("gdbus", "call", "--session", "-d", "org.kde.plasmashell", "-o", "/org/kde/osdService",
                 "-m", "org.kde.osdService.showText", icon, text, timeout=3)
     return ok
+
+
+KWIN_PLACE = os.path.join(os.path.dirname(__file__), "assets", "kwin", "place.js")
+
+
+def kwin_place_window():
+    """Loads (again, so an updated script counts) the KWin script that opens the main window
+    next to the cursor, i.e. the tray icon. KDE only; elsewhere the desktop places it."""
+    def call(*args):
+        return run("busctl", "--user", "call", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting",
+                   *args, timeout=5)
+    name = "asus-tso-helper-place"
+    call("unloadScript", "s", name)
+    ok, out = call("loadScript", "ss", KWIN_PLACE, name)
+    return call("start") if ok else (ok, out)
 
 
 # --- GPU (Cardwire, MUX through asusd) ----------------------------------------------
@@ -263,9 +279,49 @@ def _bus_get(path, iface, prop):
     kind, _, value = out.partition(" ")
     if kind == "b":
         return value == "true"
-    if kind == "i":
+    if kind in ("i", "u", "y"):
         return int(value)
     return value
+
+
+def platform_get(prop):
+    """asusd's xyz.ljones.Platform property (charge limit, EPP per profile, ...)."""
+    return _bus_get("/xyz/ljones", "xyz.ljones.Platform", prop)
+
+
+def platform_set(prop, kind, value):
+    if kind == "b":
+        value = "true" if value else "false"
+    return _bus("set-property", "xyz.ljones.Asusd", "/xyz/ljones", "xyz.ljones.Platform", prop, kind, str(value))
+
+
+# energy_performance_preference per profile, kept and applied by asusd. G-Helper's "Power Mode"
+# (the Windows power slider) is the same idea; its four steps match the four EPP values.
+EPP_CHOICES = [(4, "Best Battery"), (3, "Better Battery"), (2, "Better Performance"), (1, "Best Performance")]
+EPP_PROP = {"quiet": "ProfileQuietEpp", "balanced": "ProfileBalancedEpp", "performance": "ProfilePerformanceEpp"}
+
+
+def get_profile_epp(profile):
+    prop = EPP_PROP.get(profile)
+    return platform_get(prop) if prop else None
+
+
+def set_profile_epp(profile, value):
+    """asusd applies an EPP the moment any profile's value is set, so the current profile's
+    value is set again afterwards to keep the right one active."""
+    ok, out = platform_set("PlatformProfileLinkedEpp", "b", True)
+    if ok:
+        ok, out = platform_set(EPP_PROP[profile], "u", value)
+    current = get_profile()
+    if ok and current != profile and current in EPP_PROP:
+        platform_set(EPP_PROP[current], "u", get_profile_epp(current))
+    return ok, out
+
+
+def one_shot_full_charge():
+    """asusd charges to 100% once and puts the limit back itself when the charger is unplugged,
+    even if this app is not running."""
+    return _bus("call", "xyz.ljones.Asusd", "/xyz/ljones", "xyz.ljones.Platform", "OneShotFullCharge")
 
 
 def get_ppt_enabled():
@@ -430,6 +486,23 @@ def battery_status():
     }
 
 
+def battery_time():
+    """UPower's smoothed estimate -> ("left" | "to full", seconds), or None."""
+    path = "/org/freedesktop/UPower/devices/DisplayDevice"
+    for prop, kind in (("TimeToEmpty", "left"), ("TimeToFull", "to full")):
+        ok, out = run("busctl", "--system", "get-property", "org.freedesktop.UPower", path,
+                      "org.freedesktop.UPower.Device", prop, timeout=3)
+        m = re.match(r"x (\d+)", out) if ok else None
+        if m and int(m.group(1)) > 0:
+            return kind, int(m.group(1))
+    return None
+
+
+def battery_cycles():
+    bat = _battery()
+    return _read_int(os.path.join(bat, "cycle_count")) if bat else None
+
+
 # --- keyboard --------------------------------------------------------------------
 
 def get_kbd_level():
@@ -539,14 +612,44 @@ def model_name():
 
 # --- sensors ---------------------------------------------------------------------
 
-def dgpu_power():
-    """NVIDIA GPU runtime PM state from sysfs, without waking it: "active", "suspended",
-    or None when it is not on the bus (Eco)."""
-    for vendor in glob.glob("/sys/bus/pci/devices/*/vendor"):
-        dev = os.path.dirname(vendor)
-        if _read(vendor) == "0x10de" and (_read(os.path.join(dev, "class")) or "").startswith("0x03"):
-            return _read(os.path.join(dev, "power", "runtime_status"))
-    return None
+def dgpu_power(blocked=False):
+    """NVIDIA GPU runtime PM state, without waking it: "active", "suspended", or None.
+    While Cardwire blocks the dGPU (Eco) it also hides its sysfs files from programs, so then
+    (blocked=True, or the files are gone) the state comes from Cardwire."""
+    if not blocked:
+        for vendor in glob.glob("/sys/bus/pci/devices/*/vendor"):
+            dev = os.path.dirname(vendor)
+            if _read(vendor) == "0x10de" and (_read(os.path.join(dev, "class")) or "").startswith("0x03"):
+                state = _read(os.path.join(dev, "power", "runtime_status"))
+                if state:
+                    return state
+    path = cardwire_dgpu()
+    if not path:
+        return None
+    ok, out = run("busctl", "--system", "call", CARDWIRE, path, CARDWIRE + ".Gpu", "PowerState", timeout=5)
+    m = re.search(r'"(D\w+)', out) if ok else None
+    return None if not m else "active" if m.group(1) == "D0" else "suspended"
+
+
+_cardwire_dgpu = []
+
+
+def cardwire_dgpu():
+    """Cardwire's D-Bus object of the offload dGPU (discrete, not the default GPU), or None."""
+    if not _cardwire_dgpu:
+        for i in range(8):
+            path = f"{CARDWIRE_PATH}/Gpu/{i}"
+            ok, out = run("busctl", "--system", "call", CARDWIRE, path, CARDWIRE + ".Gpu", "GetDevice", timeout=5)
+            if not ok:
+                break
+            try:
+                fields = shlex.split(out)  # ssuubbbbssbs name pci render card default discrete ...
+            except ValueError:
+                continue
+            if len(fields) > 6 and fields[5] == "false" and fields[6] == "true":
+                _cardwire_dgpu.append(path)
+                break
+    return _cardwire_dgpu[0] if _cardwire_dgpu else None
 
 
 def sensors(include_dgpu):
