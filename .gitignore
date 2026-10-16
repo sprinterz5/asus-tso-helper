@@ -3,3 +3,6 @@ __pycache__/
 /build/
 /dist/
 *.AppImage
+
+# internal notes, never published
+/notes/
