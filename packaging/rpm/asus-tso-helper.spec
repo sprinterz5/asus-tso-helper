@@ -1,7 +1,7 @@
 Name:           asus-tso-helper
 Version:        0.4.0
 Release:        1%{?dist}
-Summary:        G-Helper for Linux: modes, GPU, fans and battery of ASUS laptops
+Summary:        ASUS laptop control inspired by G-Helper: modes, GPU, fans and battery
 
 # the app is GPL-3.0; its Lucide icons are ISC
 License:        GPL-3.0-only AND ISC
@@ -27,11 +27,12 @@ Recommends:     swayidle
 Recommends:     libkscreen
 
 %description
-A Linux port of G-Helper by seerge, with the same windows and behavior:
+A Linux app inspired by G-Helper by seerge, with the same windows and behavior:
 performance and custom modes, GPU modes (Eco, Standard, Ultimate, Optimized),
 fan curves and power limits, keyboard lighting, battery charge limit, key
 bindings and BIOS / driver updates. Hardware control goes through asusd
-(asusctl) and Cardwire. Not affiliated with ASUS.
+(asusctl) and Cardwire. Unofficial: not affiliated with the G-Helper project
+or with ASUS.
 
 %prep
 %autosetup

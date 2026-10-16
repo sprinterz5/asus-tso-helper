@@ -1494,8 +1494,8 @@ class MainWindow(QtWidgets.QWidget):
         QtWidgets.QMessageBox.about(
             self, tr("Credits"),
             f"<b>{APP}</b> {VERSION}<br><br>"
-            + tr("A Linux port of {ghelper} by seerge (GPL-3.0): its interface, layout and behaviour are "
-                 "seerge's work.", ghelper="<a href='https://github.com/seerge/g-helper'>G-Helper</a>") + "<br>"
+            + tr("Inspired by {ghelper} by seerge (GPL-3.0): its interface, layout and behaviour are "
+                 "seerge's work. An unofficial project, not affiliated with G-Helper.", ghelper="<a href='https://github.com/seerge/g-helper'>G-Helper</a>") + "<br>"
             + tr("Hardware control goes through {tools}.",
                  tools="<a href='https://asus-linux.org'>asusctl</a> &amp; "
                        "<a href='https://opengamingcollective.github.io/cardwire/'>Cardwire</a>") + "<br>"

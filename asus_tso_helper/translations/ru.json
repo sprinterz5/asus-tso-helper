@@ -262,7 +262,6 @@
  "{time} left": "осталось {time}",
  "{time} to full": "до полной {time}",
  "Hardware control goes through {tools}.": "Управление железом идёт через {tools}.",
- "A Linux port of {ghelper} by seerge (GPL-3.0): its interface, layout and behaviour are seerge's work.": "Порт {ghelper} от seerge для Linux (GPL-3.0): интерфейс, расположение и поведение — работа seerge.",
  "Support the project": "Поддержите проект",
  "Installed: {version}": "Установлено: {version}",
  "Linux kernel": "Ядро Linux",
@@ -332,5 +331,6 @@
  "Light": "Светлая",
  "Auto follows the desktop's light / dark setting": "«Авто» повторяет светлую / тёмную тему системы",
  "Accent colour from the desktop": "Акцентный цвет системы",
- "Replaces the blue of Balanced, Standard, checkboxes and sliders; Silent, Turbo and Eco keep their colours": "Заменяет синий у Balanced, Standard, галочек и ползунков; Silent, Turbo и Eco остаются своими цветами"
+ "Replaces the blue of Balanced, Standard, checkboxes and sliders; Silent, Turbo and Eco keep their colours": "Заменяет синий у Balanced, Standard, галочек и ползунков; Silent, Turbo и Eco остаются своими цветами",
+ "Inspired by {ghelper} by seerge (GPL-3.0): its interface, layout and behaviour are seerge's work. An unofficial project, not affiliated with G-Helper.": "Вдохновлено {ghelper} от seerge (GPL-3.0): интерфейс, расположение и поведение — работа seerge. Неофициальный проект, не связан с G-Helper."
 }

@@ -4,9 +4,8 @@
 </h1>
 
 <p align="center">
-  <b>G-Helper for Linux.</b> One small app for ASUS laptops: power modes, fans, GPU modes,<br>
-  keyboard lighting, battery and the Fn keys, with the windows and behaviour of
-  <a href="https://github.com/seerge/g-helper">G-Helper</a>.
+  <b>Inspired by <a href="https://github.com/seerge/g-helper">G-Helper</a>.</b> One small Linux app for ASUS laptops: power modes, fans,<br>
+  GPU modes, keyboard lighting, battery and the Fn keys, with G-Helper's windows and behaviour.
 </p>
 
 <p align="center">
@@ -34,7 +33,7 @@
 
 ## Why
 
-- **The G-Helper you know.** Same windows, same layout, same colours, same defaults. The
+- **Feels like G-Helper.** Same windows, same layout, same colours, same defaults. The
   interface is [seerge's](https://github.com/seerge) work; this project brings it to Linux.
 - **Lightweight.** A single 50 MB AppImage, or a 250 KB package on the system's Python and Qt. In
   the tray it starts no background processes, only reads a few system files every 2 seconds.
@@ -223,4 +222,4 @@ report from your laptop help the most.
 
 [GPL-3.0](LICENSE), like G-Helper.
 
-Not affiliated with or endorsed by ASUS. ASUS, ROG and TUF are trademarks of ASUSTeK Computer Inc.
+An unofficial project, not affiliated with the G-Helper project. Not affiliated with or endorsed by ASUS. ASUS, ROG and TUF are trademarks of ASUSTeK Computer Inc.
