@@ -75,7 +75,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | # | Feature | How | Notes |
 |---|---|---|---|
 | 6 | **Smart mode** (Cardwire) | dGPU blocked for everything except allowed apps (Steam games, "Launch using Discrete Graphics Card" in KDE) | Stable in Cardwire 0.12; a fifth GPU button or an Eco option |
-| 7 | Hint when an app keeps the dGPU awake | Cardwire's `Gpu.Lsof`, e.g. Firefox's video decoder; tray tooltip "dGPU: active (firefox)" | ROG Control Center, g-helper-linux |
+| 7 | ~~Hint when an app keeps the dGPU awake~~ | **Done in 0.4.0**: tray tooltip "dGPU awake: firefox" from Cardwire's `Gpu.Lsof` | ROG Control Center, g-helper-linux |
 | 8 | CPU Boost on/off per mode (Fans → Advanced) | `/sys/devices/system/cpu/cpufreq/boost` | Grant write access in Setup (udev/tmpfiles), no prompt per change |
 | 9 | GPU clock limits | `nvidia-smi -lgc / -lmc` (root) | Core/memory **offsets** depend on the driver version (NVML `SetClockOffsets`) |
 | 10 | MangoHud toggle as a key action | G-Helper's new FPS overlay; on Linux MangoHud does it | Only a key action, no overlay of our own |

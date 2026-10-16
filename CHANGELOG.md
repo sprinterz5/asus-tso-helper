@@ -13,6 +13,7 @@
 - **RPM** (COPR) and **AUR** packages on the system's Python and Qt.
 - KDE no longer switches the power profile on plug / unplug: it did so before the app and could
   leave Silent on battery instead of the remembered mode.
+- The tray tooltip names the apps keeping the dGPU awake ("dGPU awake: firefox").
 
 ## 0.3.0
 - GPU modes on **Cardwire** instead of supergfxd: Eco and Standard switch at once, without a
