@@ -6,6 +6,6 @@ Comment=G-Helper style control for ASUS laptops: modes, GPU, fans, power limits,
 Exec=@EXEC@
 Icon=@ICON@
 Terminal=false
-Categories=Settings;HardwareSettings;System;
+Categories=Settings;HardwareSettings;
 Keywords=asus;rog;tuf;g-helper;fan;gpu;battery;
 StartupWMClass=asus-tso-helper

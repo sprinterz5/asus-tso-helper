@@ -65,6 +65,15 @@ laptop still needs (asusd, Cardwire) behind one password prompt. New versions in
 app itself: click the red version label. The AppImage runs on distributions with glibc 2.34 or
 newer (Fedora 35+, Ubuntu 22.04+, Debian 12+, Arch).
 
+### Packages
+
+- **Fedora**: COPR `sprinterz5/asus-tso-helper` (coming with the first public release). asusctl and
+  Cardwire come from the Terra repository; the app's Setup adds it.
+- **Arch**: AUR `asus-tso-helper`. Cardwire is in the AUR too.
+
+The packages use the system's Python and Qt (about 250 KB) and ship the key rule, so Setup has
+less to do. Updates come through the package manager.
+
 ### From source
 
 ```bash

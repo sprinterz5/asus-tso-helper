@@ -16,8 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Tag matches the app version
-        run: test "v$(sed -n 's/^VERSION = "\(.*\)"/\1/p' asus_tso_helper/ui.py)" = "$GITHUB_REF_NAME"
+      - name: Tag matches the app, RPM and AUR versions
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          test "$(sed -n 's/^VERSION = "\(.*\)"/\1/p' asus_tso_helper/ui.py)" = "$v"
+          test "$(sed -n 's/^Version: *//p' packaging/rpm/asus-tso-helper.spec)" = "$v"
+          test "$(sed -n 's/^pkgver=//p' packaging/aur/PKGBUILD)" = "$v"
 
       - name: Build
         run: packaging/appimage/build.sh

@@ -100,7 +100,8 @@ def checks():
                           "tuned-ppd fights asusd over the platform profile (asusctl issue #724); "
                           "switches to power-profiles-daemon, as asus-linux recommends."))
     rows.append(check("keys", "Laptop keys (Fn+F4 and others)",
-                      os.path.exists(f"/etc/udev/rules.d/{hotkeys.RULE_NAME}") and hotkeys.find_device() is not None,
+                      any(os.path.exists(f"{d}/{hotkeys.RULE_NAME}") for d in ("/etc/udev/rules.d", "/usr/lib/udev/rules.d"))
+                      and hotkeys.find_device() is not None,  # the packages ship the rule in /usr/lib
                       RECOMMENDED, "Lets the app read the ASUS hotkeys; nothing else from the keyboard."))
     if not all(importlib.util.find_spec(m) for m in ("evdev", "dbus")):
         rows.append(check("python", "Python modules (evdev, dbus)", False, RECOMMENDED,
