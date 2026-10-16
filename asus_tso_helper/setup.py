@@ -105,6 +105,9 @@ def checks():
                       any(os.path.exists(f"{d}/{hotkeys.RULE_NAME}") for d in ("/etc/udev/rules.d", "/usr/lib/udev/rules.d"))
                       and hotkeys.find_device() is not None,  # the packages ship the rule in /usr/lib
                       RECOMMENDED, "Lets the app read the ASUS hotkeys; nothing else from the keyboard."))
+    if hw.cpu_boost() is not None:
+        rows.append(check("boost", "CPU Boost switch", hw.boost_writable(), OPTIONAL,
+                          "Lets the app turn CPU boost on or off per mode (Fans → Advanced)."))
     if not all(importlib.util.find_spec(m) for m in ("evdev", "dbus")):
         rows.append(check("python", "Python modules (evdev, dbus)", False, RECOMMENDED,
                           "For key bindings and keyboard shortcuts."))
@@ -187,6 +190,8 @@ def script(rows):
                   "command -v cardwire >/dev/null && { systemctl enable cardwired; systemctl restart cardwired; }"]
     if "keys" in todo:
         lines += ["step 'Laptop keys'", hotkeys.rule_script().rstrip("\n")]
+    if "boost" in todo:
+        lines += ["step 'CPU Boost switch'", hw.boost_access_script().rstrip("\n")]
     lines += ["echo", "echo '== Done'"]
     return "\n".join(lines) + "\n"
 

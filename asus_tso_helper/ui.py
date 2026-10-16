@@ -576,6 +576,8 @@ class MainWindow(QtWidgets.QWidget):
                 self.remember_mode(profile)
                 self.toast_mode(profile)
             self.last_profile = profile
+        if not self.mode_busy:
+            self.apply_boost(profile)
         custom = modes.active(self.cfg)
         if custom and profile != custom["base"] and not self.mode_busy:
             # profile changed outside (Fn+F5, asusd on charger change): the custom mode ended
@@ -817,6 +819,16 @@ class MainWindow(QtWidgets.QWidget):
         self.report(result, tr("Mode"))
         self.refresh_fast()
         self.modes_changed()
+
+    def apply_boost(self, profile=None):
+        """CPU boost of the current mode (Fans → Advanced): checked on every fast refresh, so a
+        mode change from anywhere (Fn+F5, the charger, a custom mode) carries it along."""
+        if not self.cfg.get("cpu_boost"):
+            return  # never set: the system's own choice stays
+        key = self.cfg.get("active_mode") or profile or hw.get_profile()
+        want = self.cfg["cpu_boost"].get(key, True)
+        if hw.cpu_boost() not in (None, want) and hw.boost_writable():
+            hw.set_cpu_boost(want)
 
     def remember_mode(self, key):
         """Modes.SetCurrent: the mode is kept per power source, like G-Helper's performance_<ac>.

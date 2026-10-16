@@ -575,6 +575,17 @@ class FansWindow(QtWidgets.QWidget):
         row.addWidget(self.epp, 1)
         vl.addLayout(row)
         vl.addSpacing(8)
+        # G-Helper's "CPU Boost" per mode (Enabled / Disabled; its other options are Windows ones)
+        vl.addWidget(Title("cpu", tr("CPU Boost")))
+        row = QtWidgets.QHBoxLayout()
+        row.setContentsMargins(7, 4, 7, 2)
+        self.boost = w.RComboBox()
+        self.boost.addItem(tr("Enabled"), True)
+        self.boost.addItem(tr("Disabled"), False)
+        self.boost.activated.connect(self.on_boost)
+        row.addWidget(self.boost, 1)
+        vl.addLayout(row)
+        vl.addSpacing(8)
         vl.addWidget(Title("cpu", tr("Undervolting")))
         note = QtWidgets.QLabel(tr("CPU / iGPU undervolting (Curve Optimizer) needs the ryzen_smu kernel "
                                 "module and is not available in asus-tso-helper yet.\n\n"
@@ -708,6 +719,30 @@ class FansWindow(QtWidgets.QWidget):
         self.main.bg(lambda: hw.get_fan_curves(self.profile), then=self.show_curves)
         self.main.bg(self.read_power, then=self.show_power)
         self.main.bg(hw.get_profile_epp, self.profile, then=self.show_epp)
+        self.show_boost()
+
+    def show_boost(self):
+        """Off keeps the CPU at its base clock: cooler and quieter, slower in games."""
+        key = self.main.cfg.get("active_mode") or self.profile
+        on = self.main.cfg.get("cpu_boost", {}).get(key, True)
+        self.boost.setCurrentIndex(self.boost.findData(on))
+        writable = hw.boost_writable()
+        self.boost.setEnabled(writable)
+        self.boost.setToolTip(tr("Turbo clocks above the CPU's base clock in this mode. Off runs cooler "
+                                 "and quieter.") if writable else
+                              tr("Not available: run Setup (Extra) to allow it.") if hw.cpu_boost() is not None
+                              else tr("This CPU has no boost switch."))
+
+    def on_boost(self, _index):
+        key = self.main.cfg.get("active_mode") or self.profile
+        on = self.boost.currentData()
+        boost = self.main.cfg.setdefault("cpu_boost", {})
+        if on:
+            boost.pop(key, None)
+        else:
+            boost[key] = False
+        self.main.save()
+        self.main.apply_boost()
 
     def show_epp(self, value):
         self.epp.setEnabled(value is not None)

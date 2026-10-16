@@ -135,6 +135,39 @@ def kwin_place_window():
     return call("start") if ok else (ok, out)
 
 
+# --- CPU boost -------------------------------------------------------------------
+# G-Helper's "CPU Boost" per mode. One global switch in cpufreq (amd-pstate, intel_pstate's
+# no_turbo is the inverse and not covered); root-owned, so Setup lets the user's group write it.
+BOOST = "/sys/devices/system/cpu/cpufreq/boost"
+BOOST_TMPFILES = "/etc/tmpfiles.d/asus-tso-helper.conf"
+
+
+def cpu_boost():
+    """True / False, or None without the switch."""
+    value = _read(BOOST)
+    return None if value is None else value == "1"
+
+
+def boost_writable():
+    return os.access(BOOST, os.W_OK)
+
+
+def set_cpu_boost(on):
+    try:
+        with open(BOOST, "w") as f:
+            f.write("1" if on else "0")
+    except OSError as err:
+        return False, str(err)
+    return True, ""
+
+
+def boost_access_script():
+    """Root lines for Setup: the logged-in user's group may write the switch, now and after boot."""
+    return (f"g=$(id -gn \"${{PKEXEC_UID:-0}}\") && "
+            f"echo \"z {BOOST} 0664 root $g - -\" > {BOOST_TMPFILES} && "
+            f"systemd-tmpfiles --create {BOOST_TMPFILES} || exit 1\n")
+
+
 # --- GPU (Cardwire, MUX through asusd) ----------------------------------------------
 # Cardwire, supergfxd's successor from the same people, never unloads the NVIDIA driver: it
 # blocks new opens of the dGPU with eBPF/LSM, so Eco and Standard switch at once, without a

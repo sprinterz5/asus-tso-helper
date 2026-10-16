@@ -313,5 +313,13 @@
  "Better Performance": "Больше производительности",
  "Best Performance": "Максимум производительности",
  "KDE no longer changes the power mode on plug / unplug: the mode last used on each power source comes back instead.": "KDE больше не меняет режим при подключении / отключении зарядки: вместо этого возвращается режим, последний на этом источнике питания.",
- "dGPU awake: {apps}": "dGPU не спит: {apps}"
+ "dGPU awake: {apps}": "dGPU не спит: {apps}",
+ "CPU Boost": "CPU Boost",
+ "Enabled": "Включён",
+ "Disabled": "Выключен",
+ "Turbo clocks above the CPU's base clock in this mode. Off runs cooler and quieter.": "Частоты выше базовой в этом режиме. Выключенный — холоднее и тише.",
+ "Not available: run Setup (Extra) to allow it.": "Недоступно: разрешите в Setup (Extra).",
+ "This CPU has no boost switch.": "У этого процессора нет переключателя буста.",
+ "CPU Boost switch": "Переключатель CPU Boost",
+ "Lets the app turn CPU boost on or off per mode (Fans → Advanced).": "Чтобы приложение включало и выключало буст процессора по режимам (Fans → Advanced)."
 }
