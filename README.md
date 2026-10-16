@@ -12,7 +12,7 @@
   <a href="https://github.com/sprinterz5/asus-tso-helper/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/sprinterz5/asus-tso-helper?color=3aaeef"></a>
   <a href="https://github.com/sprinterz5/asus-tso-helper/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sprinterz5/asus-tso-helper/total?color=06b48a"></a>
   <a href="https://copr.fedorainfracloud.org/coprs/thesecondone/asus-tso-helper/"><img alt="Fedora COPR" src="https://img.shields.io/badge/Fedora-COPR-51a2da"></a>
-  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/github/license/sprinterz5/asus-tso-helper?color=a8a8a8"></a>
+  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-a8a8a8"></a>
 </p>
 
 <p align="center">
@@ -23,7 +23,8 @@
 </p>
 
 <p align="center">
-  <img src="docs/main.png" width="860" alt="The main window in the dark and the light theme">
+  <img src="docs/main.png" width="860" alt="The main window in the dark and the light theme"><br>
+  <sub>The same window in a dark and a light desktop theme: the app follows yours.</sub>
 </p>
 
 > [!NOTE]
