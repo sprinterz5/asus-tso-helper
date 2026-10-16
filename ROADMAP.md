@@ -80,20 +80,65 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | 9 | GPU clock limits | `nvidia-smi -lgc / -lmc` (root) | Core/memory **offsets** depend on the driver version (NVML `SetClockOffsets`) |
 | 10 | MangoHud toggle as a key action | G-Helper's new FPS overlay; on Linux MangoHud does it | Only a key action, no overlay of our own |
 
-### Priority 3: possible, but risky or of little use
+### Priority 3: other laptops, distributions and desktops
+Everything here is needed by someone, but cannot be tested on the FA507NV this was built on.
+Rule, as in G-Helper: a control appears only when the hardware or the service has it, so nobody
+sees buttons that do nothing. Each item needs a tester with that hardware; Extra → Diagnostics
+gives them a report to attach.
+
+#### Hardware other ASUS laptops have
+| # | Feature | Models | How on Linux | Notes |
+|---|---|---|---|---|
+| 11 | **All Aura effects** | every model with RGB | asusctl `aura effect`: rainbow-wave, stars, rain, highlight, laser, ripple, comet, flash, pulse; asusd lists what the keyboard supports | The combo now offers G-Helper's four; read the model's list from asusd instead |
+| 12 | **Aura zones**: logo, lightbar, lid, rear glow | ROG Strix / Scar / Zephyrus | asusctl `aura power keyboard/logo/lightbar/lid/rear-glow` (awake / boot / sleep / shutdown each) | We only drive `power-tuf` (TUF's single zone); G-Helper shows a column per zone |
+| 13 | **Per-key / multizone RGB**, lightbar effects | Strix, Scar | asusd aura zones; LampArray on 2024+ models | g-helper-linux paints software modes (heatmap, battery) |
+| 14 | **AniMe Matrix** | Zephyrus G14 / G16 (2020-2024) | asusctl `anime` (asusd rog-anime: built-in animations, image, brightness, on sleep / shutdown) | asusctl's `simulators/` has an AniMe simulator to develop against |
+| 15 | **Slash lighting** | Zephyrus G14 / G16 2024+ | asusctl `slash` (modes, brightness, interval, show on battery / sleep) | |
+| 16 | **Third (mid) fan** | Strix Scar, some Zephyrus | asusctl `fan-curve --fan mid` | Fans window has CPU and GPU charts only; add a third when asusd reports it |
+| 17 | **More power limits**: `ppt_apu_sppt`, `ppt_platform_sppt`, `ppt_fppt`, NVIDIA `nv_tgp` / `nv_base_tgp` | newer ROG (Strix Point, 2024+) | asus-armoury attributes through asusd, same as SPL / sPPT / fPPT | Sliders only for attributes that exist |
+| 18 | **MiniLED modes**, panel HD mode, screen auto brightness | Scar, Zephyrus with MiniLED, ProArt | asus-armoury `mini_led_mode`, `panel_hd_mode`, `screen_auto_brightness` | G-Helper: "Toggle MiniLED" key action too |
+| 19 | **XG Mobile** (external GPU dock) | Flow X13 / Z13 / X16 | asus-armoury `egpu_enable` / `egpu_connected`, asusctl `xgmled` | Needs the dock to test; g-helper-linux has hints for hangs |
+| 20 | **Hard Eco** (`dgpu_disable`) | laptops whose dGPU never reaches D3cold (RTX 20 series, some 2020-21 models) | asus-armoury `dgpu_disable`: the firmware cuts the dGPU's power | G-Helper's Eco does exactly this on Windows. Cardwire's Eco relies on runtime power management, which these GPUs lack. Only with the dGPU released, else the driver hangs |
+| 21 | **Intel CPUs**: P/E cores (CPU Cores Configuration), sensors | Intel ROG / TUF / Zenbook | asus-armoury `cores_performance` / `cores_efficiency`; temperature from coretemp (already read) | Intel undervolting is locked on current CPUs |
+| 22 | **AMD dGPU** (RX 6800S, 7600S) | G14 2022-23, Strix G15 AMD Advantage | Cardwire supports it; the GPU temperature comes from the dGPU's own amdgpu hwmon | The app assumes an NVIDIA dGPU in places: `nvidia-smi`, `/dev/nvidia*`, the GPU tab |
+| 23 | **iGPU-only laptops** (Zenbook, Vivobook) | most non-gaming models | no Cardwire needed; GPU panel hidden | Check the main window has no empty GPU row and Setup asks for nothing GPU-related |
+| 24 | **Screenpad** brightness and toggle | Zenbook Pro Duo, Zephyrus Duo | asusctl `backlight` (screenpad) | G-Helper key actions Screenpad up / down |
+| 25 | **NumberPad** on the touchpad | Zenbook, Vivobook | the asus-numberpad-driver project; G-Helper's NumberPad key | Separate driver: show it in Setup as optional |
+| 26 | **Fn-Lock in software**, camera and status LEDs | models without a firmware Fn-Lock key | kernel `asus_wmi` fnlock, LED class devices | On the FA507NV Fn-Lock is Fn+Esc in firmware |
+| 27 | **ROG Ally** (handheld) | Ally, Ally X | asusd's Ally support; G-Helper's Handheld window | A handheld UI of its own; low priority for a laptop app |
+| 28 | **Models without fan curve support** | older TUF (FA506, FX506) | asusd reports no curves; g-helper-linux drives the fans manually (experimental) | Hide the charts with a clear note before trying manual control |
+
+#### Distributions
+| # | Feature | How | Notes |
+|---|---|---|---|
+| 29 | **Cardwire without BPF LSM** | Ubuntu's kernels ship without `bpf` in the LSM list; Setup adds it to the kernel command line (grub / kernelstub) and asks for a reboot | Otherwise the GPU modes need the supergfxd backend |
+| 30 | **supergfxd backend as a fallback** | where Cardwire is missing or cannot run: the code exists on the `supergfxd` branch (tag `v0.2.1-supergfxd`) | Eco there needs a logout, as before |
+| 31 | **Ubuntu / Debian packages for asusctl and Cardwire** | Cardwire ships a .deb on its releases; asusctl has no official Debian package | Setup currently only points to asus-linux.org on Debian / Ubuntu |
+| 32 | **openSUSE** | asusctl / Cardwire repositories for zypper | Setup installs the basics only |
+| 33 | **Immutable systems** (Silverblue, Kinoite, Bazzite, SteamOS) | `rpm-ostree install` instead of dnf, reboot; Bazzite already ships Cardwire | The AppImage itself works there |
+
+#### Desktops
+| # | Feature | How | Notes |
+|---|---|---|---|
+| 34 | **Clamshell mode toggle** | KDE: powerdevil `InhibitLidActionWhenExternalMonitorPresent` (on by default); GNOME: logind already ignores the lid with an external display | On by default on both; a checkbox only makes it visible |
+| 35 | **KDE switching the power profile on plug / unplug** | KDE's powerdevil sets power-profiles-daemon's profile per power source, which can override the app's per-source mode | Check on the FA507NV; if it fights, the app turns KDE's switch off |
+| 36 | **GNOME tray** | vanilla GNOME has no tray: needs the AppIndicator extension | Setup should detect it and say so; without a tray the window just stays open |
+| 37 | **Toasts, logout prompt, window at the tray outside KDE** | GNOME: notifications via the portal; logout via `gnome-session-quit`; window placement is the compositor's choice | KDE-only today |
+| 38 | **Screen off, lock and screenshot key actions outside KDE** | `loginctl lock-session` works everywhere; screen off and screenshot need the desktop's own commands | Today they call KDE tools |
+
+### Priority 4: possible, but risky or of little use
 | # | Feature | Why it is low |
 |---|---|---|
-| 11 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
-| 12 | Hibernate after N minutes of sleep | Needs a swap partition; Fedora ships zram only |
-| 13 | Temperatures in the tray icon, °F | Small; not in G-Helper |
+| 39 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
+| 40 | Hibernate after N minutes of sleep | Needs a swap partition (Fedora ships zram only), and with Secure Boot the kernel's lockdown forbids hibernation |
+| 41 | Temperatures in the tray icon, °F | Small; not in G-Helper |
 
 ## Not possible or not applicable
 
 | G-Helper feature | Reason |
 |---|---|
-| AniMe Matrix, Slash lighting, XG Mobile, ROG Ally controls, mid fan, miniLED / OLED modes, NumberPad, status LED, M4 / Armoury key | Not present on TUF A15 (FA507NV); can be added for models that have them |
 | ELMB, keystone sound | No firmware attribute on this model |
-| ASUS / NVIDIA services, Modern Standby networking, clamshell, ACPI DEVS test | Windows-only concepts, or KDE already does it |
+| ASUS / NVIDIA services, Modern Standby networking, ACPI DEVS test | Windows-only concepts (asusd / cardwired take the services' place) |
 | Audio effects (noise suppression, EQ), Logitech / ASUS mice (g-helper-linux) | Not about the laptop; separate tools do it better (EasyEffects, Piper / libratbag) |
 | Software Fn-lock remapper, deep sleep selector (g-helper-linux) | TUF A15 has a firmware Fn-lock; Rembrandt supports s2idle only |
 | Windows power plan per mode | asusd already links the CPU energy preference (EPP) to the profile |
