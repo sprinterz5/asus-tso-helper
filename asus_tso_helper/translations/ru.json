@@ -323,5 +323,8 @@
  "CPU Boost switch": "Переключатель CPU Boost",
  "Lets the app turn CPU boost on or off per mode (Fans → Advanced).": "Чтобы приложение включало и выключало буст процессора по режимам (Fans → Advanced).",
  "Toggle MangoHud (FPS)": "Показать / скрыть MangoHud (FPS)",
- "MangoHud is not installed": "MangoHud не установлен"
+ "MangoHud is not installed": "MangoHud не установлен",
+ "Keep working with the lid closed on an external display": "Не засыпать с закрытой крышкой при внешнем мониторе",
+ "Clamshell mode: closing the lid does not sleep while a monitor is connected (KDE's power settings, all power sources)": "Режим «закрытой крышки»: при подключённом мониторе ноутбук не засыпает, когда крышку закрывают (настройки питания KDE, все источники)",
+ "Clamshell mode": "Режим закрытой крышки"
 }

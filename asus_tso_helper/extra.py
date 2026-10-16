@@ -204,6 +204,15 @@ class ExtraWindow(QtWidgets.QWidget):
                 hw.platform_set, "DisableNvidiaPowerdOnBattery", "b", on,
                 then=lambda r: self.main.report(r, tr("NVIDIA power daemon"))))
             ol.addWidget(self.powerd)
+        lid = hw.clamshell()
+        if lid is not None:
+            self.clamshell = check(tr("Keep working with the lid closed on an external display"), 2)
+            self.clamshell.setChecked(lid)
+            self.clamshell.setToolTip(tr("Clamshell mode: closing the lid does not sleep while a monitor is "
+                                         "connected (KDE's power settings, all power sources)"))
+            self.clamshell.toggled.connect(lambda on: self.main.bg(
+                hw.set_clamshell, on, then=lambda r: self.main.report(r, tr("Clamshell mode"))))
+            ol.addWidget(self.clamshell)
         # rows that exist only when this laptop's firmware has the setting (asus-armoury)
         if hw.armoury_range("boot_sound") is not None or hw._read(f"{hw.ARMOURY}/boot_sound/current_value"):
             self.boot_sound = check(tr("Boot Sound"), 2)

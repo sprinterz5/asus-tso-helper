@@ -76,9 +76,9 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 |---|---|---|---|
 | 6 | **Smart mode** (Cardwire) | dGPU blocked for everything except allowed apps (Steam games, "Launch using Discrete Graphics Card" in KDE) | Stable in Cardwire 0.12; a fifth GPU button or an Eco option |
 | 7 | ~~Hint when an app keeps the dGPU awake~~ | **Done in 0.4.0**: tray tooltip "dGPU awake: firefox" from Cardwire's `Gpu.Lsof` | ROG Control Center, g-helper-linux |
-| 8 | CPU Boost on/off per mode (Fans → Advanced) | `/sys/devices/system/cpu/cpufreq/boost` | Grant write access in Setup (udev/tmpfiles), no prompt per change |
+| 8 | ~~CPU Boost on/off per mode (Fans → Advanced)~~ | **Done in 0.4.0**: cpufreq `boost`; Setup lets the user's group write it (tmpfiles.d) | Grant write access in Setup (udev/tmpfiles), no prompt per change |
 | 9 | GPU clock limits | `nvidia-smi -lgc / -lmc` (root) | Core/memory **offsets** depend on the driver version (NVML `SetClockOffsets`) |
-| 10 | MangoHud toggle as a key action | G-Helper's new FPS overlay; on Linux MangoHud does it | Only a key action, no overlay of our own |
+| 10 | ~~MangoHud toggle as a key action~~ | **Done in 0.4.0**: `mangohudctl toggle no_display` | Only a key action, no overlay of our own |
 
 ### Priority 3: other laptops, distributions and desktops
 Everything here is needed by someone, but cannot be tested on the FA507NV this was built on.
@@ -132,7 +132,7 @@ protocols are readable in G-Helper's source (GPL-3.0, same as this app); credit 
 #### Desktops
 | # | Feature | How | Notes |
 |---|---|---|---|
-| 38 | **Clamshell mode toggle** | KDE: powerdevil `InhibitLidActionWhenExternalMonitorPresent` (on by default); GNOME: logind already ignores the lid with an external display | On by default on both; a checkbox only makes it visible |
+| 38 | ~~Clamshell mode toggle~~ | **Done in 0.4.0**: Extra checkbox for KDE's `InhibitLidActionWhenExternalMonitorPresent` | On by default on both; a checkbox only makes it visible |
 | 39 | **GNOME tray** | vanilla GNOME has no tray: needs the AppIndicator extension | Setup should detect it and say so; without a tray the window just stays open |
 | 40 | **Toasts, logout prompt, window at the tray outside KDE** | GNOME: notifications via the portal; logout via `gnome-session-quit`; window placement is the compositor's choice | KDE-only today |
 | 41 | **Screen off, lock and screenshot key actions outside KDE** | `loginctl lock-session` works everywhere; screen off and screenshot need the desktop's own commands | Today they call KDE tools |

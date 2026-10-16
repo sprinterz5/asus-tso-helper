@@ -276,9 +276,36 @@ def stop_kde_power_profiles():
         if ok and value:  # unset still means KDE's built-in default, which may switch
             changed = run("kwriteconfig6", *key, "", timeout=5)[0] or changed
     if changed:
-        run("busctl", "--user", "call", "org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement",
-            "org.kde.Solid.PowerManagement", "reparseConfiguration", timeout=5)
+        _powerdevil_reload()
     return changed
+
+
+def _powerdevil_reload():
+    run("busctl", "--user", "call", "org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement",
+        "org.kde.Solid.PowerManagement", "reparseConfiguration", timeout=5)
+
+
+def _clamshell_key(source):
+    return ("--file", "powerdevilrc", "--group", source, "--group", "SuspendAndShutdown",
+            "--key", "InhibitLidActionWhenExternalMonitorPresent")
+
+
+def clamshell():
+    """Clamshell mode: the lid closed with an external display connected keeps the session
+    running (KDE's default; GNOME does it always). True / False on KDE, else None."""
+    if "KDE" not in os.environ.get("XDG_CURRENT_DESKTOP", "").upper() or not shutil.which("kreadconfig6"):
+        return None
+    return all(run("kreadconfig6", *_clamshell_key(source), "--default", "true", timeout=5)[1] == "true"
+               for source in ("AC", "Battery", "LowBattery"))
+
+
+def set_clamshell(on):
+    for source in ("AC", "Battery", "LowBattery"):
+        ok, out = run("kwriteconfig6", *_clamshell_key(source), "--type", "bool", "true" if on else "false", timeout=5)
+        if not ok:
+            return False, out
+    _powerdevil_reload()
+    return True, ""
 
 
 DESKTOP_GPU_USERS = {"kwin_wayland", "kwin_x11", "Xwayland", "Xorg", "plasmashell", "gnome-shell",
