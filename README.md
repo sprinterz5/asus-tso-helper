@@ -6,7 +6,7 @@ Its interface is seerge's work. This project brings it to Linux on top of
 [asusctl](https://asus-linux.org) and [Cardwire](https://opengamingcollective.github.io/cardwire/).
 
 > **Early preview.** Developed and tested on an ASUS TUF Gaming A15 (FA507NV) with Fedora 44 and
-> KDE Plasma 6 (Wayland). Packages for COPR and AUR are on the way; see [ROADMAP.md](ROADMAP.md).
+> KDE Plasma 6 (Wayland). Other ASUS laptops and desktops are planned; see [ROADMAP.md](ROADMAP.md).
 
 <p>
   <img src="docs/main.png" width="300" alt="Main window">
@@ -67,9 +67,19 @@ newer (Fedora 35+, Ubuntu 22.04+, Debian 12+, Arch).
 
 ### Packages
 
-- **Fedora**: COPR `sprinterz5/asus-tso-helper` (coming with the first public release). asusctl and
-  Cardwire come from the Terra repository; the app's Setup adds it.
-- **Arch**: AUR `asus-tso-helper`. Cardwire is in the AUR too.
+- **Fedora** 43, 44, 45 and rawhide: [COPR](https://copr.fedorainfracloud.org/coprs/thesecondone/asus-tso-helper/).
+  asusctl and Cardwire come from the Terra repository; the app's Setup adds it.
+
+  ```bash
+  sudo dnf copr enable thesecondone/asus-tso-helper
+  ```
+
+  ```bash
+  sudo dnf install asus-tso-helper
+  ```
+
+- **Arch**: AUR `asus-tso-helper` (the PKGBUILD is in `packaging/aur`; it goes up once AUR
+  registration reopens). Cardwire is in the AUR too.
 
 The packages use the system's Python and Qt (about 250 KB) and ship the key rule, so Setup has
 less to do. Updates come through the package manager.

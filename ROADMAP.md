@@ -69,7 +69,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | # | Feature | How | Seen in |
 |---|---|---|---|
 | 1 | **Donations** | GitHub Sponsors with Open Source Collective as fiscal host (Stripe and PayPal receiving are unavailable in Kazakhstan); apply once the repo is public, then set `DONATE_URL` and `.github/FUNDING.yml` | G-Helper |
-| 2 | **Release** | GitHub repo; then COPR (from `packaging/rpm`) and AUR (`packaging/aur`, run `updpkgsums` once the tag exists) | — |
+| 2 | **Release** | Done: GitHub (tags build the AppImage release), COPR `thesecondone/asus-tso-helper` (`.copr/Makefile`; `copr-cli build-package asus-tso-helper --name asus-tso-helper` after a tag). Left: AUR, once its registration reopens (`packaging/aur` has the 0.4.0 checksum) | — |
 
 ### Priority 2: useful
 | # | Feature | How | Notes |
