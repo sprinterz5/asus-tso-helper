@@ -1366,6 +1366,11 @@ class MainWindow(QtWidgets.QWidget):
                 self.show()
                 self.raise_()
                 self.activateWindow()
+        elif action == "mangohud":  # G-Helper's FPS overlay; MangoHud draws it inside the game
+            if shutil.which("mangohudctl"):
+                spawn("mangohudctl", "toggle", "no_display")
+            else:
+                self.toast("dialog-information", tr("MangoHud is not installed"))
         elif action == "custom":
             cmd = self.cfg.get(f"key_{key}_cmd", "").strip()
             if cmd:

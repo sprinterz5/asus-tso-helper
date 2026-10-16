@@ -54,6 +54,7 @@ ACTIONS = [
     ("micmute", tr("Mute Mic")),
     ("calculator", tr("Calculator")),
     ("ghelper", tr("Open asus-tso-helper")),
+    ("mangohud", tr("Toggle MangoHud (FPS)")),
     ("custom", tr("Custom")),
 ]
 

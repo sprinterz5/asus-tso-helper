@@ -321,5 +321,7 @@
  "Not available: run Setup (Extra) to allow it.": "Недоступно: разрешите в Setup (Extra).",
  "This CPU has no boost switch.": "У этого процессора нет переключателя буста.",
  "CPU Boost switch": "Переключатель CPU Boost",
- "Lets the app turn CPU boost on or off per mode (Fans → Advanced).": "Чтобы приложение включало и выключало буст процессора по режимам (Fans → Advanced)."
+ "Lets the app turn CPU boost on or off per mode (Fans → Advanced).": "Чтобы приложение включало и выключало буст процессора по режимам (Fans → Advanced).",
+ "Toggle MangoHud (FPS)": "Показать / скрыть MangoHud (FPS)",
+ "MangoHud is not installed": "MangoHud не установлен"
 }
