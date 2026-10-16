@@ -326,5 +326,11 @@
  "MangoHud is not installed": "MangoHud не установлен",
  "Keep working with the lid closed on an external display": "Не засыпать с закрытой крышкой при внешнем мониторе",
  "Clamshell mode: closing the lid does not sleep while a monitor is connected (KDE's power settings, all power sources)": "Режим «закрытой крышки»: при подключённом мониторе ноутбук не засыпает, когда крышку закрывают (настройки питания KDE, все источники)",
- "Clamshell mode": "Режим закрытой крышки"
+ "Clamshell mode": "Режим закрытой крышки",
+ "Theme": "Тема",
+ "Dark": "Тёмная",
+ "Light": "Светлая",
+ "Auto follows the desktop's light / dark setting": "«Авто» повторяет светлую / тёмную тему системы",
+ "Accent colour from the desktop": "Акцентный цвет системы",
+ "Replaces the blue of Balanced, Standard, checkboxes and sliders; Silent, Turbo and Eco keep their colours": "Заменяет синий у Balanced, Standard, галочек и ползунков; Silent, Turbo и Eco остаются своими цветами"
 }

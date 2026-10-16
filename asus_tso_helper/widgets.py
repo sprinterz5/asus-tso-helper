@@ -56,6 +56,16 @@ def set_theme(dark):
     _icons.clear()
 
 
+_STANDARD_BLUE = QtGui.QColor(STANDARD)
+
+
+def set_accent(colour=None):
+    """The desktop's accent colour in place of G-Helper's blue (Balanced, Standard, checkboxes,
+    sliders, links); None brings the blue back. Changed in place, so every control holding
+    STANDARD repaints with it; mode colours with a meaning (Silent green, Turbo red) stay."""
+    STANDARD.setRgb((colour or _STANDARD_BLUE).rgb())
+
+
 def icon(name, size=16):
     """Lucide line icons (assets/icons, ISC licence) drawn in the text colour: black on light,
     white on dark, the way G-Helper's ControlHelper.AdjustImage inverts its icons."""

@@ -253,6 +253,26 @@ class ExtraWindow(QtWidgets.QWidget):
         self.language.activated.connect(self.on_language)
         row.addWidget(self.language)
         ol.addLayout(row)
+        row = QtWidgets.QHBoxLayout()
+        row.setContentsMargins(2, 4, 0, 2)
+        row.addWidget(QtWidgets.QLabel(tr("Theme")))
+        row.addStretch()
+        self.theme = w.RComboBox()
+        self.theme.setFixedWidth(146)
+        self.theme.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        for key, label in (("auto", tr("Auto")), ("dark", tr("Dark")), ("light", tr("Light"))):
+            self.theme.addItem(label, key)
+        self.theme.setCurrentIndex(max(0, self.theme.findData(self.cfg.get("theme", "auto"))))
+        self.theme.setToolTip(tr("Auto follows the desktop's light / dark setting"))
+        self.theme.activated.connect(lambda _: self.set_look("theme", self.theme.currentData()))
+        row.addWidget(self.theme)
+        ol.addLayout(row)
+        self.accent = check(tr("Accent colour from the desktop"), 2)
+        self.accent.setChecked(bool(self.cfg.get("desktop_accent")))
+        self.accent.setToolTip(tr("Replaces the blue of Balanced, Standard, checkboxes and sliders; "
+                                  "Silent, Turbo and Eco keep their colours"))
+        self.accent.toggled.connect(lambda on: self.set_look("desktop_accent", on))
+        ol.addWidget(self.accent)
         root.addWidget(other)
 
         # Services
@@ -291,6 +311,11 @@ class ExtraWindow(QtWidgets.QWidget):
         self.root = root
         self.build_bindings()
         self.refresh()
+
+    def set_look(self, key, value):
+        self.cfg[key] = value
+        self.main.save()
+        self.main.apply_theme()
 
     def on_language(self, _index):
         """Like G-Helper, the language is read at start: restart to apply it."""

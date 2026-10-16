@@ -152,6 +152,20 @@ def os_dark():
     return None
 
 
+def os_accent():
+    """The desktop's accent colour as (r, g, b), or None (not set, or no portal)."""
+    ok, out = run("busctl", "--user", "call", "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+                  "org.freedesktop.portal.Settings", "ReadOne", "ss", "org.freedesktop.appearance", "accent-color",
+                  timeout=3)
+    try:
+        rgb = [float(x) for x in out.split()[-3:]] if ok else []  # "v (ddd) 0.79 0.65 0.97"
+    except ValueError:
+        return None
+    if len(rgb) != 3 or not all(0 <= x <= 1 for x in rgb):  # out of range means "not set"
+        return None
+    return tuple(round(x * 255) for x in rgb)
+
+
 # --- CPU boost -------------------------------------------------------------------
 # G-Helper's "CPU Boost" per mode. One global switch in cpufreq (amd-pstate, intel_pstate's
 # no_turbo is the inverse and not covered); root-owned, so Setup lets the user's group write it.

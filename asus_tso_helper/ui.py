@@ -169,6 +169,7 @@ class MainWindow(QtWidgets.QWidget):
         self.kbd_restoring = 0.0
         self.dgpu_temp = None
         self.dgpu_temp_at = 0.0
+        self.theme_state = None
         self.dgpu_was_awake = False
         self.dgpu_apps = []
         self.dgpu_apps_at = 0.0
@@ -494,23 +495,33 @@ class MainWindow(QtWidgets.QWidget):
     @QtCore.Slot(QtDBus.QDBusMessage)
     def on_portal_setting(self, msg):
         args = msg.arguments()
-        if len(args) == 3 and args[:2] == ["org.freedesktop.appearance", "color-scheme"]:
-            value = args[2].variant() if isinstance(args[2], QtDBus.QDBusVariant) else args[2]
-            if value in (1, 2):  # 1 dark, 2 light, 0 no preference
-                self.apply_theme(value == 1)
+        if len(args) != 3 or args[0] != "org.freedesktop.appearance":
+            return
+        value = args[2].variant() if isinstance(args[2], QtDBus.QDBusVariant) else args[2]
+        if args[1] == "color-scheme" and value in (1, 2):  # 1 dark, 2 light, 0 no preference
+            self.apply_theme(dark=value == 1)
+        elif args[1] == "accent-color":
+            self.apply_theme()
 
     def apply_theme(self, dark=None):
         """Follows the desktop's light / dark setting, as G-Helper follows Windows'. The portal
         is asked first: Qt without the desktop's own plugin (the AppImage) reads the scheme only
-        at start; changes come as the portal's SettingChanged signal."""
+        at start; changes come as the portal's SettingChanged signal. Extra can fix the theme to
+        dark or light and take the desktop's accent colour."""
+        theme = self.cfg.get("theme", "auto")
+        if theme in ("dark", "light"):
+            dark = theme == "dark"
         if dark is None:
             dark = hw.os_dark()
         if dark is None:
             scheme = QtGui.QGuiApplication.styleHints().colorScheme()
             dark = scheme != QtCore.Qt.ColorScheme.Light  # unknown: G-Helper's dark default
-        if dark == w.THEME.dark and self.styleSheet():
+        accent = hw.os_accent() if self.cfg.get("desktop_accent") else None
+        if (dark, accent) == self.theme_state:
             return
+        self.theme_state = (dark, accent)
         w.set_theme(dark)
+        w.set_accent(QtGui.QColor(*accent) if accent else None)
         self.setStyleSheet(stylesheet())
         self.fn_lock.text_colour = w.THEME.control_dark
         self.full_button.text_colour = w.THEME.control_dark
