@@ -290,7 +290,7 @@ class ExtraWindow(QtWidgets.QWidget):
         answer = QtWidgets.QMessageBox.question(self, tr("Language"), tr("Restart the app now to change the language?"))
         if answer == QtWidgets.QMessageBox.Yes:
             selfupdate.restart()
-            QtWidgets.QApplication.quit()
+            QtWidgets.QApplication.exit(0)  # not quit(): the main window would veto it (see ui.quit_app)
 
     def on_diagnostics(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(

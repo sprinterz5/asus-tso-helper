@@ -52,6 +52,12 @@ OPTIMIZED_TIP = tr("Switch to Eco on battery and to Standard when plugged in")
 AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
 
 
+def quit_app():
+    """Ends the app. QApplication.quit() would not: in Qt 6 it first asks every window to close,
+    and the main window refuses (it hides to the tray), which cancels the quit silently."""
+    QtWidgets.QApplication.exit(0)
+
+
 def load_config():
     try:
         with open(CONFIG_FILE) as f:
@@ -463,7 +469,7 @@ class MainWindow(QtWidgets.QWidget):
         updates = w.RButton(tr("Updates"), "download", secondary=True, radius=2)
         updates.clicked.connect(self.on_updates)
         quit_b = w.RButton(tr("Quit"), "log-out", secondary=True, radius=2)
-        quit_b.clicked.connect(QtWidgets.QApplication.quit)
+        quit_b.clicked.connect(quit_app)
         for b in (credits, updates, quit_b):
             b.setFixedHeight(24)
             lay.addWidget(b, 1)
@@ -1093,7 +1099,7 @@ class MainWindow(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.warning(self, tr("Update"), result[1])
                 return
             selfupdate.restart()
-            QtWidgets.QApplication.quit()
+            quit_app()
         self.bg(job, then=done)
 
     def on_setup(self):
@@ -1430,7 +1436,7 @@ class MainWindow(QtWidgets.QWidget):
                                       QtGui.QIcon(w.APP_ICON), 5000)
         else:
             event.accept()
-            QtWidgets.QApplication.quit()
+            quit_app()
 
 
 class Tray(QtWidgets.QSystemTrayIcon):
@@ -1471,7 +1477,7 @@ class Tray(QtWidgets.QSystemTrayIcon):
         if window.optimized:
             self.menu.addAction(tr("Optimized"), window.on_optimized)
         self.menu.addSeparator()
-        self.menu.addAction(tr("Quit"), QtWidgets.QApplication.quit)
+        self.menu.addAction(tr("Quit"), quit_app)
 
     def apply_theme(self):
         self.menu.setStyleSheet(stylesheet())
