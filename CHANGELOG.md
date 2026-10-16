@@ -18,6 +18,7 @@
   mode checkbox in Extra (KDE).
 - Light / dark theme follows the desktop while the app runs, in the AppImage too; Extra can fix it
   to dark or light, and take the desktop's accent colour instead of G-Helper's blue.
+- Fans, Extra, Updates and Setup open beside the main window, left or right where there is room (KDE).
 
 ## 0.3.0
 - GPU modes on **Cardwire** instead of supergfxd: Eco and Standard switch at once, without a
