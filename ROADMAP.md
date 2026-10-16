@@ -108,30 +108,42 @@ gives them a report to attach.
 | 27 | **ROG Ally** (handheld) | Ally, Ally X | asusd's Ally support; G-Helper's Handheld window | A handheld UI of its own; low priority for a laptop app |
 | 28 | **Models without fan curve support** | older TUF (FA506, FX506) | asusd reports no curves; g-helper-linux drives the fans manually (experimental) | Hide the charts with a clear note before trying manual control |
 
+#### ASUS peripherals (G-Helper's Mouse / Keyboard / Headset windows)
+G-Helper finds ROG mice, keyboards and headsets on USB and the 2.4 GHz dongle and opens a settings
+window for each. On Linux the same reports go over `/dev/hidraw*`: no extra library, a Setup step
+installs a udev rule that lets the logged-in user open ASUS (vendor 0x0B05) HID devices. The
+protocols are readable in G-Helper's source (GPL-3.0, same as this app); credit them per device.
+| # | Feature | Devices (G-Helper's list) | Settings | Notes |
+|---|---|---|---|---|
+| 29 | **Mice** | 31 models: Chakram (Core, X), Gladius II / III, Harpe Ace, Keris (Wireless, II Ace, II Origin), Pugio (II), Spatha X, Strix Impact (II / III, wireless), Strix Carry / Evolve, TUF M3 / M4 / M5, MD200, Balteus / Bulwark docks | DPI (with X / Y and per-DPI colours), polling rate, lift-off, debounce, angle snapping, acceleration, button bindings, profiles, RGB zones and brightness, battery, auto power off, low-battery warning | libratbag / Piper covers only some ROG mice; OpenRGB only lighting |
+| 30 | **Keyboards** | Azoth, Claymore II, Falchion, Strix Flare II, Strix Scope II / RX, TUF K3 | lighting modes and per-key RGB, OLED screen (Azoth), key bindings | |
+| 31 | **Headsets** | Cetra RGB, Cetra Speed Nova, Clavis, Delta II, Pelta, Strix Go 2.4 | lighting, AI noise cancelling, sidetone, microphone type, EQ, auto power off, battery | |
+| 32 | **Aura sync and tray battery** | all of the above | peripheral lighting follows the laptop's Aura; wireless battery level in the tray tooltip | G-Helper's "Sync with laptop" checkboxes |
+
 #### Distributions
 | # | Feature | How | Notes |
 |---|---|---|---|
-| 29 | **Cardwire without BPF LSM** | Ubuntu's kernels ship without `bpf` in the LSM list; Setup adds it to the kernel command line (grub / kernelstub) and asks for a reboot | Otherwise the GPU modes need the supergfxd backend |
-| 30 | **supergfxd backend as a fallback** | where Cardwire is missing or cannot run: the code exists on the `supergfxd` branch (tag `v0.2.1-supergfxd`) | Eco there needs a logout, as before |
-| 31 | **Ubuntu / Debian packages for asusctl and Cardwire** | Cardwire ships a .deb on its releases; asusctl has no official Debian package | Setup currently only points to asus-linux.org on Debian / Ubuntu |
-| 32 | **openSUSE** | asusctl / Cardwire repositories for zypper | Setup installs the basics only |
-| 33 | **Immutable systems** (Silverblue, Kinoite, Bazzite, SteamOS) | `rpm-ostree install` instead of dnf, reboot; Bazzite already ships Cardwire | The AppImage itself works there |
+| 33 | **Cardwire without BPF LSM** | Ubuntu's kernels ship without `bpf` in the LSM list; Setup adds it to the kernel command line (grub / kernelstub) and asks for a reboot | Otherwise the GPU modes need the supergfxd backend |
+| 34 | **supergfxd backend as a fallback** | where Cardwire is missing or cannot run: the code exists on the `supergfxd` branch (tag `v0.2.1-supergfxd`) | Eco there needs a logout, as before |
+| 35 | **Ubuntu / Debian packages for asusctl and Cardwire** | Cardwire ships a .deb on its releases; asusctl has no official Debian package | Setup currently only points to asus-linux.org on Debian / Ubuntu |
+| 36 | **openSUSE** | asusctl / Cardwire repositories for zypper | Setup installs the basics only |
+| 37 | **Immutable systems** (Silverblue, Kinoite, Bazzite, SteamOS) | `rpm-ostree install` instead of dnf, reboot; Bazzite already ships Cardwire | The AppImage itself works there |
 
 #### Desktops
 | # | Feature | How | Notes |
 |---|---|---|---|
-| 34 | **Clamshell mode toggle** | KDE: powerdevil `InhibitLidActionWhenExternalMonitorPresent` (on by default); GNOME: logind already ignores the lid with an external display | On by default on both; a checkbox only makes it visible |
-| 35 | **KDE switching the power profile on plug / unplug** | KDE's powerdevil sets power-profiles-daemon's profile per power source, which can override the app's per-source mode | Check on the FA507NV; if it fights, the app turns KDE's switch off |
-| 36 | **GNOME tray** | vanilla GNOME has no tray: needs the AppIndicator extension | Setup should detect it and say so; without a tray the window just stays open |
-| 37 | **Toasts, logout prompt, window at the tray outside KDE** | GNOME: notifications via the portal; logout via `gnome-session-quit`; window placement is the compositor's choice | KDE-only today |
-| 38 | **Screen off, lock and screenshot key actions outside KDE** | `loginctl lock-session` works everywhere; screen off and screenshot need the desktop's own commands | Today they call KDE tools |
+| 38 | **Clamshell mode toggle** | KDE: powerdevil `InhibitLidActionWhenExternalMonitorPresent` (on by default); GNOME: logind already ignores the lid with an external display | On by default on both; a checkbox only makes it visible |
+| 39 | **KDE switching the power profile on plug / unplug** | KDE's powerdevil sets power-profiles-daemon's profile per power source, which can override the app's per-source mode | Check on the FA507NV; if it fights, the app turns KDE's switch off |
+| 40 | **GNOME tray** | vanilla GNOME has no tray: needs the AppIndicator extension | Setup should detect it and say so; without a tray the window just stays open |
+| 41 | **Toasts, logout prompt, window at the tray outside KDE** | GNOME: notifications via the portal; logout via `gnome-session-quit`; window placement is the compositor's choice | KDE-only today |
+| 42 | **Screen off, lock and screenshot key actions outside KDE** | `loginctl lock-session` works everywhere; screen off and screenshot need the desktop's own commands | Today they call KDE tools |
 
 ### Priority 4: possible, but risky or of little use
 | # | Feature | Why it is low |
 |---|---|---|
-| 39 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
-| 40 | Hibernate after N minutes of sleep | Needs a swap partition (Fedora ships zram only), and with Secure Boot the kernel's lockdown forbids hibernation |
-| 41 | Temperatures in the tray icon, °F | Small; not in G-Helper |
+| 43 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
+| 44 | Hibernate after N minutes of sleep | Needs a swap partition (Fedora ships zram only), and with Secure Boot the kernel's lockdown forbids hibernation |
+| 45 | Temperatures in the tray icon, °F | Small; not in G-Helper |
 
 ## Not possible or not applicable
 
@@ -139,7 +151,7 @@ gives them a report to attach.
 |---|---|
 | ELMB, keystone sound | No firmware attribute on this model |
 | ASUS / NVIDIA services, Modern Standby networking, ACPI DEVS test | Windows-only concepts (asusd / cardwired take the services' place) |
-| Audio effects (noise suppression, EQ), Logitech / ASUS mice (g-helper-linux) | Not about the laptop; separate tools do it better (EasyEffects, Piper / libratbag) |
+| Audio effects (noise suppression, EQ), Logitech devices (g-helper-linux) | Not in G-Helper and not ASUS; separate tools do it better (EasyEffects, Solaar, Piper) |
 | Software Fn-lock remapper, deep sleep selector (g-helper-linux) | TUF A15 has a firmware Fn-lock; Rembrandt supports s2idle only |
 | Windows power plan per mode | asusd already links the CPU energy preference (EPP) to the profile |
 | PCIe ASPM toggle | Would need root on every change for little gain |
