@@ -14,6 +14,7 @@ from . import backend as hw
 from . import hotkeys
 from . import widgets as w
 from .widgets import ECO, TURBO
+from .i18n import tr
 
 REQUIRED, RECOMMENDED, OPTIONAL, INFO = "required", "recommended", "optional", "info"
 OLD_COPR = "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:lukenukem:asus-linux.repo"
@@ -66,7 +67,8 @@ def rpm_installed(name):
 
 
 def check(key, title, ok, level, detail="", fix=True):
-    return {"key": key, "title": title, "ok": ok, "level": level, "detail": detail, "fix": fix}
+    return {"key": key, "title": tr(title), "ok": ok, "level": level, "detail": tr(detail) if detail else "",
+            "fix": fix}
 
 
 def checks():
@@ -93,7 +95,7 @@ def checks():
                   "Replaces supergfxd, which asus-linux retired: Eco and Standard switch at once, "
                   "without a logout." if old else "Needed for Eco / Standard.")
         if not bpf:
-            detail = "The kernel runs without BPF LSM, which Cardwire needs: see " + CARDWIRE_DOCS
+            detail = tr("The kernel runs without BPF LSM, which Cardwire needs: see {url}", url=CARDWIRE_DOCS)
         rows.append(check("cardwire", "Cardwire (GPU modes)", gfx, RECOMMENDED, detail, fix=bpf))
     if family == "fedora" and rpm_installed("tuned-ppd"):
         rows.append(check("ppd", "Power profiles", False, RECOMMENDED,
@@ -117,8 +119,8 @@ def checks():
     desktop = os.environ.get("XDG_CURRENT_DESKTOP", "")
     rows.append(check("kde", "KDE Plasma", "KDE" in desktop.upper(), INFO,
                       "" if "KDE" in desktop.upper() else
-                      f"Running on {desktop or 'another desktop'}: refresh rate, toasts and the logout "
-                      "prompt use KDE.", fix=False))
+                      tr("Running on {desktop}: toasts, the logout prompt and the window at the tray icon "
+                         "use KDE.", desktop=desktop or tr("another desktop")), fix=False))
     return rows
 
 
@@ -199,14 +201,14 @@ class SetupWindow(QtWidgets.QWidget):
         super().__init__(main, QtCore.Qt.Window)
         self.main = main
         self.proc = None
-        self.setWindowTitle("Setup")
+        self.setWindowTitle(tr("Setup"))
         self.setObjectName("root")
         self.setAttribute(QtCore.Qt.WA_StyledBackground)
         self.setFixedWidth(506)
         root = QtWidgets.QVBoxLayout(self)
         root.setContentsMargins(12, 10, 12, 12)
         root.setSpacing(6)
-        head = QtWidgets.QLabel("A few things this laptop needs. One password sets them all up.")
+        head = QtWidgets.QLabel(tr("A few things this laptop needs. One password sets them all up."))
         head.setWordWrap(True)
         f = head.font()
         f.setBold(True)
@@ -227,10 +229,10 @@ class SetupWindow(QtWidgets.QWidget):
         self.links.setOpenExternalLinks(True)
         buttons.addWidget(self.links)
         buttons.addStretch()
-        self.later = w.RButton("Later", secondary=True, radius=2)
+        self.later = w.RButton(tr("Later"), secondary=True, radius=2)
         self.later.setFixedSize(90, 26)
         self.later.clicked.connect(self.on_later)
-        self.go = w.RButton("Set up", radius=2, accent=ECO)
+        self.go = w.RButton(tr("Set up"), radius=2, accent=ECO)
         self.go.setFixedSize(110, 26)
         self.go.clicked.connect(self.run)
         self.go.set_activated(True)
@@ -255,11 +257,11 @@ class SetupWindow(QtWidgets.QWidget):
             mark.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignHCenter)
             text = f"<b>{r['title']}</b>"
             if r["level"] == OPTIONAL:
-                text += " <span style='color:gray'>(optional)</span>"
+                text += f" <span style='color:gray'>({tr('optional')})</span>"
             if r["detail"] and not r["ok"]:
                 text += f"<br><span style='color:gray'>{r['detail']}</span>"
             if r["key"] == "nvidia" and not r["ok"]:
-                text += f" <a style='color:{w.STANDARD.name()}' href='{NVIDIA_HOWTO}'>How to install</a>"
+                text += f" <a style='color:{w.STANDARD.name()}' href='{NVIDIA_HOWTO}'>{tr('How to install')}</a>"
             label = QtWidgets.QLabel(text)
             label.setWordWrap(True)
             label.setOpenExternalLinks(True)
@@ -267,7 +269,7 @@ class SetupWindow(QtWidgets.QWidget):
             self.list.addWidget(label, i, 1)
         fixable = any(not r["ok"] and r["fix"] for r in self.rows)
         self.go.setEnabled(fixable and self.proc is None)
-        self.go.setText("Set up" if fixable else "All set")
+        self.go.setText(tr("Set up") if fixable else tr("All set"))
         QtCore.QTimer.singleShot(0, self.adjustSize)
 
     def run(self):
@@ -285,9 +287,9 @@ class SetupWindow(QtWidgets.QWidget):
     def done(self, code, _status):
         self.proc = None
         self.later.setEnabled(True)
-        self.later.setText("Close")
+        self.later.setText(tr("Close"))
         if code in (126, 127):
-            self.log.appendPlainText("\nThe password prompt was cancelled.")
+            self.log.appendPlainText("\n" + tr("The password prompt was cancelled."))
         self.refresh()
         self.main.after_setup()
         self.finished.emit()

@@ -67,9 +67,10 @@ def install(path):
 
 
 def restart():
-    """Starts the new AppImage once this process has quit (one instance at a time)."""
+    """Starts the app again (the new AppImage after an update) once this process has quit: one
+    instance at a time."""
     script = 'while kill -0 "$1" 2>/dev/null; do sleep 0.2; done; exec "$2"'
-    subprocess.Popen(["sh", "-c", script, "sh", str(os.getpid()), hw.APPIMAGE],
+    subprocess.Popen(["sh", "-c", script, "sh", str(os.getpid()), hw.launcher()],
                      start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 

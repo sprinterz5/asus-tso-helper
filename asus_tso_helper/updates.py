@@ -19,6 +19,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from . import backend as hw
 from . import widgets as w
 from .widgets import ECO, TURBO
+from .i18n import tr
 
 GITHUB_REPO = "sprinterz5/asus-tso-helper"
 SYMBOL_UPDATED = "•"
@@ -81,7 +82,8 @@ def fetch_bios():
                     ((f.get("DownloadUrl") or {}).get("Global") or ""))
             if version.isdigit() and bios.isdigit():
                 r["status"] = STATUS_NEW if int(version) > int(bios) else STATUS_UPTODATE
-                r["tip"] = f"Download: {version}\nInstalled: {bios}\nFlash it with ASUS EZ Flash (F2 at boot)."
+                r["tip"] = "\n".join((tr("Download: {version}", version=version), tr("Installed: {version}", version=bios),
+                                     tr("Flash it with ASUS EZ Flash (F2 at boot).")))
             rows.append(r)
     return rows
 
@@ -155,11 +157,11 @@ def fetch_linux(app_version):
             return None
         r = row(category, title, offer or installed, upstream["date"] if upstream else "", url)
         r["packages"] = sorted(n for n in updates if (family or (lambda n: n in names))(n))
-        tip = [f"Installed: {installed}"]
+        tip = [tr("Installed: {version}", version=installed)]
         if offer:
-            tip.insert(0, f"Available: {offer}")
+            tip.insert(0, tr("Available: {version}", version=offer))
         if upstream:
-            tip.append(f"Latest upstream: {upstream['version']}")
+            tip.append(tr("Latest upstream: {version}", version=upstream['version']))
         r["tip"] = "\n".join(tip)
         if offer and newer(offer, installed):
             r["status"] = STATUS_NEW
@@ -169,14 +171,14 @@ def fetch_linux(app_version):
 
     rows = []
     kernel = platform.release().split("-")[0]
-    rows.append(from_repo("System", "Linux kernel", kernel, ["kernel", "kernel-core", "linux", "linux-image-generic"],
+    rows.append(from_repo("System", tr("Linux kernel"), kernel, ["kernel", "kernel-core", "linux", "linux-image-generic"],
                           family=lambda n: n == "kernel" or n.startswith(("kernel-", "linux", "linux-"))))
     nvidia = hw._read("/sys/module/nvidia/version") or (hw.run("modinfo", "-F", "version", "nvidia", timeout=5)[1] or None)
     if nvidia and "not found" not in nvidia.lower():
-        rows.append(from_repo("Graphics", "NVIDIA driver", nvidia.strip(),
+        rows.append(from_repo("Graphics", tr("NVIDIA driver"), nvidia.strip(),
                               ["akmod-nvidia", "xorg-x11-drv-nvidia", "nvidia-driver", "nvidia-utils",
                                "nvidia-open", "nvidia-dkms"], family=lambda n: "nvidia" in n))
-    for project, title in (("asusctl", "asusctl (asusd)"), ("cardwire", "Cardwire (GPU modes)")):
+    for project, title in (("asusctl", "asusctl (asusd)"), ("cardwire", tr("Cardwire (GPU modes)"))):
         upstream = UPSTREAM[project]()
         rows.append(from_repo("ASUS", title, package_version(project), [project], upstream,
                               upstream["url"] if upstream else "", family=lambda n, p=project: n.startswith(p)))
@@ -186,7 +188,8 @@ def fetch_linux(app_version):
             for dev in json.loads(out).get("Devices", []):
                 rel = (dev.get("Releases") or [{}])[0]
                 rows.append(row("Firmware", dev.get("Name", "?"), rel.get("Version", ""), "", "",
-                                STATUS_NEW, f"Installed: {dev.get('Version', '?')}\nAvailable: {rel.get('Version', '?')}"))
+                                STATUS_NEW, tr("Installed: {version}", version=dev.get('Version', '?')) + "\n"
+                                + tr("Available: {version}", version=rel.get('Version', '?'))))
         except ValueError:
             pass
     latest = app_latest()
@@ -194,9 +197,10 @@ def fetch_linux(app_version):
               latest["date"] if latest else "", latest["url"] if latest else f"https://github.com/{GITHUB_REPO}")
     if latest:
         app["status"] = STATUS_NEW if newer(latest["version"], app_version) else STATUS_UPTODATE
-        app["tip"] = f"Download: {latest['version']}\nInstalled: {app_version}"
+        app["tip"] = (tr("Download: {version}", version=latest['version']) + "\n"
+                      + tr("Installed: {version}", version=app_version))
     else:
-        app["tip"] = f"Installed: {app_version}\nNo release found on GitHub."
+        app["tip"] = tr("Installed: {version}", version=app_version) + "\n" + tr("No release found on GitHub.")
     rows.append(app)
     return [r for r in rows if r], len(updates)
 
@@ -244,7 +248,7 @@ class Table(QtWidgets.QWidget):
         underline = QtGui.QFont(self.font())
         underline.setUnderline(True)
         for i, r in enumerate(rows):
-            for col, text in enumerate((r["category"], r["title"], r["date"])):
+            for col, text in enumerate((tr(r["category"]), r["title"], r["date"])):
                 label = QtWidgets.QLabel(text)
                 label.setFixedHeight(24)
                 label.setContentsMargins(3, 0, 3, 0)
@@ -324,17 +328,17 @@ class UpdatesWindow(QtWidgets.QWidget):
         self.refresh_button = w.RButton("", "refresh-cw", secondary=True, radius=2)
         self.refresh_button.setFixedSize(26, 23)
         self.refresh_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        self.refresh_button.setToolTip("Refresh")
+        self.refresh_button.setToolTip(tr("Refresh"))
         self.refresh_button.clicked.connect(self.load)
         self.bios_title.lay.addSpacing(8)
         self.bios_title.lay.addWidget(self.refresh_button)
         root.addWidget(self.bios_title)
         self.bios = Table()
         root.addWidget(self.bios)
-        drivers_title = TitlePanel("download", "Drivers and Software", 26)
+        drivers_title = TitlePanel("download", tr("Drivers and Software"), 26)
         self.progress = QtWidgets.QLabel("")
         self.progress.setObjectName("tip")
-        self.install_button = w.RButton("Install Updates", secondary=True, radius=2)
+        self.install_button = w.RButton(tr("Install Updates"), secondary=True, radius=2)
         self.install_button.setFixedSize(150, 23)
         self.install_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.install_button.clicked.connect(self.install)
@@ -355,9 +359,9 @@ class UpdatesWindow(QtWidgets.QWidget):
         lay = QtWidgets.QHBoxLayout(box)
         lay.setContentsMargins(5, 0, 5, 10)  # Padding(10, 0, 10, 20)
         lay.setSpacing(5)
-        items = [("Legend", None), ("Can't check local version", QtGui.QColor("gray")),
-                 (f"<span style='font-size:5pt'>{SYMBOL_NEW}</span>&nbsp; Update Available", TURBO),
-                 (f"{SYMBOL_UPDATED} Updated", ECO)]
+        items = [(tr("Legend"), None), (tr("Can't check local version"), QtGui.QColor("gray")),
+                 (f"<span style='font-size:5pt'>{SYMBOL_NEW}</span>&nbsp; " + tr("Update Available"), TURBO),
+                 (f"{SYMBOL_UPDATED} " + tr("Updated"), ECO)]
         for i, (text, colour) in enumerate(items):
             label = QtWidgets.QLabel(text)
             label.setAlignment(QtCore.Qt.AlignCenter)
@@ -371,7 +375,7 @@ class UpdatesWindow(QtWidgets.QWidget):
         if self.pending:
             return  # a check is already running
         bios, model = bios_and_model()
-        self.setWindowTitle(f"BIOS and Driver Updates: {model} {bios}".strip())
+        self.setWindowTitle(f"{tr('BIOS and Driver Updates')}: {model} {bios}".strip())
         self.new_count = 0
         self.pending = 2
         self.new_rows = []
@@ -398,11 +402,11 @@ class UpdatesWindow(QtWidgets.QWidget):
             result, self.system_updates = result
             self.new_rows = [r for r in result if r["status"] == STATUS_NEW and r.get("packages")]
             self.install_button.setVisible(bool(self.new_rows) and self.proc is None)
-            self.install_button.setText(f"Install Updates ({len(self.new_rows)})")
+            self.install_button.setText(f"{tr('Install Updates')} ({len(self.new_rows)})")
         if isinstance(result, Exception):
-            table.message(f"Could not check: {result}")
+            table.message(tr("Could not check: {error}", error=result))
         elif not result:
-            table.message("Nothing found for this model.")
+            table.message(tr("Nothing found for this model."))
         else:
             table.fill(result, self.open_row)
             self.new_count += sum(r["status"] == STATUS_NEW for r in result)
@@ -411,11 +415,11 @@ class UpdatesWindow(QtWidgets.QWidget):
     def set_status(self):
         f = self.status.font()
         if self.new_count:
-            self.status.setText(f"New updates: {self.new_count}")
+            self.status.setText(tr("New updates: {count}", count=self.new_count))
             self.status.setStyleSheet(f"color: {TURBO.name()};")
             f.setUnderline(True)
         else:
-            self.status.setText("Checking ..." if self.pending else "No new updates")
+            self.status.setText(tr("Checking ...") if self.pending else tr("No new updates"))
             self.status.setStyleSheet(f"color: {ECO.name()};" if not self.pending else "")
             f.setUnderline(False)
         self.status.setFont(f)
@@ -428,17 +432,18 @@ class UpdatesWindow(QtWidgets.QWidget):
         listed = "".join(f"\n  {r['title']} {r['version']}" for r in self.new_rows)
         others = self.system_updates - len(packages)
         answer = QtWidgets.QMessageBox.question(
-            self, "Install Updates",
-            f"Download these updates now and install them while the laptop restarts?{listed}\n\n"
-            f"({len(packages)} packages.{f' The other {others} system updates stay in Discover.' if others > 0 else ''})"
-            "\n\nBIOS updates are not included: flash them with ASUS EZ Flash (F2 at boot).")
+            self, tr("Install Updates"),
+            tr("Download these updates now and install them while the laptop restarts?") + f"{listed}\n\n("
+            + tr("Packages: {count}.", count=len(packages))
+            + (" " + tr("The other {count} system updates stay in Discover.", count=others) if others > 0 else "") + ")\n\n"
+            + tr("BIOS updates are not included: flash them with ASUS EZ Flash (F2 at boot)."))
         if answer != QtWidgets.QMessageBox.Yes:
             return
         self.install_button.hide()
         self.refresh_button.setEnabled(False)
         self.packages = packages
         self.run_step(["pkcon", "update", "--only-download", "--noninteractive", "--plain", *packages],
-                      self.downloaded, "Downloading updates")
+                      self.downloaded, tr("Downloading updates"))
 
     def run_step(self, cmd, then, label):
         self.progress.setText(label + " ...")
@@ -466,29 +471,29 @@ class UpdatesWindow(QtWidgets.QWidget):
 
     def downloaded(self, ok, output):
         if not ok:
-            return self.install_failed("Downloading the updates failed.", output)
-        self.run_step(["pkcon", "offline-trigger"], self.triggered, "Preparing the restart")
+            return self.install_failed(tr("Downloading the updates failed."), output)
+        self.run_step(["pkcon", "offline-trigger"], self.triggered, tr("Preparing the restart"))
 
     def triggered(self, ok, output):
         if not ok:
             # no offline updates here (e.g. Arch): install right away, then a restart finishes it
             self.run_step(["pkcon", "update", "--noninteractive", "--plain", *self.packages],
-                          self.installed_online, "Installing updates")
+                          self.installed_online, tr("Installing updates"))
             return
-        self.progress.setText("Ready: installs on restart")
-        self.ask_restart("The updates are downloaded and will be installed while the laptop restarts.")
+        self.progress.setText(tr("Ready: installs on restart"))
+        self.ask_restart(tr("The updates are downloaded and will be installed while the laptop restarts."))
 
     def installed_online(self, ok, output):
         if not ok:
-            return self.install_failed("Installing the updates failed.", output)
-        self.progress.setText("Installed")
-        self.ask_restart("The updates are installed. Restart so the new kernel and drivers are used.")
+            return self.install_failed(tr("Installing the updates failed."), output)
+        self.progress.setText(tr("Installed"))
+        self.ask_restart(tr("The updates are installed. Restart so the new kernel and drivers are used."))
 
     def ask_restart(self, text):
         self.refresh_button.setEnabled(True)
-        box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, "Install Updates", text, parent=self)
-        now = box.addButton("Restart now", QtWidgets.QMessageBox.AcceptRole)
-        box.addButton("Later", QtWidgets.QMessageBox.RejectRole)
+        box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, tr("Install Updates"), text, parent=self)
+        now = box.addButton(tr("Restart now"), QtWidgets.QMessageBox.AcceptRole)
+        box.addButton(tr("Later"), QtWidgets.QMessageBox.RejectRole)
         box.exec()
         if box.clickedButton() is now:
             subprocess.Popen(["systemctl", "reboot"])
@@ -498,7 +503,7 @@ class UpdatesWindow(QtWidgets.QWidget):
         self.install_button.show()
         self.progress.setText("")
         tail = "\n".join(output.strip().splitlines()[-6:])
-        QtWidgets.QMessageBox.warning(self, "Install Updates", f"{text}\n\n{tail}")
+        QtWidgets.QMessageBox.warning(self, tr("Install Updates"), f"{text}\n\n{tail}")
 
     def open_row(self, r):
         if r["category"] == "App" and r["status"] == STATUS_NEW and self.main.can_self_update():

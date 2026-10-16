@@ -11,6 +11,7 @@ kept per source too and restored for a source the next time it is active.
 import secrets
 
 from . import backend as hw
+from .i18n import tr
 
 BASES = ["quiet", "balanced", "performance"]  # Modes.GetList order: Silent, Balanced, Turbo
 PPT = ["ppt_pl1_spl", "ppt_pl2_sppt", "ppt_pl3_fppt"]
@@ -180,5 +181,5 @@ def name_of(cfg, key):
 
 def all_modes(cfg):
     """[(key, name, base)] in G-Helper's order; key is a base profile or a custom mode id."""
-    names = {"quiet": "Silent", "balanced": "Balanced", "performance": "Turbo"}
+    names = {"quiet": tr("Silent"), "balanced": tr("Balanced"), "performance": tr("Turbo")}
     return [(b, names[b], b) for b in BASES] + [(m["id"], m["name"], m["base"]) for m in custom_modes(cfg)]

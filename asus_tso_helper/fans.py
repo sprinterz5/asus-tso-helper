@@ -11,6 +11,7 @@ from . import backend as hw
 from . import modes as custom
 from . import widgets as w
 from .widgets import CUSTOM, ECO, STANDARD, TURBO, with_alpha
+from .i18n import tr
 
 TEMP_MIN, TEMP_MAX = 20, 110  # Fans.cs tempMin / tempMax
 FAN_MIN_RPM = 1800             # FanSensorControl.DEFAULT_FAN_MIN (18) * 100
@@ -124,10 +125,10 @@ def restore_after_calibration(cfg):
 
 WIN_ACCENT = QtGui.QColor(0, 120, 215)
 
-MODE_NAMES = [("quiet", "Silent"), ("balanced", "Balanced"), ("performance", "Turbo")]
-PPT = [("ppt_pl1_spl", "SPL (CPU sustained)"),
-       ("ppt_pl2_sppt", "sPPT (CPU long boost)"),
-       ("ppt_pl3_fppt", "fPPT (CPU short boost)")]
+MODE_NAMES = [("quiet", tr("Silent")), ("balanced", tr("Balanced")), ("performance", tr("Turbo"))]
+PPT = [("ppt_pl1_spl", tr("SPL (CPU sustained)")),
+       ("ppt_pl2_sppt", tr("sPPT (CPU long boost)")),
+       ("ppt_pl3_fppt", tr("fPPT (CPU short boost)"))]
 
 
 class TrackBar(QtWidgets.QWidget):
@@ -465,7 +466,7 @@ class FansWindow(QtWidgets.QWidget):
         self.profile = None
         self.calibration = None
         self.ac = None
-        self.setWindowTitle(f"Fans and Power - {hw.cpu_name()}".rstrip(" -"))
+        self.setWindowTitle(f"{tr('Fans and Power')} - {hw.cpu_name()}".rstrip(" -"))
         self.setObjectName("root")
         self.setAttribute(QtCore.Qt.WA_StyledBackground)
         self.setFixedSize(675, 550)  # ClientSize 1350 x 1100
@@ -491,9 +492,9 @@ class FansWindow(QtWidgets.QWidget):
         nl = QtWidgets.QHBoxLayout(nav)
         nl.setContentsMargins(2, 3, 2, 2)
         nl.setSpacing(4)
-        self.nav_cpu = w.RButton("CPU", secondary=True, accent=STANDARD, radius=2)
-        self.nav_gpu = w.RButton("GPU", secondary=True, accent=TURBO, radius=2)
-        self.nav_adv = w.RButton("Advanced", secondary=True, accent=CUSTOM, radius=2)
+        self.nav_cpu = w.RButton(tr("CPU"), secondary=True, accent=STANDARD, radius=2)
+        self.nav_gpu = w.RButton(tr("GPU"), secondary=True, accent=TURBO, radius=2)
+        self.nav_adv = w.RButton(tr("Advanced"), secondary=True, accent=CUSTOM, radius=2)
         for i, b in enumerate((self.nav_cpu, self.nav_gpu, self.nav_adv)):
             b.setFixedHeight(29)
             b.clicked.connect(lambda _=False, k=i: self.show_tab(k))
@@ -505,7 +506,7 @@ class FansWindow(QtWidgets.QWidget):
         cl = QtWidgets.QVBoxLayout(self.cpu_tab)
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setSpacing(0)
-        cpu_title = Title("cpu", "Power Limits")
+        cpu_title = Title("cpu", tr("Power Limits"))
         self.power_source = QtWidgets.QLabel("")
         self.power_source.setObjectName("tip")
         cpu_title.right.addWidget(self.power_source)
@@ -525,7 +526,7 @@ class FansWindow(QtWidgets.QWidget):
         apply_box = QtWidgets.QWidget()
         al = QtWidgets.QVBoxLayout(apply_box)
         al.setContentsMargins(7, 7, 7, 7)
-        self.apply_power = ApplyCheck("Apply Power Limits")
+        self.apply_power = ApplyCheck(tr("Apply Power Limits"))
         self.apply_power.clicked.connect(self.on_apply_power)
         al.addWidget(self.apply_power)
         cl.addWidget(apply_box)
@@ -562,22 +563,22 @@ class FansWindow(QtWidgets.QWidget):
         vl = QtWidgets.QVBoxLayout(self.adv_tab)
         vl.setContentsMargins(0, 0, 0, 9)
         # G-Helper's "Power Mode" (Windows power slider) per mode = the CPU's EPP, kept by asusd
-        vl.addWidget(Title("cpu", "Power Mode"))
+        vl.addWidget(Title("cpu", tr("Power Mode")))
         row = QtWidgets.QHBoxLayout()
         row.setContentsMargins(7, 4, 7, 2)
         self.epp = w.RComboBox()
         for value, label in hw.EPP_CHOICES:
-            self.epp.addItem(label, value)
-        self.epp.setToolTip("How eagerly the CPU clocks up in this mode (energy performance preference).\n"
-                            "Custom modes share it with their base mode.")
+            self.epp.addItem(tr(label), value)
+        self.epp.setToolTip(tr("How eagerly the CPU clocks up in this mode (energy performance preference).\n"
+                            "Custom modes share it with their base mode."))
         self.epp.activated.connect(self.on_epp)
         row.addWidget(self.epp, 1)
         vl.addLayout(row)
         vl.addSpacing(8)
-        vl.addWidget(Title("cpu", "Undervolting"))
-        note = QtWidgets.QLabel("CPU / iGPU undervolting (Curve Optimizer) needs the ryzen_smu kernel "
+        vl.addWidget(Title("cpu", tr("Undervolting")))
+        note = QtWidgets.QLabel(tr("CPU / iGPU undervolting (Curve Optimizer) needs the ryzen_smu kernel "
                                 "module and is not available in asus-tso-helper yet.\n\n"
-                                "GPU clock offsets are not exposed by the NVIDIA driver on Wayland.")
+                                "GPU clock offsets are not exposed by the NVIDIA driver on Wayland."))
         note.setObjectName("tip")
         note.setWordWrap(True)
         note.setContentsMargins(5, 4, 5, 0)
@@ -594,7 +595,7 @@ class FansWindow(QtWidgets.QWidget):
         lay.setContentsMargins(0, 0, 5, 0)
         lay.setSpacing(0)
 
-        title = Title("fan", "BIOS Fan Curves", height=33)
+        title = Title("fan", tr("BIOS Fan Curves"), height=33)
         title.layout().setContentsMargins(27, 0, 2, 0)
         modes = QtWidgets.QWidget()
         modes.setFixedWidth(240)
@@ -604,9 +605,9 @@ class FansWindow(QtWidgets.QWidget):
         self.remove_btn = w.RButton("", "circle-minus", secondary=True, radius=2)
         self.rename_btn = w.RButton("", "pencil", secondary=True, radius=2)
         add = w.RButton("", "circle-plus", secondary=True, radius=2)
-        for b, tip, slot in ((self.remove_btn, "Remove this custom mode", self.on_remove_mode),
-                             (self.rename_btn, "Rename this custom mode", self.on_rename_mode),
-                             (add, "New custom mode from the current settings", self.on_add_mode)):
+        for b, tip, slot in ((self.remove_btn, tr("Remove this custom mode"), self.on_remove_mode),
+                             (self.rename_btn, tr("Rename this custom mode"), self.on_rename_mode),
+                             (add, tr("New custom mode from the current settings"), self.on_add_mode)):
             b.setFixedSize(27, 23)
             b.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
             b.setToolTip(tip)
@@ -624,15 +625,15 @@ class FansWindow(QtWidgets.QWidget):
         chl = QtWidgets.QVBoxLayout(charts)
         chl.setContentsMargins(5, 0, 5, 2)
         chl.setSpacing(10)
-        self.chart_cpu = FanChart("CPU Fan Profile, RPM/°C", STANDARD)
-        self.chart_gpu = FanChart("GPU Fan Profile, RPM/°C", TURBO)
+        self.chart_cpu = FanChart(tr("CPU Fan Profile, RPM/°C"), STANDARD)
+        self.chart_gpu = FanChart(tr("GPU Fan Profile, RPM/°C"), TURBO)
         for c, fan in ((self.chart_cpu, "cpu"), (self.chart_gpu, "gpu")):
             c.edited.connect(lambda f=fan: self.on_curve_edited(f))
             c.axis_clicked.connect(self.on_toggle_rpm)
             chl.addWidget(c, 1)
         lay.addWidget(charts, 1)
         # checkFanClamp: keep the 8 points on the 30..110 grid, one 10 degC slot each
-        self.clamp = QtWidgets.QCheckBox("Clamp to Grid", self.chart_cpu)
+        self.clamp = QtWidgets.QCheckBox(tr("Clamp to Grid"), self.chart_cpu)
         self.clamp.setObjectName("apply")
         self.clamp.move(6, 4)
         self.clamp.setChecked(bool(self.main.cfg.get("fan_clamp", True)))
@@ -653,16 +654,16 @@ class FansWindow(QtWidgets.QWidget):
         bl.setContentsMargins(0, 0, 0, 0)
         bl.setSpacing(4)
         vl.addLayout(bl)
-        self.reset = w.RButton("Factory Defaults", secondary=True, radius=2)
+        self.reset = w.RButton(tr("Factory Defaults"), secondary=True, radius=2)
         self.reset.setFixedSize(126, 27)
         self.reset.clicked.connect(self.on_reset_menu)
-        self.calibrate = w.RButton("Calibrate", secondary=True, radius=2)
+        self.calibrate = w.RButton(tr("Calibrate"), secondary=True, radius=2)
         self.calibrate.setFixedSize(70, 27)
-        self.calibrate.setToolTip("Spins both fans at 100% for ~20 s to measure their real max RPM")
+        self.calibrate.setToolTip(tr("Spins both fans at 100% for ~20 s to measure their real max RPM"))
         self.calibrate.clicked.connect(self.on_calibrate)
         for b in (self.reset, self.calibrate):
             b.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        self.apply_fans = ApplyCheck("Apply Fan Curve")
+        self.apply_fans = ApplyCheck(tr("Apply Fan Curve"))
         self.apply_fans.clicked.connect(self.on_apply_fans)
         bl.addWidget(self.reset, 0, QtCore.Qt.AlignBottom)
         bl.addWidget(self.calibrate, 0, QtCore.Qt.AlignBottom)
@@ -699,9 +700,9 @@ class FansWindow(QtWidgets.QWidget):
             return
         self.profile = hw.get_profile()
         self.ac = hw.ac_online()
-        self.power_source.setText("plugged in" if self.ac else "on battery")
-        self.power_source.setToolTip("Limits are kept separately for each mode, "
-                                     "on battery and when plugged in")
+        self.power_source.setText(tr("plugged in") if self.ac else tr("on battery"))
+        self.power_source.setToolTip(tr("Limits are kept separately for each mode, "
+                                     "on battery and when plugged in"))
         self.init_axis()
         self.fill_modes()
         self.main.bg(lambda: hw.get_fan_curves(self.profile), then=self.show_curves)
@@ -716,7 +717,7 @@ class FansWindow(QtWidgets.QWidget):
     def on_epp(self, _index):
         if self.profile in hw.EPP_PROP:
             self.main.bg(hw.set_profile_epp, self.profile, self.epp.currentData(),
-                         then=lambda r: self.main.report(r, "Power mode"))
+                         then=lambda r: self.main.report(r, tr("Power mode")))
 
     def read_power(self):
         enabled = bool(hw.get_ppt_enabled())
@@ -739,7 +740,7 @@ class FansWindow(QtWidgets.QWidget):
             panel.set(lo, hi, max(lo, min(hi, value)))
             panel.track.setEnabled(hi > lo)
         boost = values.get("nv_dynamic_boost", (None,))[0]
-        self.gpu_note.setText("Dynamic Boost is locked by the firmware right now (often on battery)."
+        self.gpu_note.setText(tr("Dynamic Boost is locked by the firmware right now (often on battery).")
                               if boost and boost[0] == boost[1] else "")
 
     def show_curves(self, curves):
@@ -784,14 +785,14 @@ class FansWindow(QtWidgets.QWidget):
             result = custom.activate(cfg, mode["id"])
             self.main.save()
             return result
-        self.main.bg(job, then=lambda r: (self.main.report(r, "New mode"), self.main.refresh_fast(),
+        self.main.bg(job, then=lambda r: (self.main.report(r, tr("New mode")), self.main.refresh_fast(),
                                           self.main.modes_changed()))
 
     def on_rename_mode(self):
         mode = custom.active(self.main.cfg)
         if not mode:
             return
-        name, ok = QtWidgets.QInputDialog.getText(self, "Rename mode", "Name:", text=mode["name"])
+        name, ok = QtWidgets.QInputDialog.getText(self, tr("Rename mode"), tr("Name:"), text=mode["name"])
         if ok and name.strip():
             mode["name"] = name.strip()
             self.main.save()
@@ -809,7 +810,7 @@ class FansWindow(QtWidgets.QWidget):
             custom.remove(cfg, mode["id"])
             self.main.save()
             return hw.set_profile("balanced")
-        self.main.bg(job, then=lambda r: (self.main.report(r, "Remove mode"), self.main.refresh_fast(),
+        self.main.bg(job, then=lambda r: (self.main.report(r, tr("Remove mode")), self.main.refresh_fast(),
                                           self.main.modes_changed()))
 
     def remember(self, **edit):
@@ -833,7 +834,7 @@ class FansWindow(QtWidgets.QWidget):
             if ok:
                 ok, out = hw.enable_fan_curves(profile, True)
             return ok, out
-        self.main.bg(job, then=lambda r: (self.main.report(r, "Fan curve"), self.load()))
+        self.main.bg(job, then=lambda r: (self.main.report(r, tr("Fan curve")), self.load()))
 
     def on_apply_fans(self, on):
         self.remember(fans_on=on)
@@ -841,16 +842,16 @@ class FansWindow(QtWidgets.QWidget):
         self.chart_cpu.update()
         self.chart_gpu.update()
         self.main.bg(hw.enable_fan_curves, self.profile, on,
-                     then=lambda r: (self.main.report(r, "Fan curve"), self.load()))
+                     then=lambda r: (self.main.report(r, tr("Fan curve")), self.load()))
 
     def on_reset_menu(self):
         menu = QtWidgets.QMenu(self)
-        factory = menu.addAction("Factory (this laptop's firmware)")
+        factory = menu.addAction(tr("Factory (this laptop's firmware)"))
         factory.setEnabled(bool(self.main.cfg.get("factory_curves", {}).get(self.profile)))
         if not factory.isEnabled():
-            factory.setText("Factory (no saved copy of the firmware curves)")
+            factory.setText(tr("Factory (no saved copy of the firmware curves)"))
         factory.triggered.connect(self.on_reset_factory)
-        gh = menu.addAction("G-Helper defaults (as on Windows)")
+        gh = menu.addAction(tr("G-Helper defaults (as on Windows)"))
         gh.setEnabled(self.profile in GHELPER_DEFAULTS)
         gh.triggered.connect(self.on_reset_ghelper)
         menu.exec(self.reset.mapToGlobal(QtCore.QPoint(0, -menu.sizeHint().height())))
@@ -869,11 +870,11 @@ class FansWindow(QtWidgets.QWidget):
 
     def on_reset_factory(self):
         """Firmware curves, and custom curves off: the fans run on the firmware's own control."""
-        self.write_curves(self.main.cfg["factory_curves"][self.profile], False, "Factory defaults")
+        self.write_curves(self.main.cfg["factory_curves"][self.profile], False, tr("Factory defaults"))
 
     def on_reset_ghelper(self):
         """Generic G-Helper curves; they only take effect as a custom curve, so it is enabled."""
-        self.write_curves(GHELPER_DEFAULTS[self.profile], True, "G-Helper defaults")
+        self.write_curves(GHELPER_DEFAULTS[self.profile], True, tr("G-Helper defaults"))
 
     def constrain_ppt(self, name, value):
         """Fans.TrackPower_Scroll: keep SPL <= sPPT <= fPPT while dragging any of them."""
@@ -907,10 +908,10 @@ class FansWindow(QtWidgets.QWidget):
                     if not ok:
                         return ok, out
             return hw.set_ppt_enabled(on)
-        self.main.bg(job, then=lambda r: (self.main.report(r, "Power limits"), self.load()))
+        self.main.bg(job, then=lambda r: (self.main.report(r, tr("Power limits")), self.load()))
 
     def on_gpu_value(self, name, value):
-        self.main.bg(hw.set_armoury, name, value, then=lambda r: (self.main.report(r, "GPU setting"), self.load()))
+        self.main.bg(hw.set_armoury, name, value, then=lambda r: (self.main.report(r, tr("GPU setting")), self.load()))
 
     # -- calibration (FanSensorControl.StartCalibration) ----------------------------
     def init_axis(self):
@@ -926,7 +927,7 @@ class FansWindow(QtWidgets.QWidget):
         if not self.calibration:
             name = dict(MODE_NAMES).get(self.profile, self.profile)
             self.set_result("" if calibrated else
-                            f"Press Calibrate so the charts show the real fan speed in {name}", error=False)
+                            tr("Press Calibrate so the charts show the real fan speed in {mode}", mode=name), error=False)
 
     def on_toggle_rpm(self):
         self.main.cfg["fan_rpm"] = not self.main.cfg.get("fan_rpm")
@@ -1054,10 +1055,10 @@ class FansWindow(QtWidgets.QWidget):
             self.calibration = None
             self.calibrate.setEnabled(True)
             if error:
-                self.set_result(f"Calibration failed: {error}")
+                self.set_result(tr("Calibration failed: {error}", error=error))
             else:
-                self.set_result(f"Measured - CPU: {fan_max(cfg, 'cpu')}, GPU: {fan_max(cfg, 'gpu')}", error=False)
-            self.main.report(result, "Restoring fan curves")
+                self.set_result(tr("Measured - CPU: {cpu}, GPU: {gpu}", cpu=fan_max(cfg, 'cpu'), gpu=fan_max(cfg, 'gpu')), error=False)
+            self.main.report(result, tr("Restoring fan curves"))
             self.load()
             self.main.refresh_fast()
 

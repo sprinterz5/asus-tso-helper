@@ -6,6 +6,11 @@
 - **Update in one click**: when a new release is out, the red version label (or the app row in
   Updates) downloads it, checks GitHub's SHA-256 and restarts into it.
 - Ultimate (MUX) tested both ways; a MUX change asusd keeps queued until shutdown shows as pending.
+- **Russian** translation, picked from the system language or in Extra → Language. Other languages
+  are one JSON file each in `asus_tso_helper/translations/`.
+- Refresh rate also on **GNOME** (Mutter's display API), **Sway / Hyprland** (wlr-randr) and X11
+  (xrandr), not only KDE.
+- **RPM** (COPR) and **AUR** packages on the system's Python and Qt.
 
 ## 0.3.0
 - GPU modes on **Cardwire** instead of supergfxd: Eco and Standard switch at once, without a

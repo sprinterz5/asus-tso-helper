@@ -12,6 +12,8 @@ import threading
 
 from PySide6 import QtCore
 
+from .i18n import tr
+
 try:
     import evdev
     from evdev import ecodes as e
@@ -35,24 +37,24 @@ DEFAULT_ACTION = {"fnf4": "aura", "fne": "calculator"}  # InputDispatcher.KeyPro
 # Extra.SetKeyCombo actions that have a Linux equivalent (G-Helper's order)
 ACTIONS = [
     ("", "--------------"),
-    ("volume_down", "Volume Down"),
-    ("volume_up", "Volume Up"),
-    ("backlight_down", "Keyboard Backlight Down"),
-    ("backlight_up", "Keyboard Backlight Up"),
-    ("mute", "Volume Mute"),
-    ("screenshot", "Screenshot"),
-    ("play", "Play / Pause"),
-    ("aura", "Toggle Aura"),
-    ("performance", "Performance Mode"),
-    ("screen", "Toggle Screen"),
-    ("lock", "Lock Screen"),
-    ("brightness_down", "Brightness Down"),
-    ("brightness_up", "Brightness Up"),
-    ("touchpad", "Toggle Touchpad"),
-    ("micmute", "Mute Mic"),
-    ("calculator", "Calculator"),
-    ("ghelper", "Open asus-tso-helper"),
-    ("custom", "Custom"),
+    ("volume_down", tr("Volume Down")),
+    ("volume_up", tr("Volume Up")),
+    ("backlight_down", tr("Keyboard Backlight Down")),
+    ("backlight_up", tr("Keyboard Backlight Up")),
+    ("mute", tr("Volume Mute")),
+    ("screenshot", tr("Screenshot")),
+    ("play", tr("Play / Pause")),
+    ("aura", tr("Toggle Aura")),
+    ("performance", tr("Performance Mode")),
+    ("screen", tr("Toggle Screen")),
+    ("lock", tr("Lock Screen")),
+    ("brightness_down", tr("Brightness Down")),
+    ("brightness_up", tr("Brightness Up")),
+    ("touchpad", tr("Toggle Touchpad")),
+    ("micmute", tr("Mute Mic")),
+    ("calculator", tr("Calculator")),
+    ("ghelper", tr("Open asus-tso-helper")),
+    ("custom", tr("Custom")),
 ]
 
 # actions done by re-sending a standard key, so KDE shows its usual on-screen display
@@ -125,12 +127,12 @@ def install_rule():
 
 # friendlier names for keys the user adds themselves (evdev name otherwise)
 KEY_LABELS = {
-    "KEY_KBDILLUMUP": "Keyboard light up", "KEY_KBDILLUMDOWN": "Keyboard light down",
-    "KEY_BRIGHTNESSUP": "Brightness up", "KEY_BRIGHTNESSDOWN": "Brightness down",
-    "KEY_TOUCHPAD_TOGGLE": "Touchpad key", "KEY_MICMUTE": "Mic mute key", "KEY_RFKILL": "Airplane key",
-    "KEY_PROG1": "Fn key PROG1", "KEY_PROG2": "Fn key PROG2", "KEY_PROG3": "Armoury key",
-    "KEY_PROG4": "Aura key", "KEY_CALC": "Calculator key", "KEY_CAMERA": "Camera key",
-    "KEY_SWITCHVIDEOMODE": "Display key", "KEY_SELECTIVE_SCREENSHOT": "Screenshot key",
+    "KEY_KBDILLUMUP": tr("Keyboard light up"), "KEY_KBDILLUMDOWN": tr("Keyboard light down"),
+    "KEY_BRIGHTNESSUP": tr("Brightness up"), "KEY_BRIGHTNESSDOWN": tr("Brightness down"),
+    "KEY_TOUCHPAD_TOGGLE": tr("Touchpad key"), "KEY_MICMUTE": tr("Mic mute key"), "KEY_RFKILL": tr("Airplane key"),
+    "KEY_PROG1": tr("Fn key PROG1"), "KEY_PROG2": tr("Fn key PROG2"), "KEY_PROG3": tr("Armoury key"),
+    "KEY_PROG4": tr("Aura key"), "KEY_CALC": tr("Calculator key"), "KEY_CAMERA": tr("Camera key"),
+    "KEY_SWITCHVIDEOMODE": tr("Display key"), "KEY_SELECTIVE_SCREENSHOT": tr("Screenshot key"),
 }
 
 
@@ -138,7 +140,7 @@ def key_label(code, scan):
     name = e.KEY.get(code, f"0x{scan:02X}") if evdev else f"0x{scan:02X}"
     if isinstance(name, list):
         name = name[0]
-    return KEY_LABELS.get(name, name.replace("KEY_", "Fn key ").replace("_", " ").title())
+    return KEY_LABELS.get(name, name.replace("KEY_", tr("Fn key") + " ").replace("_", " ").title())
 
 
 class Hotkeys(QtCore.QObject):

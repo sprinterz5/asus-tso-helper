@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from PySide6 import QtCore, QtGui, QtNetwork, QtWidgets
 
 from . import backend as hw
+from .i18n import tr
 from .extra import ExtraWindow
 from . import hotkeys
 from . import modes
@@ -34,21 +35,21 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 AUTOSTART = os.path.expanduser(f"~/.config/autostart/{APP}.desktop")
 
 
-MODES = [("quiet", "Silent", "bike", ECO),
-         ("balanced", "Balanced", "car", STANDARD),
-         ("performance", "Turbo", "rocket", TURBO)]
-GPU_MODES = [("Integrated", "Eco", "leaf", ECO, "iGPU only",
-              "Disables dGPU to save battery"),
-             ("Hybrid", "Standard", "flower-2", STANDARD, "iGPU + dGPU",
-              "Enables dGPU for standard use"),
-             ("AsusMuxDgpu", "Ultimate", "gamepad-2", TURBO, "dGPU exclusive",
-              "Routes laptop screen to dGPU, maximizing FPS")]
+MODES = [("quiet", tr("Silent"), "bike", ECO),
+         ("balanced", tr("Balanced"), "car", STANDARD),
+         ("performance", tr("Turbo"), "rocket", TURBO)]
+GPU_MODES = [("Integrated", tr("Eco"), "leaf", ECO, tr("iGPU only"),
+              tr("Disables dGPU to save battery")),
+             ("Hybrid", tr("Standard"), "flower-2", STANDARD, tr("iGPU + dGPU"),
+              tr("Enables dGPU for standard use")),
+             ("AsusMuxDgpu", tr("Ultimate"), "gamepad-2", TURBO, tr("dGPU exclusive"),
+              tr("Routes laptop screen to dGPU, maximizing FPS"))]
 # nvidia-smi keeps the dGPU awake for a few seconds (it sleeps ~5 s after the last use); asking
 # every 2 s kept it awake forever. G-Helper falls back to the EC's GPU sensor, which Linux lacks.
 DGPU_TEMP_EVERY = 12
 SERVICE_TOOLS = {"asusd": "asusctl", "cardwired": "cardwire"}
-OPTIMIZED_TIP = "Switch to Eco on battery and to Standard when plugged in"
-AURA = [("static", "Static"), ("breathe", "Breathe"), ("rainbow-cycle", "Rainbow"), ("pulse", "Strobe")]
+OPTIMIZED_TIP = tr("Switch to Eco on battery and to Standard when plugged in")
+AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
 
 
 def load_config():
@@ -223,7 +224,7 @@ class MainWindow(QtWidgets.QWidget):
         self.portal.activated.connect(self.on_shortcut)
         self.portal.bound.connect(self.on_shortcuts_bound)
         self.portal.failed.connect(lambda msg: self.portal_busy and QtWidgets.QMessageBox.warning(
-            self, APP, f"Keyboard shortcut was not added: {msg}"))
+            self, APP, tr("Keyboard shortcut was not added: {msg}", msg=msg)))
         self.portal_busy = False
         if self.cfg.get("shortcuts") and self.portal.ok:
             self.portal.bind([(sid, self.shortcut_description(sid)) for sid in self.cfg["shortcuts"]])
@@ -250,7 +251,7 @@ class MainWindow(QtWidgets.QWidget):
     # -- layout -----------------------------------------------------------------
     def build_performance(self):
         p, lay = panel(10, 10, 10, 10)  # Padding(20)
-        self.perf_head = w.Header("gauge", "Mode")
+        self.perf_head = w.Header("gauge", tr("Mode"))
         lay.addWidget(self.perf_head)
         holder, g = grid(4, 64)
         self.mode_buttons = {}
@@ -260,7 +261,7 @@ class MainWindow(QtWidgets.QWidget):
             b.clicked.connect(lambda _=False, k=key: self.on_profile(k))
             g.addWidget(b, 0, col)
             self.mode_buttons[key] = b
-        self.fans_button = w.RButton("Fans + Power", "fan", secondary=True, accent=CUSTOM, vertical=True)
+        self.fans_button = w.RButton(tr("Fans + Power"), "fan", secondary=True, accent=CUSTOM, vertical=True)
         self.fans_button.setFixedHeight(60)
         self.fans_button.clicked.connect(self.on_fans)
         g.addWidget(self.fans_button, 0, 3)
@@ -269,7 +270,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def build_gpu(self):
         p, lay = panel(10, 10, 10, 0)  # Padding(20, 20, 20, 0)
-        self.gpu_head = w.Header("gpu", "GPU Mode")
+        self.gpu_head = w.Header("gpu", tr("GPU Mode"))
         lay.addWidget(self.gpu_head)
         holder, g = grid(4, 64)
         self.gpu_tip = QtWidgets.QLabel("")
@@ -293,7 +294,7 @@ class MainWindow(QtWidgets.QWidget):
             tips[b] = tip
         self.optimized = None
         if "Integrated" in supported and "Hybrid" in supported:
-            self.optimized = w.RButton("Optimized", "sparkles", accent=ECO, vertical=True)
+            self.optimized = w.RButton(tr("Optimized"), "sparkles", accent=ECO, vertical=True)
             self.optimized.setFixedHeight(60)
             self.optimized.clicked.connect(self.on_optimized)
             g.addWidget(self.optimized, 0, col)
@@ -309,7 +310,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def build_screen(self):
         p, lay = panel(10, 6, 10, 0)  # Padding(20, 11, 20, 0)
-        self.screen_head = w.Header("laptop", "Screen")
+        self.screen_head = w.Header("laptop", tr("Screen"))
         lay.addWidget(self.screen_head)
         holder, g = grid(4, 40)
         g.setRowMinimumHeight(1, 10 - 4)
@@ -317,18 +318,18 @@ class MainWindow(QtWidgets.QWidget):
         self.screen_tip.setObjectName("tip")
         self.screen_tip.setFixedHeight(18)
         self.screen_tip.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
-        self.screen_auto = w.RButton("Auto", accent=GRAY)
-        self.screen_60 = w.RButton("60Hz", accent=GRAY)
-        self.screen_max = w.RButton("Max", accent=GRAY)
+        self.screen_auto = w.RButton(tr("Auto"), accent=GRAY)
+        self.screen_60 = w.RButton(tr("60Hz"), accent=GRAY)
+        self.screen_max = w.RButton(tr("Max"), accent=GRAY)
         for col, (b, key) in enumerate(((self.screen_auto, "auto"), (self.screen_60, "60"),
                                         (self.screen_max, "max"))):
             b.setFixedHeight(36)
             b.clicked.connect(lambda _=False, k=key: self.on_screen(k))
             g.addWidget(b, 0, col)
         self.screen_hover = HoverTip(self.screen_tip, {
-            self.screen_auto: "Sets 60Hz to save battery, and back when plugged",
-            self.screen_60: "60Hz refresh rate to save battery",
-            self.screen_max: "Max refresh rate for lower latency"})
+            self.screen_auto: tr("Sets 60Hz to save battery, and back when plugged"),
+            self.screen_60: tr("60Hz refresh rate to save battery"),
+            self.screen_max: tr("Max refresh rate for lower latency")})
         for b in (self.screen_auto, self.screen_60, self.screen_max):
             b.installEventFilter(self.screen_hover)
         lay.addWidget(holder)
@@ -337,8 +338,8 @@ class MainWindow(QtWidgets.QWidget):
 
     def build_keyboard(self):
         p, lay = panel(10, 10, 10, 0)  # Padding(20, 20, 20, 0)
-        self.kbd_head = w.Header("keyboard", "Laptop Keyboard")
-        self.fn_lock = w.RButton("FN-Lock", secondary=True, radius=2, borderless=True)
+        self.kbd_head = w.Header("keyboard", tr("Laptop Keyboard"))
+        self.fn_lock = w.RButton(tr("FN-Lock"), secondary=True, radius=2, borderless=True)
         f = self.fn_lock.font()
         f.setPointSizeF(f.pointSizeF() * 7.125 / 9)
         f.setBold(True)
@@ -346,7 +347,7 @@ class MainWindow(QtWidgets.QWidget):
         self.fn_lock.setFixedSize(62, 20)
         self.fn_lock.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.fn_lock.text_colour = w.THEME.control_dark
-        self.fn_lock.setToolTip("FN-Lock is toggled with Fn + Esc on this laptop")
+        self.fn_lock.setToolTip(tr("FN-Lock is toggled with Fn + Esc on this laptop"))
         self.kbd_head.right.addWidget(self.fn_lock)
         self.kbd_head.right.setContentsMargins(23, 0, 2, 0)
         lay.addWidget(self.kbd_head)
@@ -367,10 +368,10 @@ class MainWindow(QtWidgets.QWidget):
         cl = QtWidgets.QVBoxLayout(combo_box)
         cl.setContentsMargins(3, 3, 3, 2)  # Margin(7, 7, 7, 4)
         cl.addWidget(self.aura_combo)
-        self.colour_button = w.ColorButton("Color", "#" + self.cfg.get("aura_colour", "ffffff"), radius=2)
+        self.colour_button = w.ColorButton(tr("Color"), "#" + self.cfg.get("aura_colour", "ffffff"), radius=2)
         self.colour_button.setFixedHeight(24)
         self.colour_button.clicked.connect(self.pick_colour)
-        self.extra_button = w.RButton("Extra", "settings", secondary=True, radius=2)
+        self.extra_button = w.RButton(tr("Extra"), "settings", secondary=True, radius=2)
         self.extra_button.setFixedHeight(24)
         self.extra_button.clicked.connect(self.on_extra)
         g.addWidget(combo_box, 0, 0)
@@ -393,7 +394,7 @@ class MainWindow(QtWidgets.QWidget):
         p, lay = panel(10, 8, 10, 0)  # Padding(20, 15, 20, 0)
         self.bat_panel = p
         p.installEventFilter(self)
-        self.bat_head = w.Header("battery-charging", "Battery Charge Limit", height=22)
+        self.bat_head = w.Header("battery-charging", tr("Battery Charge Limit"), height=22)
         lay.addWidget(self.bat_head)
         row = QtWidgets.QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
@@ -401,7 +402,7 @@ class MainWindow(QtWidgets.QWidget):
         self.slider = w.Slider(40, 100, 5)
         self.slider.valueChanged.connect(self.show_limit)
         self.slider.released.connect(self.on_limit)
-        self.full_button = w.RButton("100%", secondary=True, radius=2, borderless=True)
+        self.full_button = w.RButton(tr("100%"), secondary=True, radius=2, borderless=True)
         f = self.full_button.font()
         f.setPointSizeF(f.pointSizeF() * 7.125 / 9)
         f.setBold(True)
@@ -425,7 +426,7 @@ class MainWindow(QtWidgets.QWidget):
         p.setFixedHeight(25)
         lay = QtWidgets.QHBoxLayout(p)
         lay.setContentsMargins(15, 0, 10, 0)
-        self.startup = QtWidgets.QCheckBox("Run on Startup")
+        self.startup = QtWidgets.QCheckBox(tr("Run on Startup"))
         self.startup.setChecked(os.path.exists(AUTOSTART))
         self.startup.toggled.connect(self.on_startup)
         self.charge_label = QtWidgets.QLabel("")
@@ -441,7 +442,7 @@ class MainWindow(QtWidgets.QWidget):
         p.setMinimumHeight(25)
         lay = QtWidgets.QHBoxLayout(p)
         lay.setContentsMargins(12, 2, 12, 2)
-        version = QtWidgets.QLabel(f"Version: {VERSION}")
+        version = QtWidgets.QLabel(tr("Version: {version}", version=VERSION))
         version.setObjectName("version")
         version.setCursor(QtCore.Qt.PointingHandCursor)
         version.mousePressEvent = lambda _: self.on_version_clicked()
@@ -457,11 +458,11 @@ class MainWindow(QtWidgets.QWidget):
         lay = QtWidgets.QHBoxLayout(p)
         lay.setContentsMargins(10, 5, 10, 10)  # Padding(20, 10, 20, 20)
         lay.setSpacing(4)
-        credits = w.RButton("Credits", "heart", secondary=True, radius=2)
+        credits = w.RButton(tr("Credits"), "heart", secondary=True, radius=2)
         credits.clicked.connect(self.on_credits)
-        updates = w.RButton("Updates", "download", secondary=True, radius=2)
+        updates = w.RButton(tr("Updates"), "download", secondary=True, radius=2)
         updates.clicked.connect(self.on_updates)
-        quit_b = w.RButton("Quit", "log-out", secondary=True, radius=2)
+        quit_b = w.RButton(tr("Quit"), "log-out", secondary=True, radius=2)
         quit_b.clicked.connect(QtWidgets.QApplication.quit)
         for b in (credits, updates, quit_b):
             b.setFixedHeight(24)
@@ -495,7 +496,7 @@ class MainWindow(QtWidgets.QWidget):
         if self.services_missing:
             self.flash_banner()  # the banner already says why; no raw command errors
             return
-        QtWidgets.QMessageBox.warning(self, APP, f"{what} failed:\n{out}")
+        QtWidgets.QMessageBox.warning(self, APP, tr("{what} failed:", what=what) + f"\n{out}")
 
     # -- asusd / cardwired status ------------------------------------------------------
     def show_services(self, running):
@@ -504,10 +505,9 @@ class MainWindow(QtWidgets.QWidget):
             return
         self.services_missing = missing
         if missing:
-            names = " and ".join(missing)
-            verb = "is" if len(missing) == 1 else "are"
-            self.banner.setText(f"{names} {verb} not running, so settings cannot be changed. "
-                                "Click here to start.")
+            names = ", ".join(missing)
+            self.banner.setText(tr("Not running: {names}. Settings cannot be changed. Click here to start.",
+                                   names=names))
         self.banner.setVisible(bool(missing))
         self.setFixedHeight(self.root_layout.sizeHint().height())
 
@@ -524,14 +524,14 @@ class MainWindow(QtWidgets.QWidget):
             return
         self.banner.setText("Starting " + " and ".join(missing) + " ...")
         self.bg(hotkeys.run_as_root, "systemctl start " + " ".join(missing),
-                then=lambda r: (self.report_plain(r, "Starting services"),
+                then=lambda r: (self.report_plain(r, tr("Starting services")),
                                 setattr(self, "services_missing", ["?"]), self.refresh_slow(),
                                 self.refresh_fast()))
 
     def report_plain(self, result, what):
         ok, out = result
         if not ok and out:
-            QtWidgets.QMessageBox.warning(self, APP, f"{what} failed:\n{out}")
+            QtWidgets.QMessageBox.warning(self, APP, tr("{what} failed:", what=what) + f"\n{out}")
 
     def eventFilter(self, obj, event):
         kind = event.type()
@@ -586,7 +586,7 @@ class MainWindow(QtWidgets.QWidget):
             name = custom["name"]
         else:
             name = next((m[1] for m in MODES if m[0] == profile), profile or "?")
-        self.perf_head.title.setText(f"Mode: {name}")
+        self.perf_head.title.setText(tr("Mode: {name}", name=name))
         # dGPU temperature only while the window is open and the dGPU is awake anyway; asleep it
         # shows the last one (G-Helper 0.248, issue #5290), in Eco none
         now = time.monotonic()
@@ -613,9 +613,9 @@ class MainWindow(QtWidgets.QWidget):
         text = ""
         if self.bat and self.bat["watts"]:
             if self.bat["status"] == "Charging":
-                text = f"Charging: {self.bat['watts']:.1f}W"
+                text = tr("Charging: {watts}W", watts=f"{self.bat['watts']:.1f}")
             elif self.bat["status"] == "Discharging":
-                text = f"Discharging: {self.bat['watts']:.1f}W"
+                text = tr("Discharging: {watts}W", watts=f"{self.bat['watts']:.1f}")
         self.bat_head.info.setText(text)
         if text:  # charging or discharging: UPower's estimate, off the GUI thread
             self.bg(hw.battery_time, then=lambda t: (setattr(self, "bat_time", t), self.update_charge_label()))
@@ -639,23 +639,25 @@ class MainWindow(QtWidgets.QWidget):
 
     def update_charge_label(self):
         if self.full_hover:
-            text = "One time charge to 100%"
+            text = tr("One time charge to 100%")
         elif self.battery_hover:
             health = hw.battery_health()
             cycles = hw.battery_cycles()  # many ASUS batteries report 0
-            text = f"Battery Health: {health:.1f}%" if health else ""
+            text = tr("Battery Health: {health}%", health=f"{health:.1f}") if health else ""
             if text and cycles:
-                text += f", {cycles} cycles"
+                text += ", " + tr("{count} cycles", count=cycles)
         else:
             bat = getattr(self, "bat", None)
-            text = f"Charge: {bat['percent']}%" if bat and bat["percent"] is not None else ""
+            text = tr("Charge: {percent}%", percent=bat["percent"]) if bat and bat["percent"] is not None else ""
             if text and self.bat_time:
                 kind, secs = self.bat_time
-                text += f" ({secs // 3600}h {secs % 3600 // 60:02d}m {kind})"
+                time_text = tr("{h}h {m}m", h=secs // 3600, m=f"{secs % 3600 // 60:02d}")
+                text += " (" + (tr("{time} left", time=time_text) if kind == "left" else
+                                tr("{time} to full", time=time_text)) + ")"
         self.charge_label.setText(text)
 
     def show_limit(self, value):
-        self.bat_head.title.setText(f"Battery Charge Limit: {value}%")
+        self.bat_head.title.setText(tr("Battery Charge Limit: {value}%", value=value))
 
     def show_sensors(self, s):
         fans = s["fans"]
@@ -670,8 +672,8 @@ class MainWindow(QtWidgets.QWidget):
                 save_config(self.cfg)
             calibrated = any(k.startswith("fan_table_") for k in self.cfg)
             if self.cfg.get("fan_rpm", calibrated):
-                return f"Fan: {rpm}RPM"
-            return f"Fan: {min(100, round(rpm * 100 / fan_max(self.cfg, name)))}%"
+                return tr("Fan: {value}", value=f"{rpm}RPM")
+            return tr("Fan: {value}", value=f"{min(100, round(rpm * 100 / fan_max(self.cfg, name)))}%")
 
         if s["dgpu"] is not None:
             self.dgpu_temp = s["dgpu"]
@@ -713,9 +715,9 @@ class MainWindow(QtWidgets.QWidget):
         label = next((m[4] for m in GPU_MODES if m[0] == mode), mode or "?")
         if target:
             to = next((m[4] for m in GPU_MODES if m[0] == target), target)
-            self.gpu_head.title.setText(f"GPU Mode: {label} \u2192 {to}")
+            self.gpu_head.title.setText(tr("GPU Mode: {mode}", mode=f"{label} \u2192 {to}"))
         else:
-            self.gpu_head.title.setText(f"GPU Mode: {label}")
+            self.gpu_head.title.setText(tr("GPU Mode: {mode}", mode=label))
         if self.tray:
             self.tray.set_gpu(mode)
 
@@ -726,8 +728,10 @@ class MainWindow(QtWidgets.QWidget):
             action = (pending or "Reboot required to complete mode change").rstrip(".")
             reboot = "reboot" in action.lower() or "restart" in action.lower()
             self.gpu_logout_reboot = reboot
-            self.gpu_hover.set_rest(f"{action}. Click here to {'restart' if reboot else 'log out'} now, "
-                                    "or pick the current mode to cancel.")
+            self.gpu_hover.set_rest(tr("{action}. Click here to restart now, or pick the current mode to cancel.",
+                                       action=tr(action)) if reboot else
+                                    tr("{action}. Click here to log out now, or pick the current mode to cancel.",
+                                       action=tr(action)))
             self.gpu_tip.setObjectName("pending")
             self.gpu_tip.setCursor(QtCore.Qt.PointingHandCursor)
         else:
@@ -749,22 +753,22 @@ class MainWindow(QtWidgets.QWidget):
         ok, _ = hw.run("busctl", "--user", "call", "org.kde.LogoutPrompt", "/LogoutPrompt",
                        "org.kde.LogoutPrompt", method, timeout=5)
         if not ok:
-            QtWidgets.QMessageBox.information(self, APP, "Log out (or restart) to finish the GPU mode change.")
+            QtWidgets.QMessageBox.information(self, APP, tr("Log out (or restart) to finish the GPU mode change."))
 
     def show_screen(self, data):
         info, overdrive = data
         if not info:
-            self.screen_head.title.setText("Screen: Turned off")
+            self.screen_head.title.setText(tr("Screen: Turned off"))
             for b in (self.screen_auto, self.screen_60, self.screen_max):
                 b.setEnabled(False)
             return
         _, hz, rates = info
         for b in (self.screen_auto, self.screen_60, self.screen_max):
             b.setEnabled(True)
-        self.screen_head.title.setText(f"Screen: {hz}Hz" + (" + Overdrive" if overdrive else ""))
-        self.screen_60.setText(f"{min(rates)}Hz")
+        self.screen_head.title.setText(tr("Screen: {hz}Hz", hz=hz) + (tr(" + Overdrive") if overdrive else ""))
+        self.screen_60.setText(tr("{hz}Hz", hz=min(rates)))
         od = overdrive is not None and not self.cfg.get("no_overdrive")
-        self.screen_max.setText(f"{max(rates)}Hz" + (" + OD" if od else ""))
+        self.screen_max.setText(tr("{hz}Hz", hz=max(rates)) + (" + OD" if od else ""))
         auto = self.cfg.get("screen") == "auto"
         self.screen_auto.set_activated(auto)
         self.screen_60.set_activated(not auto and hz <= min(rates))
@@ -800,7 +804,7 @@ class MainWindow(QtWidgets.QWidget):
     def mode_done(self, result):
         self.mode_busy = False
         self.last_profile = hw.get_profile()
-        self.report(result, "Mode")
+        self.report(result, tr("Mode"))
         self.refresh_fast()
         self.modes_changed()
 
@@ -896,14 +900,14 @@ class MainWindow(QtWidgets.QWidget):
                 self.cfg.pop("gpu_after_reboot", None)
                 save_config(self.cfg)
                 self.bg(hw.set_armoury, "gpu_mux_mode", 0 if mode == "AsusMuxDgpu" else 1,
-                        then=lambda r: (self.report(r, "GPU mode"), self.refresh_slow()))
+                        then=lambda r: (self.report(r, tr("GPU mode")), self.refresh_slow()))
             else:
                 self.refresh_slow()
             return
         if mode == "AsusMuxDgpu" or self.gpu_current == "AsusMuxDgpu":
             answer = QtWidgets.QMessageBox.question(
-                self, "GPU Mode",
-                "Switching to or from Ultimate Mode requires restart.\n\nSwitch and reboot now?")
+                self, tr("GPU Mode"),
+                tr("Switching to or from Ultimate Mode requires restart.\n\nSwitch and reboot now?"))
             if answer != QtWidgets.QMessageBox.Yes:
                 self.refresh_slow()
                 return
@@ -931,11 +935,11 @@ class MainWindow(QtWidgets.QWidget):
         if self.cfg.get("kill_gpu_apps"):
             return pids
         names = sorted({name for _, name in apps})
-        box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Question, "Switch to Eco",
-                                    "These programs use the NVIDIA GPU:\n\n  " + "\n  ".join(names), parent=self)
-        box.setInformativeText("They keep it powered on until they are closed. Close them now?")
-        close = box.addButton("Close and switch", QtWidgets.QMessageBox.AcceptRole)
-        box.addButton("Switch anyway", QtWidgets.QMessageBox.DestructiveRole)
+        box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Question, tr("Switch to Eco"),
+                                    tr("These programs use the NVIDIA GPU:") + "\n\n  " + "\n  ".join(names), parent=self)
+        box.setInformativeText(tr("They keep it powered on until they are closed. Close them now?"))
+        close = box.addButton(tr("Close and switch"), QtWidgets.QMessageBox.AcceptRole)
+        box.addButton(tr("Switch anyway"), QtWidgets.QMessageBox.DestructiveRole)
         cancel = box.addButton(QtWidgets.QMessageBox.Cancel)
         box.setDefaultButton(close)
         box.exec()
@@ -959,7 +963,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def switch_gpu(self, mode, reboot=False, close=()):
         self.gpu_busy = True
-        self.gpu_head.title.setText("GPU Mode: Changing ...")
+        self.gpu_head.title.setText(tr("GPU Mode: Changing ..."))
         for b in self.gpu_buttons.values():
             b.setEnabled(False)
 
@@ -971,7 +975,7 @@ class MainWindow(QtWidgets.QWidget):
             if not ok:
                 self.cfg.pop("gpu_after_reboot", None)
                 save_config(self.cfg)
-                self.report(result, "GPU mode")
+                self.report(result, tr("GPU mode"))
             elif "reboot" in (out or "").lower():
                 self.gpu_target = mode
                 if reboot:
@@ -1023,7 +1027,7 @@ class MainWindow(QtWidgets.QWidget):
             if hw.get_overdrive() is not None and hw.get_overdrive() != overdrive:
                 hw.set_overdrive(overdrive)
             return result
-        self.bg(job, then=lambda r: (self.report(r, "Refresh rate"), self.refresh_slow()))
+        self.bg(job, then=lambda r: (self.report(r, tr("Refresh rate")), self.refresh_slow()))
 
     def on_updates(self):
         if self.updates is None:
@@ -1040,7 +1044,7 @@ class MainWindow(QtWidgets.QWidget):
             if latest and updates.newer(latest["version"], VERSION):
                 self.latest_release = latest
                 self.release_url = latest["url"] or HOMEPAGE + "/releases"
-                self.version_label.setText(f"Download Update: {latest['version']}")
+                self.version_label.setText(tr("Download Update: {version}", version=latest['version']))
                 f = self.version_label.font()
                 f.setBold(True)
                 f.setUnderline(True)
@@ -1049,7 +1053,7 @@ class MainWindow(QtWidgets.QWidget):
                 if self.tray and not self.isVisible() and self.cfg.get("update_toast") != latest["version"]:
                     self.cfg["update_toast"] = latest["version"]
                     self.save()
-                    self.tray.showMessage(APP, f"Version {latest['version']} is available.",
+                    self.tray.showMessage(APP, tr("Version {version} is available.", version=latest['version']),
                                           QtGui.QIcon(w.APP_ICON), 8000)
         self.bg(updates.app_latest, then=done)
 
@@ -1068,16 +1072,16 @@ class MainWindow(QtWidgets.QWidget):
         """AutoUpdateControl.AutoUpdate: download, swap the AppImage, restart."""
         version = self.latest_release["version"]
         answer = QtWidgets.QMessageBox.question(
-            self, "Update", f"Update to {version} now? The app restarts by itself.\n\n"
-            f"What changed: {self.release_url}")
+            self, tr("Update"), tr("Update to {version} now? The app restarts by itself.", version=version) + "\n\n"
+            + tr("What changed: {url}", url=self.release_url))
         if answer != QtWidgets.QMessageBox.Yes:
             return
         asset = selfupdate.asset_of(self.latest_release)
         label = self.version_label
-        label.setText("Downloading update ...")
+        label.setText(tr("Downloading update ..."))
 
         def progress(percent):
-            self.bridge.done.emit(lambda p: label.setText(f"Downloading update: {p}%"), percent)
+            self.bridge.done.emit(lambda p: label.setText(tr("Downloading update: {percent}%", percent=p)), percent)
 
         def job():
             ok, path = selfupdate.download(asset, progress)
@@ -1085,8 +1089,8 @@ class MainWindow(QtWidgets.QWidget):
 
         def done(result):
             if not result[0]:
-                label.setText(f"Download Update: {version}")
-                QtWidgets.QMessageBox.warning(self, "Update", result[1])
+                label.setText(tr("Download Update: {version}", version=version))
+                QtWidgets.QMessageBox.warning(self, tr("Update"), result[1])
                 return
             selfupdate.restart()
             QtWidgets.QApplication.quit()
@@ -1105,8 +1109,8 @@ class MainWindow(QtWidgets.QWidget):
         """Opens Setup at start when something required or recommended is missing (until 'Later'
         for this version)."""
         if hw.remove_kwin_limits() and self.tray:
-            self.tray.showMessage(APP, "Log out once to get the HDMI / USB-C video ports back: "
-                                  "\"Eco without logout\" is not needed with Cardwire.",
+            self.tray.showMessage(APP, tr("Log out once to get the HDMI / USB-C video ports back: "
+                                  "\"Eco without logout\" is not needed with Cardwire."),
                                   QtWidgets.QSystemTrayIcon.Information, 8000)
         if self.cfg.get("setup_later") == VERSION:
             return
@@ -1150,8 +1154,8 @@ class MainWindow(QtWidgets.QWidget):
         Some Fn keys never reach Linux (Fn+F2/F3: the keyboard firmware changes the light
         itself), so the dialog watches for that and explains instead of waiting forever."""
         self.hotkeys.capturing = True
-        box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, "Add laptop key",
-                                    "Press the laptop key (Fn + ...) you want to bind.",
+        box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, tr("Add laptop key"),
+                                    tr("Press the laptop key (Fn + ...) you want to bind."),
                                     QtWidgets.QMessageBox.Cancel, self.extra or self)
         box.rejected.connect(self.end_capture)
         self.capture_box = box
@@ -1167,19 +1171,19 @@ class MainWindow(QtWidgets.QWidget):
         self.capture_ticks += 1
         light = hw._read(self.KBD_HW_CHANGED)
         if light != self.capture_light:
-            self.capture_fail("This key is handled by the keyboard's own firmware (it changes the "
-                              "backlight by itself) and never reaches Linux, so it cannot be rebound.")
+            self.capture_fail(tr("This key is handled by the keyboard's own firmware (it changes the "
+                                 "backlight by itself) and never reaches Linux, so it cannot be rebound."))
         elif self.capture_ticks >= 34:  # ~10 s
-            self.capture_fail("No laptop key arrived. That key is either handled by the firmware "
-                              "itself or sent as a normal key combination.\n\n"
-                              "Use Add -> Keyboard shortcut for normal key combinations.")
+            self.capture_fail(tr("No laptop key arrived. That key is either handled by the firmware "
+                                 "itself or sent as a normal key combination.") + "\n\n" +
+                              tr("Use Add -> Keyboard shortcut for normal key combinations."))
 
     def capture_fail(self, text):
         box = self.capture_box
         self.end_capture()
         if box:
             box.done(0)
-        QtWidgets.QMessageBox.information(self.extra or self, "Add laptop key", text)
+        QtWidgets.QMessageBox.information(self.extra or self, tr("Add laptop key"), text)
 
     def end_capture(self):
         self.hotkeys.capturing = False
@@ -1206,8 +1210,8 @@ class MainWindow(QtWidgets.QWidget):
             label = self.cfg["custom_keys"][name]["label"]
         if builtin:
             label = hotkeys.KEYS[builtin][0]
-        QtWidgets.QMessageBox.information(self.extra or self, "Add laptop key",
-                                          f"{label} is in the list. Pick what it should do.")
+        QtWidgets.QMessageBox.information(self.extra or self, tr("Add laptop key"),
+                                          tr("{key} is in the list. Pick what it should do.", key=label))
 
     def shortcut_description(self, sid):
         n = list(self.cfg.get("shortcuts", {})).index(sid) + 1 if sid in self.cfg.get("shortcuts", {}) else 0
@@ -1216,10 +1220,10 @@ class MainWindow(QtWidgets.QWidget):
     def add_shortcut(self):
         """Add -> Keyboard shortcut: pick keys here, the desktop confirms and owns them."""
         dlg = QtWidgets.QDialog(self.extra or self)
-        dlg.setWindowTitle("Add keyboard shortcut")
+        dlg.setWindowTitle(tr("Add keyboard shortcut"))
         lay = QtWidgets.QVBoxLayout(dlg)
-        lay.addWidget(QtWidgets.QLabel("Press the key combination, then OK.\n"
-                                       "KDE will ask once to confirm it."))
+        lay.addWidget(QtWidgets.QLabel(tr("Press the key combination, then OK.\n"
+                                       "KDE will ask once to confirm it.")))
         edit = QtWidgets.QKeySequenceEdit()
         edit.setMaximumSequenceLength(1)
         lay.addWidget(edit)
@@ -1280,7 +1284,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def install_idle(self):
         def done(result):
-            self.report(result, "Installing swayidle")
+            self.report(result, tr("Installing swayidle"))
             self.idle_available = bool(shutil.which("swayidle"))
             if self.extra:
                 self.extra.show_idle_state(self.idle_available)
@@ -1295,7 +1299,7 @@ class MainWindow(QtWidgets.QWidget):
             hw.kbd_idle("on")  # do not leave the light off if we stop while idle
 
     def enable_hotkeys(self):
-        self.bg(hotkeys.install_rule, then=lambda r: (self.report(r, "Enabling Key Bindings"),
+        self.bg(hotkeys.install_rule, then=lambda r: (self.report(r, tr("Enabling Key Bindings")),
                                                      QtCore.QTimer.singleShot(1500, self.hotkeys.start)))
 
     def on_hotkey(self, action, key):
@@ -1348,7 +1352,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def pick_colour(self):
         colour = QtWidgets.QColorDialog.getColor(
-            QtGui.QColor("#" + self.cfg.get("aura_colour", "ffffff")), self, "Color")
+            QtGui.QColor("#" + self.cfg.get("aura_colour", "ffffff")), self, tr("Color"))
         if colour.isValid():
             self.cfg["aura_colour"] = colour.name()[1:]
             self.colour_button.set_swatch(colour)
@@ -1358,13 +1362,13 @@ class MainWindow(QtWidgets.QWidget):
         self.cfg["aura_effect"] = self.aura_combo.currentData()
         save_config(self.cfg)
         self.bg(hw.set_aura, self.cfg["aura_effect"], self.cfg.get("aura_colour", "ffffff"),
-                self.cfg.get("aura_speed", "med"), then=lambda r: self.report(r, "Keyboard lighting"))
+                self.cfg.get("aura_speed", "med"), then=lambda r: self.report(r, tr("Keyboard lighting")))
 
     def on_limit(self, percent):
         if self.cfg.pop("full_once", None) is not None:
             self.cfg.pop("limit_before_full", None)
             save_config(self.cfg)
-        self.bg(hw.set_charge_limit, percent, then=lambda r: self.report(r, "Charge limit"))
+        self.bg(hw.set_charge_limit, percent, then=lambda r: self.report(r, tr("Charge limit")))
 
     def on_full_charge(self):
         """BatteryControl.ToggleBatteryLimitFull: charge to 100% once, then restore the limit."""
@@ -1378,27 +1382,30 @@ class MainWindow(QtWidgets.QWidget):
         self.show_limit(100)
         self.full_button.set_activated(True)
         # asusd puts the limit back on unplug even without this app; at 100% the app does it
-        self.bg(hw.one_shot_full_charge, then=lambda r: self.report(r, "Charge limit"))
+        self.bg(hw.one_shot_full_charge, then=lambda r: self.report(r, tr("Charge limit")))
 
     def end_full_charge(self):
         limit = self.cfg.pop("limit_before_full", 80)
         self.cfg.pop("full_once", None)
         save_config(self.cfg)
         self.full_button.set_activated(False)
-        self.bg(hw.set_charge_limit, limit, then=lambda r: (self.report(r, "Charge limit"), self.refresh_fast()))
+        self.bg(hw.set_charge_limit, limit, then=lambda r: (self.report(r, tr("Charge limit")), self.refresh_fast()))
 
     def on_credits(self):
         QtWidgets.QMessageBox.about(
-            self, "Credits",
+            self, tr("Credits"),
             f"<b>{APP}</b> {VERSION}<br><br>"
-            "A Linux port of <a href='https://github.com/seerge/g-helper'>G-Helper</a> by seerge (GPL-3.0): "
-            "its interface, layout and behaviour are seerge's work.<br>"
-            "Hardware control goes through <a href='https://asus-linux.org'>asusctl</a> and <a href='https://opengamingcollective.github.io/cardwire/'>Cardwire</a>.<br>"
-            "Icons: <a href='https://lucide.dev'>Lucide</a> (ISC).<br><br>"
-            + (f"Like it? <a href='{DONATE_URL}'>Support the project</a>, "
-               "and support <a href='https://github.com/seerge/g-helper'>G-Helper</a> too.<br><br>"
-               if DONATE_URL else "") +
-            "Not affiliated with or endorsed by ASUS. ASUS, ROG and TUF are trademarks of ASUSTeK Computer Inc.")
+            + tr("A Linux port of {ghelper} by seerge (GPL-3.0): its interface, layout and behaviour are "
+                 "seerge's work.", ghelper="<a href='https://github.com/seerge/g-helper'>G-Helper</a>") + "<br>"
+            + tr("Hardware control goes through {tools}.",
+                 tools="<a href='https://asus-linux.org'>asusctl</a> &amp; "
+                       "<a href='https://opengamingcollective.github.io/cardwire/'>Cardwire</a>") + "<br>"
+            + tr("Icons: {icons}.", icons="<a href='https://lucide.dev'>Lucide</a> (ISC)") + "<br><br>"
+            + (tr("Like it? {support}, and support {ghelper} too.",
+                  support=f"<a href='{DONATE_URL}'>{tr('Support the project')}</a>",
+                  ghelper="<a href='https://github.com/seerge/g-helper'>G-Helper</a>") + "<br><br>"
+               if DONATE_URL else "")
+            + tr("Not affiliated with or endorsed by ASUS. ASUS, ROG and TUF are trademarks of ASUSTeK Computer Inc."))
 
     def on_startup(self, on):
         if on:
@@ -1419,7 +1426,7 @@ class MainWindow(QtWidgets.QWidget):
             if not self.cfg.get("tray_hint_shown") and self.tray:
                 self.cfg["tray_hint_shown"] = True
                 self.save()
-                self.tray.showMessage(APP, "Still running in the tray. Use Quit to close it.",
+                self.tray.showMessage(APP, tr("Still running in the tray. Use Quit to close it."),
                                       QtGui.QIcon(w.APP_ICON), 5000)
         else:
             event.accept()
@@ -1448,7 +1455,7 @@ class Tray(QtWidgets.QSystemTrayIcon):
         """Settings.SetContextMenu: modes (custom ones too), GPU modes, Quit."""
         window = self.window
         self.menu.clear()
-        title = self.menu.addAction("Mode")
+        title = self.menu.addAction(tr("Mode"))
         title.setEnabled(False)
         self.mode_actions = {}
         for key, label, _ in modes.all_modes(window.cfg):
@@ -1456,15 +1463,15 @@ class Tray(QtWidgets.QSystemTrayIcon):
             act.setCheckable(True)
             self.mode_actions[key] = act
         self.menu.addSeparator()
-        title = self.menu.addAction("GPU Mode")
+        title = self.menu.addAction(tr("GPU Mode"))
         title.setEnabled(False)
         for key, label, *_ in GPU_MODES:
             if key in window.gpu_buttons:
                 self.menu.addAction(label, lambda k=key: window.on_gpu(k))
         if window.optimized:
-            self.menu.addAction("Optimized", window.on_optimized)
+            self.menu.addAction(tr("Optimized"), window.on_optimized)
         self.menu.addSeparator()
-        self.menu.addAction("Quit", QtWidgets.QApplication.quit)
+        self.menu.addAction(tr("Quit"), QtWidgets.QApplication.quit)
 
     def apply_theme(self):
         self.menu.setStyleSheet(stylesheet())

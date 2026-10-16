@@ -9,12 +9,15 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from . import backend as hw
 from . import diagnostics
+from . import i18n
+from . import selfupdate
 from . import hotkeys
 from . import modes
 from . import widgets as w
 from .widgets import ECO, STANDARD
+from .i18n import tr
 
-SPEEDS = [("low", "Slow"), ("med", "Normal"), ("high", "Fast")]
+SPEEDS = [("low", tr("Slow")), ("med", tr("Normal")), ("high", tr("Fast"))]
 
 
 class HeaderPanel(QtWidgets.QWidget):
@@ -56,7 +59,7 @@ class ExtraWindow(QtWidgets.QWidget):
         super().__init__(main, QtCore.Qt.Window)
         self.main = main
         self.cfg = main.cfg
-        self.setWindowTitle("Extra Settings")
+        self.setWindowTitle(tr("Extra Settings"))
         self.setObjectName("root")
         self.setAttribute(QtCore.Qt.WA_StyledBackground)
         self.setFixedWidth(506)  # ClientSize 1013 at 192 DPI
@@ -65,15 +68,15 @@ class ExtraWindow(QtWidgets.QWidget):
         root.setSpacing(0)
 
         # Key Bindings
-        self.bind_head = HeaderPanel("keyboard", "Key Bindings")
-        add_key = w.RButton("Add", secondary=True, radius=2)
+        self.bind_head = HeaderPanel("keyboard", tr("Key Bindings"))
+        add_key = w.RButton(tr("Add"), secondary=True, radius=2)
         add_key.setFixedSize(60, 20)
         add_key.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         add_key.clicked.connect(lambda: self.on_add_key(add_key))
         self.bind_head.right.addWidget(add_key)
         self.bind_head.right.addSpacing(4)
         self.add_key = add_key
-        reset_keys = w.RButton("Reset", secondary=True, radius=2)
+        reset_keys = w.RButton(tr("Reset"), secondary=True, radius=2)
         reset_keys.setFixedSize(75, 20)
         reset_keys.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         reset_keys.clicked.connect(self.on_reset_bindings)
@@ -82,7 +85,7 @@ class ExtraWindow(QtWidgets.QWidget):
         help_icon = QtWidgets.QLabel()  # pictureHelp
         help_icon.setPixmap(w.icon("circle-help"))
         help_icon.setCursor(QtCore.Qt.PointingHandCursor)
-        help_icon.setToolTip("How Key Bindings work")
+        help_icon.setToolTip(tr("How Key Bindings work"))
         help_icon.mousePressEvent = lambda _: QtGui.QDesktopServices.openUrl(
             QtCore.QUrl("https://github.com/sprinterz5/asus-tso-helper#key-bindings"))
         self.bind_head.right.addWidget(help_icon)
@@ -101,7 +104,7 @@ class ExtraWindow(QtWidgets.QWidget):
         self.bind_rows = {}
 
         # Laptop Backlight
-        head = HeaderPanel("sunrise", "Laptop Backlight")
+        head = HeaderPanel("sunrise", tr("Laptop Backlight"))
         self.brightness = w.Slider(0, 3, 1)
         self.brightness.setFixedWidth(250)
         self.brightness.released.connect(self.on_brightness)
@@ -112,15 +115,15 @@ class ExtraWindow(QtWidgets.QWidget):
         bl = QtWidgets.QVBoxLayout(body)
         bl.setContentsMargins(2, 2, 0, 2)
         bl.setSpacing(0)
-        self.awake = check("Awake")
-        self.boot = check("Boot/Shutdown")
-        self.sleep = check("Sleep")
+        self.awake = check(tr("Awake"))
+        self.boot = check(tr("Boot/Shutdown"))
+        self.sleep = check(tr("Sleep"))
         for c in (self.awake, self.boot, self.sleep):
             c.toggled.connect(self.on_power)
             bl.addWidget(c)
         speed_row = QtWidgets.QHBoxLayout()
         speed_row.setContentsMargins(6, 6, 6, 2)
-        speed_label = QtWidgets.QLabel("Animation Speed")
+        speed_label = QtWidgets.QLabel(tr("Animation Speed"))
         self.speed = w.RComboBox()
         self.speed.setFixedWidth(146)
         self.speed.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -135,15 +138,15 @@ class ExtraWindow(QtWidgets.QWidget):
         # Extra.panelBacklightExtra: "Timeout when plugged / on battery"
         timeout_row = QtWidgets.QHBoxLayout()
         timeout_row.setContentsMargins(6, 4, 6, 2)
-        self.timeout_label = QtWidgets.QLabel("Backlight timeout plugged / on battery")
+        self.timeout_label = QtWidgets.QLabel(tr("Backlight timeout plugged / on battery"))
         timeout_row.addWidget(self.timeout_label)
         timeout_row.addStretch()
         self.timeout_ac = QtWidgets.QSpinBox()
         self.timeout_bat = QtWidgets.QSpinBox()
         for box, key in ((self.timeout_ac, "kbd_timeout_ac"), (self.timeout_bat, "kbd_timeout_bat")):
             box.setRange(0, 3600)
-            box.setSuffix(" sec")
-            box.setToolTip("0 = backlight always on")
+            box.setSuffix(tr(" sec"))
+            box.setToolTip(tr("0 = backlight always on"))
             box.setFixedSize(70, 20)
             box.setValue(int(self.cfg.get(key, 0)))
             box.editingFinished.connect(self.on_timeout)
@@ -151,9 +154,9 @@ class ExtraWindow(QtWidgets.QWidget):
         bl.addLayout(timeout_row)
         note_row = QtWidgets.QHBoxLayout()
         note_row.setContentsMargins(6, 0, 6, 0)
-        self.timeout_note = QtWidgets.QLabel("Backlight timeout needs the small swayidle tool.")
+        self.timeout_note = QtWidgets.QLabel(tr("Backlight timeout needs the small swayidle tool."))
         self.timeout_note.setObjectName("tip")
-        self.install_idle = w.RButton("Install", secondary=True, radius=2)
+        self.install_idle = w.RButton(tr("Install"), secondary=True, radius=2)
         self.install_idle.setFixedSize(70, 20)
         self.install_idle.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.install_idle.clicked.connect(self.main.install_idle)
@@ -164,69 +167,83 @@ class ExtraWindow(QtWidgets.QWidget):
         root.addWidget(body)
 
         # Other
-        root.addWidget(HeaderPanel("settings", "Other"))
+        root.addWidget(HeaderPanel("settings", tr("Other")))
         other = QtWidgets.QWidget()
         ol = QtWidgets.QVBoxLayout(other)
         ol.setContentsMargins(10, 2, 5, 2)  # Padding(21, 5, 11, 5)
         ol.setSpacing(0)
-        self.topmost = check("Keep app window always on top", 2)
+        self.topmost = check(tr("Keep app window always on top"), 2)
         self.topmost.setChecked(bool(self.cfg.get("topmost")))
         self.topmost.toggled.connect(self.on_topmost)
         ol.addWidget(self.topmost)
         self.no_overdrive = None
         if hw.get_overdrive() is not None:
-            self.no_overdrive = check("Disable screen overdrive", 2)
+            self.no_overdrive = check(tr("Disable screen overdrive"), 2)
             self.no_overdrive.setChecked(bool(self.cfg.get("no_overdrive")))
             self.no_overdrive.toggled.connect(self.on_no_overdrive)
             ol.addWidget(self.no_overdrive)
         if main.optimized:
-            self.usbc = check("Keep GPU disabled on USB-C charger in Optimized mode", 2)
+            self.usbc = check(tr("Keep GPU disabled on USB-C charger in Optimized mode"), 2)
             self.usbc.setChecked(bool(self.cfg.get("optimized_usbc")))
             self.usbc.toggled.connect(self.on_usbc)
             ol.addWidget(self.usbc)
             # Extra.checkGpuApps: Eco blocks new users of the dGPU; running ones keep it awake
-            self.gpu_apps = check("Stop all apps using GPU when switching to Eco", 2)
+            self.gpu_apps = check(tr("Stop all apps using GPU when switching to Eco"), 2)
             self.gpu_apps.setChecked(bool(self.cfg.get("kill_gpu_apps")))
-            self.gpu_apps.setToolTip("Programs already using the NVIDIA GPU keep it powered on until they "
-                                     "quit. Without this option you are asked first.")
+            self.gpu_apps.setToolTip(tr("Programs already using the NVIDIA GPU keep it powered on until they "
+                                     "quit. Without this option you are asked first."))
             self.gpu_apps.toggled.connect(lambda on: (self.cfg.__setitem__("kill_gpu_apps", on), self.main.save()))
             ol.addWidget(self.gpu_apps)
         powerd = hw.platform_get("DisableNvidiaPowerdOnBattery")
         if powerd is not None and os.path.exists("/usr/lib/systemd/system/nvidia-powerd.service"):
-            self.powerd = check("Stop NVIDIA power daemon on battery", 2)
+            self.powerd = check(tr("Stop NVIDIA power daemon on battery"), 2)
             self.powerd.setChecked(powerd)
-            self.powerd.setToolTip("nvidia-powerd runs Dynamic Boost, which the firmware turns off on "
-                                   "battery anyway; stopping it there saves a little power (asusd)")
+            self.powerd.setToolTip(tr("nvidia-powerd runs Dynamic Boost, which the firmware turns off on "
+                                   "battery anyway; stopping it there saves a little power (asusd)"))
             self.powerd.toggled.connect(lambda on: self.main.bg(
                 hw.platform_set, "DisableNvidiaPowerdOnBattery", "b", on,
-                then=lambda r: self.main.report(r, "NVIDIA power daemon")))
+                then=lambda r: self.main.report(r, tr("NVIDIA power daemon"))))
             ol.addWidget(self.powerd)
         # rows that exist only when this laptop's firmware has the setting (asus-armoury)
         if hw.armoury_range("boot_sound") is not None or hw._read(f"{hw.ARMOURY}/boot_sound/current_value"):
-            self.boot_sound = check("Boot Sound", 2)
+            self.boot_sound = check(tr("Boot Sound"), 2)
             self.boot_sound.setChecked(hw._read(f"{hw.ARMOURY}/boot_sound/current_value") == "1")
             self.boot_sound.toggled.connect(lambda on: self.main.bg(
                 hw.run, "asusctl", "armoury", "set", "boot_sound", "1" if on else "0",
-                then=lambda r: self.main.report(r, "Boot sound")))
+                then=lambda r: self.main.report(r, tr("Boot sound"))))
             ol.addWidget(self.boot_sound)
         apu = hw.armoury_choices("apu_mem")
         if apu:
             row = QtWidgets.QHBoxLayout()
             row.setContentsMargins(2, 4, 0, 2)
-            row.addWidget(QtWidgets.QLabel("Memory Assigned to GPU"))
+            row.addWidget(QtWidgets.QLabel(tr("Memory Assigned to GPU")))
             row.addStretch()
             self.apu = w.RComboBox()
             self.apu.setFixedWidth(146)
             self.apu.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
             for value in apu:
-                self.apu.addItem("Auto" if value == "0" else f"{value} GB", value)
+                self.apu.addItem(tr("Auto") if value == "0" else f"{value} GB", value)
             self.apu.setCurrentIndex(max(0, self.apu.findData(hw._read(f"{hw.ARMOURY}/apu_mem/current_value"))))
             self.apu.activated.connect(lambda _: self.main.bg(
                 hw.run, "asusctl", "armoury", "set", "apu_mem", self.apu.currentData(),
-                then=lambda r: (self.main.report(r, "GPU memory"), QtWidgets.QMessageBox.information(
-                    self, "Memory Assigned to GPU", "Takes effect after a restart."))))
+                then=lambda r: (self.main.report(r, tr("GPU memory")), QtWidgets.QMessageBox.information(
+                    self, tr("Memory Assigned to GPU"), tr("Takes effect after a restart.")))))
             row.addWidget(self.apu)
             ol.addLayout(row)
+        row = QtWidgets.QHBoxLayout()
+        row.setContentsMargins(2, 4, 0, 2)
+        row.addWidget(QtWidgets.QLabel(tr("Language")))
+        row.addStretch()
+        self.language = w.RComboBox()
+        self.language.setFixedWidth(146)
+        self.language.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.language.addItem(tr("Auto"), "auto")
+        for code, name in i18n.LANGUAGES.items():
+            self.language.addItem(name, code)
+        self.language.setCurrentIndex(max(0, self.language.findData(self.cfg.get("language", "auto"))))
+        self.language.activated.connect(self.on_language)
+        row.addWidget(self.language)
+        ol.addLayout(row)
         root.addWidget(other)
 
         # Services
@@ -242,22 +259,22 @@ class ExtraWindow(QtWidgets.QWidget):
         sl.addWidget(self.services_icon)
         sl.addWidget(self.services_label)
         sl.addStretch()
-        self.services_start = w.RButton("Start", secondary=True, radius=2)  # buttonServices
+        self.services_start = w.RButton(tr("Start"), secondary=True, radius=2)  # buttonServices
         self.services_start.setFixedSize(128, 26)
         self.services_start.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.services_start.clicked.connect(lambda: (self.main.start_services(), QtCore.QTimer.singleShot(3000, self.refresh)))
         sl.addWidget(self.services_start)
-        self.setup_button = w.RButton("Setup", "cog", secondary=True, radius=2)
+        self.setup_button = w.RButton(tr("Setup"), "cog", secondary=True, radius=2)
         self.setup_button.setFixedSize(90, 26)
         self.setup_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        self.setup_button.setToolTip("Check and install what this laptop needs (one password)")
+        self.setup_button.setToolTip(tr("Check and install what this laptop needs (one password)"))
         self.setup_button.clicked.connect(self.main.on_setup)
         sl.addWidget(self.setup_button)
-        self.diag_button = w.RButton("Diagnostics", secondary=True, radius=2)
+        self.diag_button = w.RButton(tr("Diagnostics"), secondary=True, radius=2)
         self.diag_button.setFixedSize(90, 26)
         self.diag_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        self.diag_button.setToolTip("Save a report for a bug report: versions, settings and logs, "
-                                    "without serial numbers or the computer's name")
+        self.diag_button.setToolTip(tr("Save a report for a bug report: versions, settings and logs, "
+                                    "without serial numbers or the computer's name"))
         self.diag_button.clicked.connect(self.on_diagnostics)
         sl.addWidget(self.diag_button)
         root.addWidget(services)
@@ -266,9 +283,18 @@ class ExtraWindow(QtWidgets.QWidget):
         self.build_bindings()
         self.refresh()
 
+    def on_language(self, _index):
+        """Like G-Helper, the language is read at start: restart to apply it."""
+        self.cfg["language"] = self.language.currentData()
+        self.main.save()
+        answer = QtWidgets.QMessageBox.question(self, tr("Language"), tr("Restart the app now to change the language?"))
+        if answer == QtWidgets.QMessageBox.Yes:
+            selfupdate.restart()
+            QtWidgets.QApplication.quit()
+
     def on_diagnostics(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save diagnostics", os.path.expanduser("~/asus-tso-helper-report.txt"), "Text (*.txt)")
+            self, tr("Save diagnostics"), os.path.expanduser("~/asus-tso-helper-report.txt"), tr("Text (*.txt)"))
         if not path:
             return
         self.diag_button.setEnabled(False)
@@ -285,10 +311,10 @@ class ExtraWindow(QtWidgets.QWidget):
         def done(result):
             self.diag_button.setEnabled(True)
             if result[0]:
-                QtWidgets.QMessageBox.information(self, "Diagnostics", f"Saved to {path}.\n\n"
-                                                  "Have a look before sharing it, then attach it to the issue.")
+                QtWidgets.QMessageBox.information(self, tr("Diagnostics"), tr("Saved to {path}.", path=path) + "\n\n"
+                                                  + tr("Have a look before sharing it, then attach it to the issue."))
             else:
-                self.main.report(result, "Diagnostics")
+                self.main.report(result, tr("Diagnostics"))
         self.main.bg(job, then=done)
 
     # -- key bindings (Extra.SetKeyCombo) -------------------------------------------
@@ -298,7 +324,7 @@ class ExtraWindow(QtWidgets.QWidget):
         for action in hotkeys.ACTIONS:
             out.append(action)
             if action[0] == "performance":
-                out += [(f"mode:{key}", f"{label} Mode") for key, label, _ in modes.all_modes(self.cfg)]
+                out += [(f"mode:{key}", tr("{mode} Mode", mode=label)) for key, label, _ in modes.all_modes(self.cfg)]
         return out
 
     def build_bindings(self):
@@ -320,13 +346,13 @@ class ExtraWindow(QtWidgets.QWidget):
         r = 0
         if state in ("no-access", "no-evdev"):
             note = QtWidgets.QLabel(
-                "Laptop keys need permission to read the ASUS keys (one password prompt)."
-                if state == "no-access" else "Laptop keys need the python3-evdev package.")
+                tr("Laptop keys need permission to read the ASUS keys (one password prompt).")
+                if state == "no-access" else tr("Laptop keys need the python3-evdev package."))
             note.setObjectName("tip")
             note.setWordWrap(True)
             self.bind_grid.addWidget(note, r, 0, 1, 2)
             if state == "no-access":
-                enable = w.RButton("Enable", secondary=True, radius=2)
+                enable = w.RButton(tr("Enable"), secondary=True, radius=2)
                 enable.setFixedHeight(22)
                 enable.clicked.connect(self.main.enable_hotkeys)
                 self.bind_grid.addWidget(enable, r, 2, 1, 2)
@@ -340,8 +366,8 @@ class ExtraWindow(QtWidgets.QWidget):
             current = "" if stored == "none" else (stored or hotkeys.DEFAULT_ACTION.get(key, ""))
             combo.setCurrentIndex(max(0, combo.findData(current)))
             command = QtWidgets.QLineEdit(self.cfg.get(f"key_{key}_cmd", ""))
-            command.setPlaceholderText("action")
-            command.setToolTip("Command to run when the action is Custom")
+            command.setPlaceholderText(tr("action"))
+            command.setToolTip(tr("Command to run when the action is Custom"))
             command.setFixedHeight(20)
             command.setEnabled(current == "custom")
             combo.activated.connect(lambda _=0, k=key: self.on_binding(k))
@@ -352,7 +378,7 @@ class ExtraWindow(QtWidgets.QWidget):
             if removable:
                 remove = w.RButton("", "circle-minus", secondary=True, radius=2)
                 remove.setFixedSize(20, 20)
-                remove.setToolTip("Remove this key")
+                remove.setToolTip(tr("Remove this key"))
                 remove.clicked.connect(lambda _=False, k=key: self.on_remove_key(k))
                 self.bind_grid.addWidget(remove, r, 3)
             self.bind_rows[key] = (combo, command)
@@ -377,10 +403,10 @@ class ExtraWindow(QtWidgets.QWidget):
 
     def on_add_key(self, button):
         menu = QtWidgets.QMenu(self)
-        laptop = menu.addAction("Laptop key (Fn + ...)")
+        laptop = menu.addAction(tr("Laptop key (Fn + ...)"))
         laptop.setEnabled(getattr(self.main, "hotkeys_state", "") == "running")
         laptop.triggered.connect(self.main.capture_laptop_key)
-        combo = menu.addAction("Keyboard shortcut (any keys) ...")
+        combo = menu.addAction(tr("Keyboard shortcut (any keys) ..."))
         combo.setEnabled(bool(self.main.portal and self.main.portal.ok))
         combo.triggered.connect(self.main.add_shortcut)
         menu.exec(button.mapToGlobal(QtCore.QPoint(0, button.height())))
@@ -423,7 +449,7 @@ class ExtraWindow(QtWidgets.QWidget):
         idx = self.speed.findData(hw.get_aura_speed() or self.cfg.get("aura_speed", "med"))
         self.speed.setCurrentIndex(max(idx, 0))
         running = hw.services_running()
-        self.services_label.setText(f"asusd / cardwired running:  {len(running)}")
+        self.services_label.setText(tr("asusd / cardwired running: {count}", count=len(running)))
         self.services_start.setVisible(len(running) < 2)
         colour = (ECO if len(running) == 2 else STANDARD).name()
         self.services_label.setStyleSheet(f"color: {colour};")
@@ -435,11 +461,11 @@ class ExtraWindow(QtWidgets.QWidget):
     # -- actions ----------------------------------------------------------------
     def on_brightness(self, value):
         self.main.bg(hw.set_kbd_level, hw.KBD_LEVELS[value],
-                     then=lambda r: self.main.report(r, "Keyboard backlight"))
+                     then=lambda r: self.main.report(r, tr("Keyboard backlight")))
 
     def on_power(self):
         self.main.bg(hw.set_aura_power, self.awake.isChecked(), self.boot.isChecked(),
-                     self.sleep.isChecked(), then=lambda r: self.main.report(r, "Backlight power"))
+                     self.sleep.isChecked(), then=lambda r: self.main.report(r, tr("Backlight power")))
 
     def on_speed(self):
         self.cfg["aura_speed"] = self.speed.currentData()
@@ -454,7 +480,7 @@ class ExtraWindow(QtWidgets.QWidget):
         self.cfg["no_overdrive"] = on
         self.main.save()
         if on and hw.get_overdrive():
-            self.main.bg(hw.set_overdrive, False, then=lambda r: (self.main.report(r, "Overdrive"),
+            self.main.bg(hw.set_overdrive, False, then=lambda r: (self.main.report(r, tr("Overdrive")),
                                                                   self.main.refresh_slow()))
         else:
             self.main.refresh_slow()
