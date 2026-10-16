@@ -11,7 +11,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from PySide6 import QtCore, QtGui, QtNetwork, QtWidgets
+from PySide6 import QtCore, QtDBus, QtGui, QtNetwork, QtWidgets
 
 from . import backend as hw
 from .i18n import tr
@@ -242,6 +242,10 @@ class MainWindow(QtWidgets.QWidget):
         hints = QtGui.QGuiApplication.styleHints()
         if hasattr(hints, "colorSchemeChanged"):
             hints.colorSchemeChanged.connect(lambda _: self.apply_theme())
+        # the portal announces a theme change; Qt without the desktop's plugin (the AppImage) does not
+        QtDBus.QDBusConnection.sessionBus().connect(
+            "", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings", "SettingChanged",
+            self, QtCore.SLOT("on_portal_setting(QDBusMessage)"))
 
         self.fast = QtCore.QTimer(self, interval=2000, timeout=self.refresh_fast)
         self.slow = QtCore.QTimer(self, interval=5000, timeout=self.refresh_slow)
@@ -475,10 +479,18 @@ class MainWindow(QtWidgets.QWidget):
             lay.addWidget(b, 1)
         return p
 
+    @QtCore.Slot(QtDBus.QDBusMessage)
+    def on_portal_setting(self, msg):
+        args = msg.arguments()
+        if len(args) == 3 and args[:2] == ["org.freedesktop.appearance", "color-scheme"]:
+            value = args[2].variant() if isinstance(args[2], QtDBus.QDBusVariant) else args[2]
+            if value in (1, 2):  # 1 dark, 2 light, 0 no preference
+                self.apply_theme(value == 1)
+
     def apply_theme(self, dark=None):
         """Follows the desktop's light / dark setting, as G-Helper follows Windows'. The portal
         is asked first: Qt without the desktop's own plugin (the AppImage) reads the scheme only
-        at start, so the slow refresh asks the portal again to catch a change."""
+        at start; changes come as the portal's SettingChanged signal."""
         if dark is None:
             dark = hw.os_dark()
         if dark is None:
@@ -655,7 +667,6 @@ class MainWindow(QtWidgets.QWidget):
         eco = self.gpu_current == "Integrated"
         self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power(blocked=eco)), then=self.show_gpu)
         self.bg(lambda: (hw.screen_info(), hw.get_overdrive()), then=self.show_screen)
-        self.bg(hw.os_dark, then=lambda dark: dark is not None and self.apply_theme(dark))
 
     def update_charge_label(self):
         if self.full_hover:
