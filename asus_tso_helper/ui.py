@@ -604,7 +604,9 @@ class MainWindow(QtWidgets.QWidget):
                  and now - self.dgpu_temp_at >= DGPU_TEMP_EVERY)
         if query:
             self.dgpu_temp_at = now
-        self.bg(hw.sensors, query, then=self.show_sensors)
+        awake = power == "active" and not eco
+        self.bg(lambda: dict(hw.sensors(query), dgpu_apps=hw.dgpu_users() if awake else []),
+                then=self.show_sensors)
 
         limit = hw.get_charge_limit()
         if limit is not None and not self.slider.dragging:
@@ -691,6 +693,8 @@ class MainWindow(QtWidgets.QWidget):
             tip = f"CPU{cpu} {fan('cpu')}\nGPU{gpu} {fan('gpu')}"
             if self.bat_head.info.text():
                 tip += "\n" + self.bat_head.info.text()
+            if s.get("dgpu_apps"):  # what keeps the dGPU from sleeping (ROG Control Center)
+                tip += "\n" + tr("dGPU awake: {apps}", apps=", ".join(s["dgpu_apps"]))
             self.tray.setToolTip(tip)
 
     def show_gpu(self, data):

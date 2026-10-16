@@ -831,6 +831,28 @@ def cardwire_dgpu():
     return _cardwire_dgpu[0] if _cardwire_dgpu else None
 
 
+DGPU_SYSTEM_USERS = DESKTOP_GPU_USERS | {"cardwired", "nvidia-powerd", "systemd", "systemd-logind"}
+
+
+def dgpu_users():
+    """Apps keeping the dGPU awake, from Cardwire's Gpu.Lsof (no sysfs or /proc scan of our own,
+    so it works in Eco too and does not wake the GPU): sorted names without the desktop's own."""
+    path = cardwire_dgpu()
+    if not path:
+        return []
+    ok, out = run("busctl", "--system", "call", CARDWIRE, path, CARDWIRE + ".Gpu", "Lsof", timeout=5)
+    try:
+        words = shlex.split(out)[1:] if ok else []  # a{sas} N  node M name... node M name...
+    except ValueError:
+        return []
+    names, i = set(), 1
+    while i < len(words):
+        count = int(words[i + 1]) if words[i + 1].isdigit() else 0
+        names.update(words[i + 2:i + 2 + count])
+        i += 2 + count
+    return sorted(names - DGPU_SYSTEM_USERS)
+
+
 def sensors(include_dgpu):
     """Cheap sysfs reads, plus nvidia-smi when include_dgpu. Each nvidia-smi run keeps the dGPU
     awake for a few seconds more, so the caller asks rarely (ui.DGPU_TEMP_EVERY)."""

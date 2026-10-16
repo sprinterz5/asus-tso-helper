@@ -312,5 +312,6 @@
  "Better Battery": "Больше автономности",
  "Better Performance": "Больше производительности",
  "Best Performance": "Максимум производительности",
- "KDE no longer changes the power mode on plug / unplug: the mode last used on each power source comes back instead.": "KDE больше не меняет режим при подключении / отключении зарядки: вместо этого возвращается режим, последний на этом источнике питания."
+ "KDE no longer changes the power mode on plug / unplug: the mode last used on each power source comes back instead.": "KDE больше не меняет режим при подключении / отключении зарядки: вместо этого возвращается режим, последний на этом источнике питания.",
+ "dGPU awake: {apps}": "dGPU не спит: {apps}"
 }
