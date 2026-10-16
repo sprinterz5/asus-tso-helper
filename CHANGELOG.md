@@ -11,6 +11,8 @@
 - Refresh rate also on **GNOME** (Mutter's display API), **Sway / Hyprland** (wlr-randr) and X11
   (xrandr), not only KDE.
 - **RPM** (COPR) and **AUR** packages on the system's Python and Qt.
+- KDE no longer switches the power profile on plug / unplug: it did so before the app and could
+  leave Silent on battery instead of the remembered mode.
 
 ## 0.3.0
 - GPU modes on **Cardwire** instead of supergfxd: Eco and Standard switch at once, without a

@@ -15,7 +15,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 |---|---|---|---|
 | Silent / Balanced / Turbo | Modes | asusd platform profile | `ui.on_profile`, `backend.set_profile` |
 | Custom modes (`+`, rename, remove) | Modes.cs | Base profile + own fan curves + power limits; the base mode is restored exactly afterwards | `modes.py` |
-| Mode remembered per power source | `performance_<ac>` | Stored in config and in asusd (`PlatformProfileOnAc/OnBattery`); custom modes too | `ui.remember_mode`, `ui.on_power_source` |
+| Mode remembered per power source | `performance_<ac>` | Stored in config and in asusd (`PlatformProfileOnAc/OnBattery`); custom modes too. KDE's own per-source power profile is set to "leave unchanged" once, else it switched first and sometimes stayed | `ui.remember_mode`, `ui.on_power_source` |
 | Toast on mode / Aura change by key | ToastForm | KDE OSD (`org.kde.osdService.showText`), tray notification elsewhere | `ui.toast`, `backend.osd` |
 | GPU Eco / Standard / Ultimate / Optimized | GPUModeControl | Eco / Standard: Cardwire (D-Bus `Mode`), at once, no logout. Ultimate: firmware MUX (`gpu_mux_mode`) through asusd, which queues the write and makes it at shutdown, reboot (tested: panel on the NVIDIA card after the reboot); pending shown with a dashed button, cancel by picking the current mode | `ui.on_gpu`, `ui.switch_gpu`, `backend.set_gpu_mode` |
 | Screen 60 Hz / max / Auto, Overdrive | ScreenControl | kscreen-doctor, asus-armoury `panel_overdrive` | `ui.on_screen` |
@@ -133,17 +133,16 @@ protocols are readable in G-Helper's source (GPL-3.0, same as this app); credit 
 | # | Feature | How | Notes |
 |---|---|---|---|
 | 38 | **Clamshell mode toggle** | KDE: powerdevil `InhibitLidActionWhenExternalMonitorPresent` (on by default); GNOME: logind already ignores the lid with an external display | On by default on both; a checkbox only makes it visible |
-| 39 | **KDE switching the power profile on plug / unplug** | KDE's powerdevil sets power-profiles-daemon's profile per power source, which can override the app's per-source mode | Check on the FA507NV; if it fights, the app turns KDE's switch off |
-| 40 | **GNOME tray** | vanilla GNOME has no tray: needs the AppIndicator extension | Setup should detect it and say so; without a tray the window just stays open |
-| 41 | **Toasts, logout prompt, window at the tray outside KDE** | GNOME: notifications via the portal; logout via `gnome-session-quit`; window placement is the compositor's choice | KDE-only today |
-| 42 | **Screen off, lock and screenshot key actions outside KDE** | `loginctl lock-session` works everywhere; screen off and screenshot need the desktop's own commands | Today they call KDE tools |
+| 39 | **GNOME tray** | vanilla GNOME has no tray: needs the AppIndicator extension | Setup should detect it and say so; without a tray the window just stays open |
+| 40 | **Toasts, logout prompt, window at the tray outside KDE** | GNOME: notifications via the portal; logout via `gnome-session-quit`; window placement is the compositor's choice | KDE-only today |
+| 41 | **Screen off, lock and screenshot key actions outside KDE** | `loginctl lock-session` works everywhere; screen off and screenshot need the desktop's own commands | Today they call KDE tools |
 
 ### Priority 4: possible, but risky or of little use
 | # | Feature | Why it is low |
 |---|---|---|
-| 43 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
-| 44 | Hibernate after N minutes of sleep | Needs a swap partition (Fedora ships zram only), and with Secure Boot the kernel's lockdown forbids hibernation |
-| 45 | Temperatures in the tray icon, °F | Small; not in G-Helper |
+| 42 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
+| 43 | Hibernate after N minutes of sleep | Needs a swap partition (Fedora ships zram only), and with Secure Boot the kernel's lockdown forbids hibernation |
+| 44 | Temperatures in the tray icon, °F | Small; not in G-Helper |
 
 ## Not possible or not applicable
 

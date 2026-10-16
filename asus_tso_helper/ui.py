@@ -1118,6 +1118,13 @@ class MainWindow(QtWidgets.QWidget):
             self.tray.showMessage(APP, tr("Log out once to get the HDMI / USB-C video ports back: "
                                   "\"Eco without logout\" is not needed with Cardwire."),
                                   QtWidgets.QSystemTrayIcon.Information, 8000)
+        if not self.cfg.get("kde_profiles_off"):  # once: the user may turn KDE's switch back on
+            self.cfg["kde_profiles_off"] = True
+            self.save()
+            if hw.stop_kde_power_profiles() and self.tray:
+                self.tray.showMessage(APP, tr("KDE no longer changes the power mode on plug / unplug: "
+                                      "the mode last used on each power source comes back instead."),
+                                      QtWidgets.QSystemTrayIcon.Information, 8000)
         if self.cfg.get("setup_later") == VERSION:
             return
         self.bg(setup.checks, then=lambda rows: setup.needs_setup(rows) and self.on_setup())

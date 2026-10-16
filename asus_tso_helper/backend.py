@@ -228,6 +228,26 @@ def remove_kwin_limits():
     return removed
 
 
+POWERDEVIL_SOURCES = ("AC", "Battery")  # LowBattery keeps KDE's power-saver
+
+
+def stop_kde_power_profiles():
+    """KDE's powerdevil sets the power profile on plug / unplug, a moment before the app brings
+    back the mode remembered for that source: the mode flickers, and with quick plugging KDE's
+    one stays. Sets KDE's choice for AC and battery to "leave unchanged", as G-Helper is the only
+    one switching on Windows. -> True when something was changed."""
+    changed = False
+    for source in POWERDEVIL_SOURCES:
+        key = ("--file", "powerdevilrc", "--group", source, "--group", "Performance", "--key", "PowerProfile")
+        ok, value = run("kreadconfig6", *key, "--default", "unset", timeout=5)
+        if ok and value:  # unset still means KDE's built-in default, which may switch
+            changed = run("kwriteconfig6", *key, "", timeout=5)[0] or changed
+    if changed:
+        run("busctl", "--user", "call", "org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement",
+            "org.kde.Solid.PowerManagement", "reparseConfiguration", timeout=5)
+    return changed
+
+
 DESKTOP_GPU_USERS = {"kwin_wayland", "kwin_x11", "Xwayland", "Xorg", "plasmashell", "gnome-shell",
                      "mutter", "sddm-greeter", "gdm-x-session"}
 
