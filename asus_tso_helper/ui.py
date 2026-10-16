@@ -47,6 +47,7 @@ GPU_MODES = [("Integrated", tr("Eco"), "leaf", ECO, tr("iGPU only"),
 # nvidia-smi keeps the dGPU awake for a few seconds (it sleeps ~5 s after the last use); asking
 # every 2 s kept it awake forever. G-Helper falls back to the EC's GPU sensor, which Linux lacks.
 DGPU_TEMP_EVERY = 12
+DGPU_APPS_EVERY = 30
 SERVICE_TOOLS = {"asusd": "asusctl", "cardwired": "cardwire"}
 OPTIMIZED_TIP = tr("Switch to Eco on battery and to Standard when plugged in")
 AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
@@ -168,6 +169,9 @@ class MainWindow(QtWidgets.QWidget):
         self.kbd_restoring = 0.0
         self.dgpu_temp = None
         self.dgpu_temp_at = 0.0
+        self.dgpu_was_awake = False
+        self.dgpu_apps = []
+        self.dgpu_apps_at = 0.0
         self.gpu_current = None
         self.gpu_busy = False
         self.battery_hover = False
@@ -242,6 +246,10 @@ class MainWindow(QtWidgets.QWidget):
         hints = QtGui.QGuiApplication.styleHints()
         if hasattr(hints, "colorSchemeChanged"):
             hints.colorSchemeChanged.connect(lambda _: self.apply_theme())
+        # GPU mode changed elsewhere (cardwire CLI, another app): Cardwire says so, no polling for it
+        QtDBus.QDBusConnection.systemBus().connect(
+            hw.CARDWIRE, hw.CARDWIRE_PATH, "org.freedesktop.DBus.Properties", "PropertiesChanged",
+            self, QtCore.SLOT("on_cardwire_changed(QDBusMessage)"))
         # the portal announces a theme change; Qt without the desktop's plugin (the AppImage) does not
         QtDBus.QDBusConnection.sessionBus().connect(
             "", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings", "SettingChanged",
@@ -256,7 +264,7 @@ class MainWindow(QtWidgets.QWidget):
         self.update_timer.start()
         QtCore.QTimer.singleShot(10000, self.check_app_update)
         self.refresh_fast()
-        self.refresh_slow()
+        self.refresh_gpu()  # the tray icon shows the GPU mode; the rest comes when the window opens
 
     # -- layout -----------------------------------------------------------------
     def build_performance(self):
@@ -480,6 +488,10 @@ class MainWindow(QtWidgets.QWidget):
         return p
 
     @QtCore.Slot(QtDBus.QDBusMessage)
+    def on_cardwire_changed(self, _msg):
+        self.refresh_gpu()
+
+    @QtCore.Slot(QtDBus.QDBusMessage)
     def on_portal_setting(self, msg):
         args = msg.arguments()
         if len(args) == 3 and args[:2] == ["org.freedesktop.appearance", "color-scheme"]:
@@ -620,7 +632,7 @@ class MainWindow(QtWidgets.QWidget):
         # shows the last one (G-Helper 0.248, issue #5290), in Eco none
         now = time.monotonic()
         eco = self.gpu_current == "Integrated"
-        power = hw.dgpu_power(blocked=eco)
+        power = None if eco else hw.dgpu_power()  # in Eco it sleeps; asking Cardwire costs a process
         if power is None or eco:
             self.dgpu_temp = None
         query = (power == "active" and not eco and self.isVisible()
@@ -628,7 +640,14 @@ class MainWindow(QtWidgets.QWidget):
         if query:
             self.dgpu_temp_at = now
         awake = power == "active" and not eco
-        self.bg(lambda: dict(hw.sensors(query), dgpu_apps=hw.dgpu_users() if awake else []),
+        # who keeps the dGPU awake (tray tooltip): asked when it wakes, then every DGPU_APPS_EVERY s
+        ask_apps = awake and (not self.dgpu_was_awake or now - self.dgpu_apps_at >= DGPU_APPS_EVERY)
+        self.dgpu_was_awake = awake
+        if ask_apps:
+            self.dgpu_apps_at = now
+        elif not awake:
+            self.dgpu_apps = []
+        self.bg(lambda: dict(hw.sensors(query), dgpu_apps=hw.dgpu_users() if ask_apps else None),
                 then=self.show_sensors)
 
         limit = hw.get_charge_limit()
@@ -648,7 +667,7 @@ class MainWindow(QtWidgets.QWidget):
             elif self.bat["status"] == "Discharging":
                 text = tr("Discharging: {watts}W", watts=f"{self.bat['watts']:.1f}")
         self.bat_head.info.setText(text)
-        if text:  # charging or discharging: UPower's estimate, off the GUI thread
+        if text and self.isVisible():  # time left / to full is shown in the window only
             self.bg(hw.battery_time, then=lambda t: (setattr(self, "bat_time", t), self.update_charge_label()))
         else:
             self.bat_time = None
@@ -663,10 +682,22 @@ class MainWindow(QtWidgets.QWidget):
             self.end_full_charge()
 
     def refresh_slow(self):
+        """What only the open window shows: services, GPU panel, screen. In the tray none of it
+        runs; a GPU mode change elsewhere still arrives as Cardwire's signal."""
+        if not self.isVisible():
+            return
         self.bg(hw.services_running, then=self.show_services)
+        self.refresh_gpu()
+        self.bg(lambda: (hw.screen_info(), hw.get_overdrive()), then=self.show_screen)
+
+    def refresh_gpu(self):
         eco = self.gpu_current == "Integrated"
         self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power(blocked=eco)), then=self.show_gpu)
-        self.bg(lambda: (hw.screen_info(), hw.get_overdrive()), then=self.show_screen)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if hasattr(self, "slow"):  # opened from the tray: catch up at once
+            QtCore.QTimer.singleShot(0, self.refresh_slow)
 
     def update_charge_label(self):
         if self.full_hover:
@@ -716,8 +747,10 @@ class MainWindow(QtWidgets.QWidget):
             tip = f"CPU{cpu} {fan('cpu')}\nGPU{gpu} {fan('gpu')}"
             if self.bat_head.info.text():
                 tip += "\n" + self.bat_head.info.text()
-            if s.get("dgpu_apps"):  # what keeps the dGPU from sleeping (ROG Control Center)
-                tip += "\n" + tr("dGPU awake: {apps}", apps=", ".join(s["dgpu_apps"]))
+            if s.get("dgpu_apps") is not None:
+                self.dgpu_apps = s["dgpu_apps"]
+            if self.dgpu_apps:  # what keeps the dGPU from sleeping (ROG Control Center)
+                tip += "\n" + tr("dGPU awake: {apps}", apps=", ".join(self.dgpu_apps))
             self.tray.setToolTip(tip)
 
     def show_gpu(self, data):
