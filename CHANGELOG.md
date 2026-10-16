@@ -16,6 +16,7 @@
 - The tray tooltip names the apps keeping the dGPU awake ("dGPU awake: firefox").
 - **CPU Boost** on or off per mode (Fans → Advanced), a **MangoHud** key action, and a clamshell
   mode checkbox in Extra (KDE).
+- Light / dark theme follows the desktop while the app runs, in the AppImage too.
 
 ## 0.3.0
 - GPU modes on **Cardwire** instead of supergfxd: Eco and Standard switch at once, without a

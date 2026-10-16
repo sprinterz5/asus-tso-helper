@@ -475,9 +475,18 @@ class MainWindow(QtWidgets.QWidget):
             lay.addWidget(b, 1)
         return p
 
-    def apply_theme(self):
-        scheme = QtGui.QGuiApplication.styleHints().colorScheme()
-        w.set_theme(scheme != QtCore.Qt.ColorScheme.Light)
+    def apply_theme(self, dark=None):
+        """Follows the desktop's light / dark setting, as G-Helper follows Windows'. The portal
+        is asked first: Qt without the desktop's own plugin (the AppImage) reads the scheme only
+        at start, so the slow refresh asks the portal again to catch a change."""
+        if dark is None:
+            dark = hw.os_dark()
+        if dark is None:
+            scheme = QtGui.QGuiApplication.styleHints().colorScheme()
+            dark = scheme != QtCore.Qt.ColorScheme.Light  # unknown: G-Helper's dark default
+        if dark == w.THEME.dark and self.styleSheet():
+            return
+        w.set_theme(dark)
         self.setStyleSheet(stylesheet())
         self.fn_lock.text_colour = w.THEME.control_dark
         self.full_button.text_colour = w.THEME.control_dark
@@ -646,6 +655,7 @@ class MainWindow(QtWidgets.QWidget):
         eco = self.gpu_current == "Integrated"
         self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power(blocked=eco)), then=self.show_gpu)
         self.bg(lambda: (hw.screen_info(), hw.get_overdrive()), then=self.show_screen)
+        self.bg(hw.os_dark, then=lambda dark: dark is not None and self.apply_theme(dark))
 
     def update_charge_label(self):
         if self.full_hover:

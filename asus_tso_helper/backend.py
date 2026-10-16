@@ -135,6 +135,23 @@ def kwin_place_window():
     return call("start") if ok else (ok, out)
 
 
+def os_dark():
+    """The desktop's light / dark preference: True / False, or None when it says nothing.
+    For Qt without the desktop's platform plugin (the AppImage), which reports no scheme. The
+    XDG portal answers on KDE, GNOME and most others; GNOME's setting is the fallback."""
+    ok, out = run("busctl", "--user", "call", "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+                  "org.freedesktop.portal.Settings", "ReadOne", "ss", "org.freedesktop.appearance", "color-scheme",
+                  timeout=3)
+    if ok and out.split()[-1:] in (["1"], ["2"]):  # "v u 1": 1 dark, 2 light, 0 no preference
+        return out.split()[-1] == "1"
+    ok, out = run("gsettings", "get", "org.gnome.desktop.interface", "color-scheme", timeout=3)
+    if ok and "dark" in out:
+        return True
+    if ok and "light" in out:
+        return False
+    return None
+
+
 # --- CPU boost -------------------------------------------------------------------
 # G-Helper's "CPU Boost" per mode. One global switch in cpufreq (amd-pstate, intel_pstate's
 # no_turbo is the inverse and not covered); root-owned, so Setup lets the user's group write it.
