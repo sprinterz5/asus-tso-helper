@@ -1,6 +1,6 @@
 pkgbase = asus-tso-helper
 	pkgdesc = asusctl and Cardwire in one app: ASUS laptop modes, GPU, fans and battery
-	pkgver = 0.6.0
+	pkgver = 0.6.1
 	pkgrel = 1
 	url = https://github.com/sprinterz5/asus-tso-helper
 	arch = any
@@ -16,7 +16,7 @@ pkgbase = asus-tso-helper
 	optdepends = cardwire: Eco / Standard GPU modes (AUR)
 	optdepends = swayidle: keyboard backlight timeout
 	optdepends = libkscreen: refresh rate on KDE Plasma
-	source = asus-tso-helper-0.6.0.tar.gz::https://github.com/sprinterz5/asus-tso-helper/archive/v0.6.0.tar.gz
+	source = asus-tso-helper-0.6.1.tar.gz::https://github.com/sprinterz5/asus-tso-helper/archive/v0.6.1.tar.gz
 	sha256sums = 6fba738222a27248d83a6d282371f68125bc7e119a0cbe488e1c5f37d60526cc
 
 pkgname = asus-tso-helper

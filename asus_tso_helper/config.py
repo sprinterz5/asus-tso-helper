@@ -5,7 +5,7 @@ import os
 from PySide6 import QtWidgets
 
 APP = "asus-tso-helper"
-VERSION = "0.6.0"
+VERSION = "0.6.1"
 HOMEPAGE = "https://github.com/sprinterz5/asus-tso-helper"
 DONATE_URL = ""  # PayPal donation link; Credits shows a support link once it is set
 CONFIG_DIR = os.path.join(os.path.expanduser("~/.config"), APP)

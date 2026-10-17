@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.1
 - **Conflicting tools**: TLP, auto-cpufreq, TuneD, supergfxd next to Cardwire, optimus-manager,
   system76-power, EnvyControl and g-helper-linux are found and shown in Setup and as a line in the
   main window. Set up stops the services (listed in Changes, Undo starts them again); for the

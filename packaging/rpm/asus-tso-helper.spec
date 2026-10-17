@@ -1,5 +1,5 @@
 Name:           asus-tso-helper
-Version:        0.6.0
+Version:        0.6.1
 Release:        1%{?dist}
 Summary:        asusctl and Cardwire in one app: ASUS laptop modes, GPU, fans and battery
 
@@ -58,6 +58,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/%{name}.desktop
 %{_udevrulesdir}/70-%{name}.rules
 
 %changelog
+* Sun Oct 18 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.6.1-1
+- Conflicting tools found and stopped with undo; simpler Setup
+
 * Sat Oct 17 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.6.0-1
 - System changes with undo, log and --debug, code split, tests
 
