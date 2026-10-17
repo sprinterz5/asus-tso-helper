@@ -428,12 +428,17 @@ class MainWindow(QtWidgets.QWidget):
         self.bat_panel = p
         p.installEventFilter(self)
         self.bat_head = w.Header("battery-charging", tr("Battery Charge Limit"), height=22)
-        history = w.RButton("", "chart-line", secondary=True, radius=2)
-        history.setFixedSize(22, 18)
+        self.bat_history = history = QtWidgets.QToolButton()  # small, right after the title
+        history.setAutoRaise(True)
+        history.setIcon(QtGui.QIcon(w.icon("chart-line", 12)))
+        history.setIconSize(QtCore.QSize(12, 12))
+        history.setFixedSize(16, 16)
+        history.setCursor(QtCore.Qt.PointingHandCursor)
         history.setToolTip(tr("Battery history and health"))
         history.clicked.connect(self.on_battery)
-        self.bat_head.right.addSpacing(6)
-        self.bat_head.right.addWidget(history, 0, QtCore.Qt.AlignTop)
+        self.bat_head.right.setStretch(0, 0)
+        self.bat_head.right.insertWidget(1, history, 0, QtCore.Qt.AlignTop)
+        self.bat_head.right.insertStretch(2, 1)
         lay.addWidget(self.bat_head)
         row = QtWidgets.QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
@@ -603,6 +608,8 @@ class MainWindow(QtWidgets.QWidget):
             return
         self.theme_state = (dark, accent)
         w.set_theme(dark)
+        if hasattr(self, "bat_history"):  # the icon is drawn in the text colour
+            self.bat_history.setIcon(QtGui.QIcon(w.icon("chart-line", 12)))
         w.set_accent(QtGui.QColor(*accent) if accent else None)
         self.setStyleSheet(stylesheet())
         self.fn_lock.text_colour = w.THEME.control_dark
@@ -1225,7 +1232,8 @@ class MainWindow(QtWidgets.QWidget):
         self.updates.show()
         self.updates.raise_()
         self.updates.activateWindow()
-        self.updates.load()
+        if self.updates.proc is None:  # an install still running keeps its rows and bars
+            self.updates.load()
 
     def check_app_update(self):
         """AutoUpdateCheck: a newer GitHub release turns the version label into a red
