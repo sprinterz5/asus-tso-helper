@@ -1159,6 +1159,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
 
     def switch_gpu(self, mode, reboot=False, close=()):
         log.info(f"GPU -> {mode}" + (f", closing {list(close)}" if close else ""))
+        restart_offered = []  # the Cardwire restart is offered once per switch
         self.gpu_busy = True
         self.gpu_head.title.setText(tr("GPU Mode: Changing ..."))
         for b in self.gpu_buttons.values():
@@ -1169,6 +1170,10 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             self.gpu_busy = False
             for b in self.gpu_buttons.values():
                 b.setEnabled(True)
+            if not ok and "discrete GPU" in (out or "") and not restart_offered:
+                restart_offered.append(True)
+                self.offer_cardwire_restart(mode, done)
+                return
             if not ok:
                 self.cfg.pop("gpu_after_reboot", None)
                 save_config(self.cfg)
@@ -1184,6 +1189,20 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
                 self.terminate(list(close))
             return hw.set_gpu_mode(mode)
         self.bg(job, then=done)
+
+    def offer_cardwire_restart(self, mode, done):
+        """Cardwire started before the NVIDIA driver (first boot after a kernel update) and does not
+        know the dGPU is a discrete one: a restart of Cardwire, then the same switch again."""
+        log.warning("Cardwire does not see the dGPU as discrete: offering a restart of cardwired")
+        answer = QtWidgets.QMessageBox.question(
+            self, NAME, tr("Cardwire started before the NVIDIA driver was ready (this happens on the first "
+                           "start after a kernel update), so it does not know the NVIDIA GPU yet.\n\n"
+                           "Restart Cardwire and switch again? It asks for your password."))
+        if answer != QtWidgets.QMessageBox.Yes:
+            done((False, tr("Cardwire does not see the NVIDIA GPU yet. Restarting the laptop also fixes it.")))
+            return
+        self.gpu_head.title.setText(tr("GPU Mode: Changing ..."))
+        self.bg(hw.restart_cardwire_and_set, mode, then=done)
 
     def on_optimized(self):
         self.cfg["gpu_auto"] = True

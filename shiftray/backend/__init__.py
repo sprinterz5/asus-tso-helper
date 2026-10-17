@@ -51,6 +51,7 @@ from .profile import (  # noqa: F401
     set_armoury,
 )
 from .gpu import (  # noqa: F401
+    restart_cardwire_and_set,
     CARDWIRE,
     CARDWIRE_PATH,
     CARDWIRE_MODES,

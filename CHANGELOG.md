@@ -1,7 +1,9 @@
 # Changelog
 
 ## Unreleased
-- Eco after a kernel update: when Cardwire missed the NVIDIA GPU at boot (the driver was still being built), the app asks it to look again and retries, instead of failing with "requires a discrete GPU".
+- Eco after a kernel update: Cardwire, started before the NVIDIA driver was built and loaded,
+  does not know the NVIDIA GPU is a discrete one and refuses Eco. The app now explains that and
+  offers to restart Cardwire (one password), then switches again.
 
 ## 0.7.0
 - **New name: Shiftray** (was asus-tso-helper). Settings, the log and autostart move over by

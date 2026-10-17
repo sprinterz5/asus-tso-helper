@@ -409,5 +409,7 @@
  "Writes the same hardware settings as asusd itself, and its GPU block keeps the NVIDIA driver from loading. Both installed means two programs changing the same things.": "Сам пишет те же настройки железа, что и asusd, а его блокировка видеокарты не даёт загрузиться драйверу NVIDIA. Если стоят оба, две программы меняют одно и то же.",
  "its own uninstaller (see its README)": "его собственным деинсталлятором (см. его README)",
  "{name} is also installed": "Также установлен {name}",
- "Open Shiftray": "Открыть Shiftray"
+ "Open Shiftray": "Открыть Shiftray",
+ "Cardwire started before the NVIDIA driver was ready (this happens on the first start after a kernel update), so it does not know the NVIDIA GPU yet.\n\nRestart Cardwire and switch again? It asks for your password.": "Cardwire запустился раньше, чем был готов драйвер NVIDIA (так бывает при первом запуске после обновления ядра), и пока не знает о видеокарте.\n\nПерезапустить Cardwire и переключить снова? Потребуется пароль.",
+ "Cardwire does not see the NVIDIA GPU yet. Restarting the laptop also fixes it.": "Cardwire пока не видит видеокарту NVIDIA. Перезагрузка ноутбука тоже это исправит."
 }

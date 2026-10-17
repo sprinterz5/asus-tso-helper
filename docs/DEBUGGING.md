@@ -29,7 +29,7 @@ changes, the last lines of this log and of the asusd / cardwired journals.
 | Orange line "Also running: ..." | `conflicts.py`, log: `conflicting tools` | Another tool changes the same settings: Setup stops it |
 | Mode changes by itself on plug / unplug | `backend/desktop.py` `stop_kde_power_profiles`, `ui.py` `on_power_source` | Something else switches profiles too: KDE, tuned-ppd, TLP |
 | Eco does not save power | tray tooltip "dGPU awake: ..." | A program opened the dGPU before Eco; `backend/gpu.py` `dgpu_users` |
-| "Integrated and Smart modes require a offload discrete GPU" | `cardwire list`: the NVIDIA row has `card4294967295` | Cardwire missed the dGPU at boot (driver came up late, e.g. akmods after a kernel update). The app asks Cardwire to rescan and retries; by hand: `busctl --system call org.opengamingcollective.cardwire /org/opengamingcollective/cardwire org.opengamingcollective.cardwire.Debug RefreshGpu` |
+| "Integrated and Smart modes require a offload discrete GPU" | `cardwire list`: no `(*)` under DISCRETE for the NVIDIA GPU | Cardwire started before the NVIDIA driver (first boot after a kernel update, akmods) and decides the GPU type only at start. The app offers to restart it (one password); by hand: `sudo systemctl restart cardwired` |
 | GPU mode stuck "Changing ..." | `cardwire list`, `journalctl -u cardwired` | Cardwire version; `backend/gpu.py` `set_gpu_mode` |
 | Fn keys do nothing | `ls -l /dev/input/by-path/*` and the udev rule | Rule missing: Setup row "Laptop keys"; `hotkeys.py` |
 | Refresh rate buttons greyed | log: `kscreen-doctor` / `wlr-randr` / `xrandr` | Desktop not recognised: `backend/screen.py` `screen_backend` |

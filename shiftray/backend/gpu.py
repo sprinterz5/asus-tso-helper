@@ -41,6 +41,22 @@ def set_cardwire_mode(mode):
     return ok, out
 
 
+def restart_cardwire_and_set(mode):
+    """Cardwire tells the dGPU's type once, when it starts: started before the NVIDIA driver came up
+    (the first boot of a new kernel, while akmods builds it), it never learns the dGPU is a
+    discrete one and refuses Eco. A restart, now that the driver is there, fixes that (one password)."""
+    ok, out = run("pkexec", "systemctl", "restart", "cardwired", timeout=120)
+    if not ok:
+        return ok, out
+    import time
+    for _ in range(30):  # until it answers on D-Bus again, with the GPUs looked at
+        if cardwire_mode() is not None:
+            break
+        time.sleep(0.5)
+    time.sleep(1)
+    return set_cardwire_mode(mode)
+
+
 def has_mux():
     return os.path.exists(os.path.join(ARMOURY, "gpu_mux_mode"))
 
