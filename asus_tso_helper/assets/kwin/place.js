@@ -2,6 +2,7 @@
 // G-Helper's does above the taskbar; its other windows (Fans, Extra, Updates, Setup) open beside
 // it, left or right where there is room, as G-Helper's do. Wayland apps cannot place their own
 // windows, KWin can.
+// KEEP_ABOVE is prepended by the app when it loads the script (Extra -> always on top)
 var MARGIN = 8;
 
 function ours(window) {
@@ -60,6 +61,7 @@ function placeBeside(window, main) {
 function place(window) {
     if (!ours(window) || window.dialog || window.specialWindow)
         return;                                     // message boxes stay centred on their window
+    window.keepAbove = KEEP_ABOVE;
     if (isMain(window)) {
         placeMain(window);
         return;
@@ -69,3 +71,11 @@ function place(window) {
         placeBeside(window, main);
 }
 workspace.windowAdded.connect(place);
+
+// "Keep app window always on top" toggled: the script is reloaded, already open windows follow
+(function () {
+    var list = workspace.windowList ? workspace.windowList() : workspace.clientList();
+    for (var i = 0; i < list.length; i++)
+        if (ours(list[i]) && !list[i].dialog && !list[i].specialWindow)
+            list[i].keepAbove = KEEP_ABOVE;
+})();

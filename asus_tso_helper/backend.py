@@ -123,15 +123,21 @@ def integrate_desktop():
             f.write(data)
 
 
-def kwin_place_window():
+def kwin_place_window(keep_above=False):
     """Loads (again, so an updated script counts) the KWin script that opens the main window
-    next to the cursor, i.e. the tray icon. KDE only; elsewhere the desktop places it."""
+    next to the cursor, i.e. the tray icon, and keeps the app's windows above others when asked:
+    Wayland ignores Qt's stays-on-top hint, KWin does not. KDE only; elsewhere the desktop places it."""
     def call(*args):
         return run("busctl", "--user", "call", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting",
                    *args, timeout=5)
     name = "asus-tso-helper-place"
+    with open(KWIN_PLACE) as f:
+        script = f"var KEEP_ABOVE = {'true' if keep_above else 'false'};\n" + f.read()
+    path = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "asus-tso-helper-place.js")
+    with open(path, "w") as f:
+        f.write(script)
     call("unloadScript", "s", name)
-    ok, out = call("loadScript", "ss", KWIN_PLACE, name)
+    ok, out = call("loadScript", "ss", path, name)
     return call("start") if ok else (ok, out)
 
 

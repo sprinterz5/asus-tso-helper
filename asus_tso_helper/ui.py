@@ -1443,6 +1443,7 @@ class MainWindow(QtWidgets.QWidget):
 
     def apply_topmost(self):
         on = bool(self.cfg.get("topmost"))
+        hw.kwin_place_window(on)                    # Wayland: only the compositor can do it
         if bool(self.windowFlags() & QtCore.Qt.WindowStaysOnTopHint) != on:
             visible = self.isVisible()
             self.setWindowFlag(QtCore.Qt.WindowStaysOnTopHint, on)
@@ -1604,7 +1605,6 @@ def main():
     app.setApplicationName(APP)
     app.setDesktopFileName(APP)
     app.setQuitOnLastWindowClosed(False)
-    hw.kwin_place_window()
     hw.integrate_desktop()
     app.setStyle("Fusion")
     font = app.font()
