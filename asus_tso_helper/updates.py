@@ -18,7 +18,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 
 from . import backend as hw
 from . import widgets as w
-from .widgets import ECO, TURBO
+from .widgets import ECO, STANDARD, TURBO
 from .i18n import tr
 
 GITHUB_REPO = "sprinterz5/asus-tso-helper"
@@ -235,6 +235,7 @@ class Table(QtWidgets.QWidget):
         for col, stretch in enumerate((23, 40, 15, 0, 22)):
             self.grid.setColumnStretch(col, stretch)
         self.grid.setColumnMinimumWidth(3, 22)
+        self.bars = []
 
     def clear(self):
         while self.grid.count():
@@ -250,12 +251,24 @@ class Table(QtWidgets.QWidget):
 
     def fill(self, rows, open_row):
         self.clear()
+        self.bars = []  # (bar, row) for every new row with packages
         bold_underline = QtGui.QFont(self.font())
         bold_underline.setBold(True)
         bold_underline.setUnderline(True)
         underline = QtGui.QFont(self.font())
         underline.setUnderline(True)
-        for i, r in enumerate(rows):
+        for n, r in enumerate(rows):
+            i = 2 * n
+            if r["status"] == STATUS_NEW and r.get("packages"):
+                bar = QtWidgets.QProgressBar()
+                bar.setTextVisible(False)
+                bar.setFixedHeight(4)
+                bar.setRange(0, len(r["packages"]))
+                bar.setStyleSheet(f"QProgressBar {{ border: none; background: rgba(128,128,128,60); border-radius: 2px; }}"
+                                  f"QProgressBar::chunk {{ background: {STANDARD.name()}; border-radius: 2px; }}")
+                bar.hide()
+                self.grid.addWidget(bar, i + 1, 0, 1, 5)
+                self.bars.append((bar, r))
             for col, text in enumerate((tr(r["category"]), r["title"], r["date"])):
                 label = QtWidgets.QLabel(text)
                 label.setFixedHeight(24)
@@ -465,19 +478,54 @@ class UpdatesWindow(QtWidgets.QWidget):
         self.proc.setStandardInputFile(QtCore.QProcess.nullDevice())
         self.proc_output = ""
 
+        if "update" in cmd:  # not for offline-trigger
+            for bar, _ in self.drivers.bars:
+                bar.setValue(0)
+                bar.show()
+            self.done_packages = set()
+            self.current_package = ""
+        self.status_word = ""
+        self.proc_line = ""
+
         def read():
-            text = bytes(self.proc.readAll()).decode(errors="replace")
-            self.proc_output += text
-            for pct in re.findall(r"Percentage:\s*(\d+)", text):
-                self.progress.setText(f"{label} ... {pct}%")
+            chunk = bytes(self.proc.readAll()).decode(errors="replace")
+            self.proc_output += chunk
+            self.proc_line += chunk  # whole lines only: a read can end mid-line
+            text, _, self.proc_line = self.proc_line.rpartition("\n")
+            for key, value in re.findall(r"^(Status|Package|Percentage):\s*(\S+)", text, re.M):
+                if key == "Status":
+                    self.status_word = value
+                elif key == "Package" and self.status_word in ("Downloading", "Installing", "Updating"):
+                    m = re.match(r"(.+?)_\d", value)  # kernel-core_7.2.11-200.fc44.x86_64
+                    name = m.group(1) if m else value
+                    if self.current_package:
+                        self.done_packages.add(self.current_package)
+                    self.current_package = name
+                    self.show_progress()
+                elif value.isdigit():
+                    self.percent = int(value)
+                self.progress.setText(f"{label}: {self.current_package}" + (f" {self.percent}%" if self.percent else ""))
+
+        self.percent = 0
 
         def finished(code, _status):
             output = self.proc_output
             self.proc = None
+            if "update" in cmd:
+                self.show_progress(done=code == 0)
             then(code == 0, output)
         self.proc.readyRead.connect(read)
         self.proc.finished.connect(finished)
         self.proc.start(cmd[0], cmd[1:])
+
+    def show_progress(self, done=False):
+        """Each red row's bar: how many of its packages pkcon has got through."""
+        for bar, r in self.drivers.bars:
+            got = len(r["packages"]) if done else sum(p in self.done_packages for p in r["packages"])
+            bar.setValue(got)
+            colour = ECO if got == len(r["packages"]) else STANDARD
+            bar.setStyleSheet(bar.styleSheet().split("QProgressBar::chunk")[0]
+                              + f"QProgressBar::chunk {{ background: {colour.name()}; border-radius: 2px; }}")
 
     def downloaded(self, ok, output):
         if not ok:
