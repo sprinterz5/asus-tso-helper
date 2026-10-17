@@ -249,7 +249,7 @@ class RButton(QtWidgets.QAbstractButton):
             p.drawText(QtCore.QRectF(rect.left(), y + 16 + gap, rect.width(), fm.height()),
                        QtCore.Qt.AlignCenter, text)
         elif pix:
-            gap = 4
+            gap = 4 if text else 0  # an icon-only button: the icon centred
             total = 16 + gap + fm.horizontalAdvance(text)
             x = rect.left() + (rect.width() - total) / 2
             p.drawPixmap(QtCore.QPointF(x, rect.center().y() - 8), pix)
