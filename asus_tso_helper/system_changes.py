@@ -15,6 +15,7 @@ import shutil
 import time
 
 from . import backend as hw
+from . import conflicts
 from . import hotkeys
 from .i18n import tr
 from .log import log
@@ -188,6 +189,12 @@ def changes():
                    tr("KDE setting you can turn on in Extra."),
                    LOW, False, lambda: bool(hw.clamshell()) and "clamshell" in journal(), undo_user=_clamshell_undo),
         ]
+    # services Setup stopped because they fight asusd / Cardwire (conflicts.py)
+    for c in conflicts.CONFLICTS:
+        if c.service:
+            rows.append(Change("stopped:" + c.key, tr("{name} stopped", name=c.title), c.why, LOW, True,
+                               lambda c=c: "stopped:" + c.key in journal(),
+                               undo_root=f"systemctl enable --now {c.service}"))
     rows.append(Change("desktop", tr("Autostart, menu entry and window placement script"),
                        tr("In your home folder only: start with the session, an app menu entry (AppImage) and a "
                           "KWin script that opens windows at the tray icon."),

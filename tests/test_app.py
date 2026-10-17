@@ -63,6 +63,29 @@ class SystemChanges(unittest.TestCase):
         self.assertIn("mem_sleep", script)
 
 
+class Conflicts(unittest.TestCase):
+    def test_found_conflict_becomes_a_setup_row_and_a_stop_step(self):
+        from asus_tso_helper import conflicts
+        tlp = next(c for c in conflicts.CONFLICTS if c.key == "tlp")
+        with mock.patch.object(conflicts, "found", return_value=[tlp]), \
+                mock.patch.object(setup, "is_asus", return_value=True), \
+                mock.patch.object(setup, "distro", return_value="arch"):
+            rows = setup.checks()
+            row = next(r for r in rows if r["key"] == "conflict:tlp")
+            text = setup.script([row])
+        self.assertIn("systemctl disable --now tlp", text)
+        self.assertIn("stopped:tlp", setup.todo_changes({"conflict:tlp"}))
+
+    def test_every_stopped_service_can_be_started_again(self):
+        keys = {c.key: c for c in sc.changes()}
+        from asus_tso_helper import conflicts
+        for c in conflicts.CONFLICTS:
+            if c.service:
+                self.assertIn(f"enable --now {c.service}", keys["stopped:" + c.key].undo_root)
+            else:
+                self.assertTrue(c.manual, c.key)
+
+
 class Updates(unittest.TestCase):
     def test_exact_ids_for_both_architectures(self):
         out = ("Available xorg-x11-drv-nvidia-cuda-libs-3:615.78.08-1.fc44.x86_64 (rpmfusion-nonfree-updates)\n"

@@ -30,6 +30,7 @@ Setup, the deep sleep option and Undo, and every such change is listed in `syste
 | `asus_tso_helper/battery.py` | Battery window: history chart, health, draw per mode |
 | `asus_tso_helper/setup.py` | First-run Setup: checks what is missing and installs it behind one password |
 | `asus_tso_helper/system_changes.py` | **Every change outside the app's own files**: what, why, risk, state, undo |
+| `asus_tso_helper/conflicts.py` | Other tools that change the same settings (TLP, supergfxd, ...): found, stopped in Setup |
 | `asus_tso_helper/changes_window.py` | Extra → System changes window (Undo) |
 | `asus_tso_helper/modes.py` | Custom modes (Turbo+ 30W, ...) on top of asusd's three profiles |
 | `asus_tso_helper/hotkeys.py` | Reads the "Asus WMI hotkeys" input device (needs the udev rule) |

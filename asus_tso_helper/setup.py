@@ -16,6 +16,7 @@ from . import widgets as w
 from .widgets import ECO, TURBO
 from .i18n import tr
 from . import system_changes
+from . import conflicts
 
 REQUIRED, RECOMMENDED, OPTIONAL, INFO = "required", "recommended", "optional", "info"
 OLD_COPR = "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:lukenukem:asus-linux.repo"
@@ -120,6 +121,13 @@ def checks():
         rows.append(check("nvidia", "NVIDIA driver", driver, INFO,
                           "" if driver else "Not installed: needed for games on the NVIDIA GPU and its "
                           "temperature. Install it from your distribution (Fedora: RPM Fusion).", fix=False))
+    # other tools changing the same things: Set up stops the services; the rest say how to remove them
+    for c in conflicts.found():
+        row = {"key": "conflict:" + c.key, "title": (tr("{name} is also running", name=c.title) if c.service
+                          else tr("{name} is also installed", name=c.title)), "ok": False,
+               "level": RECOMMENDED, "fix": bool(c.service), "conflict": c,
+               "detail": c.why + (" " + tr("Set up stops it (Undo starts it again).") if c.service else "")}
+        rows.append(row)
     desktop = os.environ.get("XDG_CURRENT_DESKTOP", "")
     rows.append(check("kde", "KDE Plasma", "KDE" in desktop.upper(), INFO,
                       "" if "KDE" in desktop.upper() else
@@ -131,6 +139,7 @@ def checks():
 def todo_changes(todo):
     """Setup rows to fix -> the system_changes keys they make."""
     keys = {k for k in todo if k in ("terra", "cardwire", "ppd", "keys", "boost")}
+    keys |= {"stopped:" + k.split(":", 1)[1] for k in todo if k.startswith("conflict:")}
     if todo & {"asusd", "python", "swayidle"}:
         keys.add("packages")
     return keys
@@ -206,6 +215,9 @@ def script(rows):
         lines += ["step 'Laptop keys'", hotkeys.rule_script().rstrip("\n")]
     if "boost" in todo:
         lines += ["step 'CPU Boost switch'", hw.boost_access_script().rstrip("\n")]
+    stop = [r["conflict"] for r in rows if r["key"] in todo and r.get("conflict")]
+    if stop:
+        lines += ["step 'Stopping " + ", ".join(c.title for c in stop) + "'", *conflicts.stop_script(stop)]
     lines += ["echo", "echo '== Done'"]
     return "\n".join(lines) + "\n"
 
@@ -285,6 +297,11 @@ class SetupWindow(QtWidgets.QWidget):
                 text += f" <span style='color:gray'>({tr('optional')})</span>"
             if r["detail"] and not r["ok"]:
                 text += f"<br><span style='color:gray'>{r['detail']}</span>"
+            c = r.get("conflict")
+            if c and c.manual and not r["ok"]:
+                text += "<br><span style='color:gray'>" + tr("To remove it:") + f"</span> {c.manual}"
+                if c.link:
+                    text += f" <a style='color:{w.STANDARD.name()}' href='{c.link}'>{tr('Details')}</a>"
             if r["key"] == "nvidia" and not r["ok"]:
                 text += f" <a style='color:{w.STANDARD.name()}' href='{NVIDIA_HOWTO}'>{tr('How to install')}</a>"
             label = QtWidgets.QLabel(text)

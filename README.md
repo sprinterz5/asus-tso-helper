@@ -180,6 +180,12 @@ Undo (the root ones together, one password):
 The list lives in [`system_changes.py`](asus_tso_helper/system_changes.py); a change that is not
 there is a bug.
 
+**Tools that change the same things.** TLP, auto-cpufreq, TuneD, supergfxd (next to Cardwire),
+optimus-manager, system76-power, EnvyControl and g-helper-linux all set the power mode, the charge
+limit or the GPU themselves, so modes stop sticking or the dGPU misbehaves. The app shows them in
+Setup and as a line in the main window; Set up stops the services (Undo starts them again) and
+says how to remove the rest. See [`conflicts.py`](asus_tso_helper/conflicts.py).
+
 ## Troubleshooting
 
 <details>

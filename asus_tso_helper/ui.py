@@ -24,6 +24,7 @@ from . import updates
 from . import battery
 from . import system_changes
 from . import changes_window
+from . import conflicts
 from . import setup
 from . import selfupdate
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
@@ -185,6 +186,15 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         self.banner.hide()
         self.services_missing = []
         root.addWidget(self.banner)
+        # another tool changing the same settings (conflicts.py): checked at start and after Setup
+        self.conflict_line = QtWidgets.QLabel("")
+        self.conflict_line.setWordWrap(True)
+        self.conflict_line.setCursor(QtCore.Qt.PointingHandCursor)
+        self.conflict_line.setContentsMargins(10, 6, 10, 2)
+        self.conflict_line.setStyleSheet(f"color: {CUSTOM.name()};")
+        self.conflict_line.mousePressEvent = lambda _: self.on_setup()
+        self.conflict_line.hide()
+        root.addWidget(self.conflict_line)
         self.root_layout = root
 
         root.addWidget(self.build_performance())
@@ -1244,6 +1254,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
     def first_run_setup(self):
         """Opens Setup at start when something required or recommended is missing (until 'Later'
         for this version)."""
+        self.check_conflicts()
         if hw.remove_kwin_limits() and self.tray:
             self.tray.showMessage(APP, tr("Log out once to get the HDMI / USB-C video ports back: "
                                   "\"Eco without logout\" is not needed with Cardwire."),
@@ -1263,8 +1274,22 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             return
         self.bg(setup.checks, then=lambda rows: setup.needs_setup(rows) and self.on_setup())
 
+    def check_conflicts(self):
+        self.bg(conflicts.found, then=self.show_conflicts)
+
+    def show_conflicts(self, found):
+        if found:
+            log.warning("conflicting tools: " + ", ".join(c.key for c in found))
+            self.conflict_line.setText(tr("Also running: {names}. They change the same settings, so modes "
+                                          "may not stick. Click to fix.", names=", ".join(c.title for c in found)))
+        visible = bool(found)
+        if visible != self.conflict_line.isVisible():
+            self.conflict_line.setVisible(visible)
+            QtCore.QTimer.singleShot(0, lambda: self.setFixedHeight(self.root_layout.sizeHint().height()))
+
     def after_setup(self):
         """Setup changed services, packages or the key rule: pick them up."""
+        self.check_conflicts()
         self.refresh_slow()
         self.hotkeys.start()
         if self.extra is not None:

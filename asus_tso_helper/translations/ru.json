@@ -393,5 +393,21 @@
  "high": "высокий риск",
  "Changes": "Изменения",
  "Everything here can be undone later:": "Всё это можно потом откатить:",
- "Extra → Changes": "Extra → Изменения"
+ "Extra → Changes": "Extra → Изменения",
+ "{name} is also running": "Также запущен {name}",
+ "Set up stops it (Undo starts it again).": "Настройка остановит его (откат запустит снова).",
+ "To remove it:": "Чтобы удалить:",
+ "Details": "Подробнее",
+ "Also running: {names}. They change the same settings, so modes may not stick. Click to fix.": "Также запущены: {names}. Они меняют те же настройки, и режимы могут сбиваться. Нажмите, чтобы исправить.",
+ "{name} stopped": "{name} остановлен",
+ "Switches the GPU too, so it fights Cardwire: the dGPU may stay on or not come back.": "Тоже переключает видеокарту и спорит с Cardwire: видеокарта может не выключаться или не включаться обратно.",
+ "Sets the power mode, CPU boost and the battery charge limit behind asusd's back, so modes and the limit change by themselves.": "Меняет режим питания, CPU Boost и лимит заряда в обход asusd, поэтому режимы и лимит меняются сами.",
+ "Changes the CPU's power mode and boost on its own, so the mode you pick does not stick.": "Сам меняет режим питания процессора и boost, поэтому выбранный режим не держится.",
+ "Applies its own power profiles (CPU power mode, boost) on top of asusd's.": "Применяет свои профили питания (режим процессора, boost) поверх asusd.",
+ "Switches the GPU too, so it fights Cardwire.": "Тоже переключает видеокарту и спорит с Cardwire.",
+ "Switches the GPU and power profiles too.": "Тоже переключает видеокарту и профили питания.",
+ "Its GPU setting (Xorg or modprobe files) can keep the NVIDIA driver from loading, so Cardwire cannot turn the dGPU on.": "Его настройка видеокарты (файлы Xorg или modprobe) может не давать драйверу NVIDIA загрузиться, и Cardwire не сможет включить видеокарту.",
+ "Writes the same hardware settings as asusd itself, and its GPU block keeps the NVIDIA driver from loading. Both installed means two programs changing the same things.": "Сам пишет те же настройки железа, что и asusd, а его блокировка видеокарты не даёт загрузиться драйверу NVIDIA. Если стоят оба, две программы меняют одно и то же.",
+ "its own uninstaller (see its README)": "его собственным деинсталлятором (см. его README)",
+ "{name} is also installed": "Также установлен {name}"
 }

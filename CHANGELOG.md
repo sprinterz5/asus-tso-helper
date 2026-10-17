@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **Conflicting tools**: TLP, auto-cpufreq, TuneD, supergfxd next to Cardwire, optimus-manager,
+  system76-power, EnvyControl and g-helper-linux are found and shown in Setup and as a line in the
+  main window. Set up stops the services (listed in Changes, Undo starts them again); for the
+  others it says how to remove them.
+- Setup: a line linking to Changes instead of a second confirmation box.
+
 ## 0.6.0
 - **System changes** (Extra → Changes): every change the app made outside its own files, why, how
   risky, whether it is in place, and **Undo** for each or all (root ones with one password). Things

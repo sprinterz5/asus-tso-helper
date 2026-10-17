@@ -26,6 +26,7 @@ changes, the last lines of this log and of the asusd / cardwired journals.
 |---|---|---|
 | A red line "asusd / cardwired is not running" | `systemctl status asusd cardwired` | Service not installed or crashed: Extra → Setup |
 | Mode buttons do nothing | log: `run asusctl ...` lines | asusd too old or not running; try `asusctl profile -n` by hand |
+| Orange line "Also running: ..." | `conflicts.py`, log: `conflicting tools` | Another tool changes the same settings: Setup stops it |
 | Mode changes by itself on plug / unplug | `backend/desktop.py` `stop_kde_power_profiles`, `ui.py` `on_power_source` | Something else switches profiles too: KDE, tuned-ppd, TLP |
 | Eco does not save power | tray tooltip "dGPU awake: ..." | A program opened the dGPU before Eco; `backend/gpu.py` `dgpu_users` |
 | GPU mode stuck "Changing ..." | `cardwire list`, `journalctl -u cardwired` | Cardwire version; `backend/gpu.py` `set_gpu_mode` |
