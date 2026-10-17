@@ -15,12 +15,15 @@ from PySide6 import QtCore, QtDBus, QtGui, QtNetwork, QtWidgets
 
 from . import backend as hw
 from .i18n import tr
+from .log import log, setup as logsetup
 from .extra import ExtraWindow
 from . import hotkeys
 from . import modes
 from . import shortcuts
 from . import updates
 from . import battery
+from . import system_changes
+from . import changes_window
 from . import setup
 from . import selfupdate
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
@@ -558,6 +561,7 @@ class MainWindow(QtWidgets.QWidget):
     def after_resume(self):
         """Puts back what this laptop should have after sleep: the charger may have changed while
         asleep, and the firmware sometimes resets the mode, the lighting or the screen rate."""
+        log.info("resumed from sleep")
         ac = hw.ac_online()
         self.last_ac = ac
         if self.cfg.get("screen") == "auto":
@@ -617,7 +621,11 @@ class MainWindow(QtWidgets.QWidget):
     def bg(self, fn, *args, then=None):
         """Run fn(*args) off the GUI thread, then call `then(result)` on it."""
         def job():
-            result = fn(*args)
+            try:
+                result = fn(*args)
+            except Exception:  # the pool would keep it in a Future nobody reads
+                log.exception(f"background job {getattr(fn, '__name__', fn)} failed")
+                return
             if then:
                 self.bridge.done.emit(then, result)
         self.pool.submit(job)
@@ -626,6 +634,7 @@ class MainWindow(QtWidgets.QWidget):
         ok, out = result
         if ok:
             return
+        log.warning(f"{what} failed: {out}")
         if self.services_missing:
             self.flash_banner()  # the banner already says why; no raw command errors
             return
@@ -663,6 +672,8 @@ class MainWindow(QtWidgets.QWidget):
 
     def report_plain(self, result, what):
         ok, out = result
+        if not ok:
+            log.warning(f"{what} failed: {out}")
         if not ok and out:
             QtWidgets.QMessageBox.warning(self, APP, tr("{what} failed:", what=what) + f"\n{out}")
 
@@ -965,6 +976,7 @@ class MainWindow(QtWidgets.QWidget):
     def on_profile(self, key, notify=False):
         """A base mode (quiet / balanced / performance) or a custom mode id.
         notify: show the toast (mode picked by a key, not in the window)."""
+        log.info(f"mode -> {key}")
         self.remember_mode(key)
         if notify:
             self.toast_mode(key)
@@ -1038,6 +1050,7 @@ class MainWindow(QtWidgets.QWidget):
     def on_power_source(self, ac):
         """Charger plugged or unplugged: the mode last used on this source comes back
         (custom modes too); with none remembered asusd's own choice stays."""
+        log.info(f"power source -> {'AC' if ac else 'battery'}")
         target = self.cfg.get("mode_ac" if ac else "mode_bat")
         self.mode_busy = True
 
@@ -1159,6 +1172,7 @@ class MainWindow(QtWidgets.QWidget):
             time.sleep(0.1)
 
     def switch_gpu(self, mode, reboot=False, close=()):
+        log.info(f"GPU -> {mode}" + (f", closing {list(close)}" if close else ""))
         self.gpu_busy = True
         self.gpu_head.title.setText(tr("GPU Mode: Changing ..."))
         for b in self.gpu_buttons.values():
@@ -1225,6 +1239,14 @@ class MainWindow(QtWidgets.QWidget):
                 hw.set_overdrive(overdrive)
             return result
         self.bg(job, then=lambda r: (self.report(r, tr("Refresh rate")), self.refresh_slow()))
+
+    def on_changes(self):
+        if getattr(self, "changes", None) is None:
+            self.changes = changes_window.ChangesWindow(self)
+        self.changes.show()
+        self.changes.raise_()
+        self.changes.activateWindow()
+        self.changes.load()
 
     def on_battery(self):
         if getattr(self, "battery", None) is None:
@@ -1321,9 +1343,13 @@ class MainWindow(QtWidgets.QWidget):
         if not self.cfg.get("kde_profiles_off"):  # once: the user may turn KDE's switch back on
             self.cfg["kde_profiles_off"] = True
             self.save()
-            if hw.stop_kde_power_profiles() and self.tray:
+            before = hw.stop_kde_power_profiles()
+            if before:
+                system_changes.record("kde_profiles", before=before)
+            if before and self.tray:
                 self.tray.showMessage(APP, tr("KDE no longer changes the power mode on plug / unplug: "
-                                      "the mode last used on each power source comes back instead."),
+                                      "the mode last used on each power source comes back instead. "
+                                      "Undo in Extra → System changes."),
                                       QtWidgets.QSystemTrayIcon.Information, 8000)
         if self.cfg.get("setup_later") == VERSION:
             return
@@ -1721,6 +1747,7 @@ class Tray(QtWidgets.QSystemTrayIcon):
 
 
 def main():
+    logsetup("--debug" in sys.argv)
     app = QtWidgets.QApplication(sys.argv)
     app.setApplicationName(APP)
     app.setDesktopFileName(APP)

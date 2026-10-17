@@ -13,6 +13,7 @@ from . import i18n
 from . import selfupdate
 from . import hotkeys
 from . import modes
+from . import system_changes
 from . import widgets as w
 from .widgets import ECO, STANDARD
 from .i18n import tr
@@ -214,8 +215,7 @@ class ExtraWindow(QtWidgets.QWidget):
             self.deep.setChecked(deep)
             self.deep.setToolTip(tr("Instead of Modern Standby (s2idle), which can drain the battery "
                                     "overnight. Waking up takes a few seconds longer."))
-            self.deep.toggled.connect(lambda on: self.main.bg(
-                hw.set_deep_sleep, on, then=lambda r: self.main.report(r, tr("Sleep mode"))))
+            self.deep.toggled.connect(self.on_deep_sleep)
             ol.addWidget(self.deep)
         lid = hw.clamshell()
         if lid is not None:
@@ -223,8 +223,7 @@ class ExtraWindow(QtWidgets.QWidget):
             self.clamshell.setChecked(lid)
             self.clamshell.setToolTip(tr("Clamshell mode: closing the lid does not sleep while a monitor is "
                                          "connected (KDE's power settings, all power sources)"))
-            self.clamshell.toggled.connect(lambda on: self.main.bg(
-                hw.set_clamshell, on, then=lambda r: self.main.report(r, tr("Clamshell mode"))))
+            self.clamshell.toggled.connect(self.on_clamshell)
             ol.addWidget(self.clamshell)
         # rows that exist only when this laptop's firmware has the setting (asus-armoury)
         if hw.armoury_range("boot_sound") is not None or hw._read(f"{hw.ARMOURY}/boot_sound/current_value"):
@@ -319,6 +318,12 @@ class ExtraWindow(QtWidgets.QWidget):
                                     "without serial numbers or the computer's name"))
         self.diag_button.clicked.connect(self.on_diagnostics)
         sl.addWidget(self.diag_button)
+        self.changes_button = w.RButton(tr("System changes"), secondary=True, radius=2)
+        self.changes_button.setFixedSize(120, 26)
+        self.changes_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.changes_button.setToolTip(tr("What the app changed on the system, and Undo"))
+        self.changes_button.clicked.connect(self.main.on_changes)
+        sl.addWidget(self.changes_button)
         root.addWidget(services)
 
         self.root = root
@@ -517,6 +522,33 @@ class ExtraWindow(QtWidgets.QWidget):
     def on_speed(self):
         self.cfg["aura_speed"] = self.speed.currentData()
         self.main.apply_aura()
+
+    def on_deep_sleep(self, on):
+        if on:
+            answer = QtWidgets.QMessageBox.question(
+                self, tr("Deep sleep"),
+                tr("This adds mem_sleep_default=deep to the kernel command line (asks for your password). "
+                   "On a few laptops S3 does not wake up properly: if that happens, hold the power button, "
+                   "start again and turn this off, or undo it in Extra → System changes.\n\nTurn it on?"))
+            if answer != QtWidgets.QMessageBox.Yes:
+                self.deep.blockSignals(True)
+                self.deep.setChecked(False)
+                self.deep.blockSignals(False)
+                return
+
+        def done(result):
+            if result[0]:
+                (system_changes.record if on else system_changes.forget)("deep_sleep")
+            else:
+                self.deep.blockSignals(True)
+                self.deep.setChecked(not on)
+                self.deep.blockSignals(False)
+            self.main.report(result, tr("Sleep mode"))
+        self.main.bg(hw.set_deep_sleep, on, then=done)
+
+    def on_clamshell(self, on):
+        system_changes.record("clamshell", on=on)
+        self.main.bg(hw.set_clamshell, on, then=lambda r: self.main.report(r, tr("Clamshell mode")))
 
     def on_topmost(self, on):
         self.cfg["topmost"] = on

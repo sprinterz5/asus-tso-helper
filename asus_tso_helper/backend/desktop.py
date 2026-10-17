@@ -1,0 +1,158 @@
+"""Desktop integration: menu entry, KWin script, theme, OSD, notifications, KDE settings."""
+import os
+import shutil
+import sys
+
+from .common import run
+
+
+def osd(icon, text):
+    """The desktop's on-screen display (KDE), like G-Helper's toast; False if there is none."""
+    ok, _ = run("gdbus", "call", "--session", "-d", "org.kde.plasmashell", "-o", "/org/kde/osdService",
+                "-m", "org.kde.osdService.showText", icon, text, timeout=3)
+    return ok
+
+
+ASSETS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets")
+KWIN_PLACE = os.path.join(ASSETS, "kwin", "place.js")
+APPIMAGE = os.environ.get("APPIMAGE")  # set by the AppImage runtime: the .AppImage file itself
+
+
+def launcher():
+    """Command that starts this app: the AppImage file, the installed command, or the launcher
+    of a source checkout. Inside an AppImage the code lives in a temporary mount instead."""
+    if APPIMAGE:
+        return APPIMAGE
+    return shutil.which("asus-tso-helper") or os.path.abspath(sys.argv[0])
+
+
+DESKTOP_FILE = os.path.expanduser("~/.local/share/applications/asus-tso-helper.desktop")
+ICON_FILE = os.path.expanduser("~/.local/share/icons/hicolor/256x256/apps/asus-tso-helper.png")
+
+
+def integrate_desktop():
+    """AppImage: a menu entry and icon pointing at the .AppImage file, like an installed app
+    (the GlobalShortcuts portal and notifications also need the .desktop file). Rewritten only
+    when something changed, e.g. the file was moved."""
+    if not APPIMAGE:
+        return
+    with open(os.path.join(ASSETS, "asus-tso-helper.png"), "rb") as f:
+        icon = f.read()
+    with open(os.path.join(ASSETS, "asus-tso-helper.desktop")) as f:
+        entry = f.read().replace("@EXEC@", f'"{APPIMAGE}"').replace("@ICON@", "asus-tso-helper")
+    for path, data in ((ICON_FILE, icon), (DESKTOP_FILE, entry.encode())):
+        try:
+            with open(path, "rb") as f:
+                if f.read() == data:
+                    continue
+        except OSError:
+            pass
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(data)
+
+
+def kwin_place_window(keep_above=False):
+    """Loads (again, so an updated script counts) the KWin script that opens the main window
+    next to the cursor, i.e. the tray icon, and keeps the app's windows above others when asked:
+    Wayland ignores Qt's stays-on-top hint, KWin does not. KDE only; elsewhere the desktop places it."""
+    def call(*args):
+        return run("busctl", "--user", "call", "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting",
+                   *args, timeout=5)
+    name = "asus-tso-helper-place"
+    with open(KWIN_PLACE) as f:
+        script = f"var KEEP_ABOVE = {'true' if keep_above else 'false'};\n" + f.read()
+    path = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or "/tmp", "asus-tso-helper-place.js")
+    with open(path, "w") as f:
+        f.write(script)
+    call("unloadScript", "s", name)
+    ok, out = call("loadScript", "ss", path, name)
+    return call("start") if ok else (ok, out)
+
+
+def os_dark():
+    """The desktop's light / dark preference: True / False, or None when it says nothing.
+    For Qt without the desktop's platform plugin (the AppImage), which reports no scheme. The
+    XDG portal answers on KDE, GNOME and most others; GNOME's setting is the fallback."""
+    ok, out = run("busctl", "--user", "call", "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+                  "org.freedesktop.portal.Settings", "ReadOne", "ss", "org.freedesktop.appearance", "color-scheme",
+                  timeout=3)
+    if ok and out.split()[-1:] in (["1"], ["2"]):  # "v u 1": 1 dark, 2 light, 0 no preference
+        return out.split()[-1] == "1"
+    ok, out = run("gsettings", "get", "org.gnome.desktop.interface", "color-scheme", timeout=3)
+    if ok and "dark" in out:
+        return True
+    if ok and "light" in out:
+        return False
+    return None
+
+
+def os_accent():
+    """The desktop's accent colour as (r, g, b), or None (not set, or no portal)."""
+    ok, out = run("busctl", "--user", "call", "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop",
+                  "org.freedesktop.portal.Settings", "ReadOne", "ss", "org.freedesktop.appearance", "accent-color",
+                  timeout=3)
+    try:
+        rgb = [float(x) for x in out.split()[-3:]] if ok else []  # "v (ddd) 0.79 0.65 0.97"
+    except ValueError:
+        return None
+    if len(rgb) != 3 or not all(0 <= x <= 1 for x in rgb):  # out of range means "not set"
+        return None
+    return tuple(round(x * 255) for x in rgb)
+
+
+POWERDEVIL_SOURCES = ("AC", "Battery")  # LowBattery keeps KDE's power-saver
+
+
+def stop_kde_power_profiles():
+    """KDE's powerdevil sets the power profile on plug / unplug, a moment before the app brings
+    back the mode remembered for that source: the mode flickers, and with quick plugging KDE's
+    one stays. Sets KDE's choice for AC and battery to "leave unchanged", as G-Helper is the only
+    one switching on Windows. -> {source: the value it had} for what was changed (empty if
+    nothing), kept in the system changes journal so Undo can put it back."""
+    before = {}
+    for source in POWERDEVIL_SOURCES:
+        key = ("--file", "powerdevilrc", "--group", source, "--group", "Performance", "--key", "PowerProfile")
+        ok, value = run("kreadconfig6", *key, "--default", "unset", timeout=5)
+        if ok and value and run("kwriteconfig6", *key, "", timeout=5)[0]:  # unset is KDE's default, which may switch
+            before[source] = value
+    if before:
+        _powerdevil_reload()
+    return before
+
+
+def _powerdevil_reload():
+    run("busctl", "--user", "call", "org.kde.Solid.PowerManagement", "/org/kde/Solid/PowerManagement",
+        "org.kde.Solid.PowerManagement", "reparseConfiguration", timeout=5)
+
+
+def _clamshell_key(source):
+    return ("--file", "powerdevilrc", "--group", source, "--group", "SuspendAndShutdown",
+            "--key", "InhibitLidActionWhenExternalMonitorPresent")
+
+
+def clamshell():
+    """Clamshell mode: the lid closed with an external display connected keeps the session
+    running (KDE's default; GNOME does it always). True / False on KDE, else None."""
+    if "KDE" not in os.environ.get("XDG_CURRENT_DESKTOP", "").upper() or not shutil.which("kreadconfig6"):
+        return None
+    return all(run("kreadconfig6", *_clamshell_key(source), "--default", "true", timeout=5)[1] == "true"
+               for source in ("AC", "Battery", "LowBattery"))
+
+
+def set_clamshell(on):
+    for source in ("AC", "Battery", "LowBattery"):
+        ok, out = run("kwriteconfig6", *_clamshell_key(source), "--type", "bool", "true" if on else "false", timeout=5)
+        if not ok:
+            return False, out
+    _powerdevil_reload()
+    return True, ""
+
+
+def notify_action(icon, title, body, action):
+    """A desktop notification with one button -> its id (for ActionInvoked), or None."""
+    ok, out = run("busctl", "--user", "call", "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                  "org.freedesktop.Notifications", "Notify", "susssasa{sv}i", "asus-tso-helper", "0", icon,
+                  title, body, "2", "default", action, "0", "15000", timeout=5)
+    words = out.split() if ok else []
+    return int(words[1]) if len(words) == 2 and words[1].isdigit() else None

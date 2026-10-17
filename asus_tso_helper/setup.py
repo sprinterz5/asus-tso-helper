@@ -15,6 +15,7 @@ from . import hotkeys
 from . import widgets as w
 from .widgets import ECO, TURBO
 from .i18n import tr
+from . import system_changes
 
 REQUIRED, RECOMMENDED, OPTIONAL, INFO = "required", "recommended", "optional", "info"
 OLD_COPR = "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:lukenukem:asus-linux.repo"
@@ -125,6 +126,19 @@ def checks():
                       tr("Running on {desktop}: toasts, the logout prompt and the window at the tray icon "
                          "use KDE.", desktop=desktop or tr("another desktop")), fix=False))
     return rows
+
+
+def todo_changes(todo):
+    """Setup rows to fix -> the system_changes keys they make."""
+    keys = {k for k in todo if k in ("terra", "cardwire", "ppd", "keys", "boost")}
+    if todo & {"asusd", "python", "swayidle"}:
+        keys.add("packages")
+    return keys
+
+
+def packages_of(todo):
+    names = {"asusd": ["asusctl"], "python": ["python3-evdev", "python3-dbus"], "swayidle": ["swayidle"]}
+    return [p for k in sorted(todo) for p in names.get(k, [])]
 
 
 def needs_setup(rows):
@@ -278,6 +292,15 @@ class SetupWindow(QtWidgets.QWidget):
         QtCore.QTimer.singleShot(0, self.adjustSize)
 
     def run(self):
+        """First says what will change on the system (and that each can be undone), then one
+        password for all of it."""
+        self.todo = {r["key"] for r in self.rows if not r["ok"] and r["fix"]}
+        planned = [c for c in system_changes.changes() if c.key in todo_changes(self.todo)]
+        text = tr("These changes will be made to the system:") + "\n\n" + "\n".join(
+            f"• {c.title}: {c.why}" for c in planned)
+        text += "\n\n" + tr("Each can be undone later in Extra → System changes. Continue?")
+        if QtWidgets.QMessageBox.question(self, tr("Set up"), text) != QtWidgets.QMessageBox.Yes:
+            return
         self.go.setEnabled(False)
         self.later.setEnabled(False)
         self.log.clear()
@@ -292,6 +315,9 @@ class SetupWindow(QtWidgets.QWidget):
 
     def done(self, code, _status):
         self.proc = None
+        if code == 0:  # into the journal, so Extra -> System changes can list and undo them
+            for key in todo_changes(self.todo) - {"keys", "boost"}:  # those two are seen on disk
+                system_changes.record(key, **({"names": packages_of(self.todo)} if key == "packages" else {}))
         self.later.setEnabled(True)
         self.later.setText(tr("Close"))
         if code in (126, 127):

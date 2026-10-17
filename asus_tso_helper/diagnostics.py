@@ -8,6 +8,10 @@ import json
 import os
 import platform
 import re
+import shutil
+
+from . import log as applog
+from . import system_changes
 
 from . import backend as hw
 
@@ -27,7 +31,7 @@ def _section(title, lines):
 
 def _package(name):
     for cmd in (["rpm", "-q", name], ["pacman", "-Q", name], ["dpkg-query", "-W", name]):
-        if hw.shutil.which(cmd[0]):
+        if shutil.which(cmd[0]):
             ok, out = hw.run(*cmd, timeout=5)
             return out.strip() if ok else "not installed"
     return "?"
@@ -84,7 +88,7 @@ def report(cfg, version):
 
     out += _section("GPU", [f"mode: {hw.gpu_mode()}", f"pending: {hw.gpu_pending()}",
                             f"dGPU power: {hw.dgpu_power(blocked=hw.cardwire_mode() == 'Integrated')}",
-                            _cmd("cardwire", "list") if hw.shutil.which("cardwire") else "cardwire: not installed"])
+                            _cmd("cardwire", "list") if shutil.which("cardwire") else "cardwire: not installed"])
     bat = hw.battery_status() or {}
     health = hw.battery_health()
     out += _section("Battery", [f"charge: {bat.get('percent')}% {bat.get('status')} {bat.get('watts')} W",
@@ -92,10 +96,12 @@ def report(cfg, version):
                                 f"health: {health:.1f}%" if health else "health: ?",
                                 f"cycles: {hw.battery_cycles()}"])
 
+    out += _section("System changes (system_changes.py)", system_changes.report())
     # the app's settings, without the user's own commands
     safe = {k: ("<set>" if k.endswith("_cmd") and v else v) for k, v in cfg.items()}
     out += _section("App settings", [json.dumps(safe, indent=1, sort_keys=True, default=str)])
 
+    out += _section("App log (last lines; start with --debug for every command)", applog.tail(150) or ["(empty)"])
     for unit in JOURNAL_UNITS:
         log = _cmd("journalctl", "-u", unit, "-b", "-n", "400", "-o", "cat", "--no-pager", timeout=15)
         lines = [line for line in log.splitlines() if not re.search(r"dispatch_call|zbus::", line)]
