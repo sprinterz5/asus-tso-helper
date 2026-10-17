@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Eco after a kernel update: when Cardwire missed the NVIDIA GPU at boot (the driver was still being built), the app asks it to look again and retries, instead of failing with "requires a discrete GPU".
+
 ## 0.7.0
 - **New name: Shiftray** (was asus-tso-helper). Settings, the log and autostart move over by
   themselves on the first start; the AppImage, COPR and AUR packages update to the new name.

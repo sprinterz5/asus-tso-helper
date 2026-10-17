@@ -42,6 +42,16 @@ class Cardwire(unittest.TestCase):
             self.assertIsNone(gpu.cardwire_last_blocked())
 
 
+class CardwireRetry(unittest.TestCase):
+    def test_missed_dgpu_is_looked_for_again(self):
+        calls = []
+        answers = iter([(False, "Couldn't set mode to Integrated, Integrated and Smart modes require a offload "
+                                 "discrete GPU"), (True, ""), (True, "")])
+        with mock.patch.object(gpu, "run", side_effect=lambda *a, **k: calls.append(a) or next(answers)):
+            self.assertEqual(gpu.set_cardwire_mode("Integrated"), (True, ""))
+        self.assertTrue(any("RefreshGpu" in c for c in calls))
+
+
 class Games(unittest.TestCase):
     def _spawn(self, env):
         p = subprocess.Popen(["sleep", "5"], env=dict(os.environ, **env))

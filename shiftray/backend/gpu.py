@@ -4,6 +4,7 @@ import os
 import re
 import shlex
 
+from ..log import log
 from .common import ARMOURY, _bus_get, _read, run
 from .profile import set_armoury
 
@@ -26,8 +27,18 @@ def cardwire_mode():
 
 
 def set_cardwire_mode(mode):
-    return run("busctl", "--system", "set-property", CARDWIRE, CARDWIRE_PATH, CARDWIRE + ".Mode",
-               "Mode", "u", str(CARDWIRE_MODES.index(mode)), timeout=30)
+    def attempt():
+        return run("busctl", "--system", "set-property", CARDWIRE, CARDWIRE_PATH, CARDWIRE + ".Mode",
+                   "Mode", "u", str(CARDWIRE_MODES.index(mode)), timeout=30)
+    ok, out = attempt()
+    if not ok and "discrete GPU" in out:
+        # Cardwire looks for the GPUs once, at boot. When the NVIDIA driver comes up late (the first
+        # boot of a new kernel, while akmods builds it) it misses the dGPU and refuses Eco: it is
+        # asked to look again, then the switch is tried once more.
+        log.info("Cardwire missed the dGPU at boot: asking it to look again")
+        run("busctl", "--system", "call", CARDWIRE, CARDWIRE_PATH, CARDWIRE + ".Debug", "RefreshGpu", timeout=15)
+        ok, out = attempt()
+    return ok, out
 
 
 def has_mux():
