@@ -428,14 +428,12 @@ class MainWindow(QtWidgets.QWidget):
         self.bat_panel = p
         p.installEventFilter(self)
         self.bat_head = w.Header("battery-charging", tr("Battery Charge Limit"), height=22)
-        self.bat_history = history = w.RButton("", "chart-line", secondary=True, radius=2, borderless=True)
-        history.setFixedSize(28, 20)  # as FN-Lock
-        history.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.bat_history = history = w.IconButton("chart-line", size=18, nudge=(0.5, -0.5))
         history.setToolTip(tr("Battery history and health"))
         history.clicked.connect(self.on_battery)
         self.bat_head.right.setStretch(0, 0)
         self.bat_head.right.insertSpacing(1, 6)
-        self.bat_head.right.insertWidget(2, history, 0, QtCore.Qt.AlignVCenter)
+        self.bat_head.right.insertWidget(2, history, 0, QtCore.Qt.AlignTop)  # level with the title text
         self.bat_head.right.insertStretch(3, 1)
         lay.addWidget(self.bat_head)
         row = QtWidgets.QHBoxLayout()

@@ -259,6 +259,33 @@ class RButton(QtWidgets.QAbstractButton):
             p.drawText(rect, QtCore.Qt.AlignCenter, text)
 
 
+class IconButton(RButton):
+    """A small square button with only an icon, centred, and a soft shadow under it."""
+
+    def __init__(self, icon_name, size=20, icon_size=12, nudge=(0, 0)):
+        super().__init__("", icon_name, secondary=True)
+        self.nudge = nudge  # optical centring for icons heavy on one side
+        self.icon_size = icon_size
+        self.setFixedSize(size, size + 2)  # 2 px for the shadow
+        self.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+
+    def paintEvent(self, _):
+        p = QtGui.QPainter(self)
+        p.setRenderHint(QtGui.QPainter.Antialiasing)
+        box = QtCore.QRectF(0.5, 0.5, self.width() - 1, self.width() - 1)
+        for i, alpha in ((2, 25), (1, 45)):  # shadow: two soft steps below
+            p.setPen(QtCore.Qt.NoPen)
+            p.setBrush(QtGui.QColor(0, 0, 0, alpha))
+            p.drawRoundedRect(box.translated(0, i), 3, 3)
+        p.setBrush(self.background())
+        p.setPen(QtGui.QPen(THEME.border_main, 1))
+        p.drawRoundedRect(box, 3, 3)
+        pix = icon(self.icon_name, self.icon_size)
+        offset = (self.width() - self.icon_size) / 2
+        p.drawPixmap(QtCore.QPointF(box.left() + offset - 0.5 + self.nudge[0],
+                                    box.top() + offset - 0.5 + self.nudge[1]), pix)
+
+
 class ColorButton(RButton):
     """RColorButton: a button with a colour swatch on its right edge."""
 
