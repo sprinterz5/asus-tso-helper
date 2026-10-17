@@ -28,15 +28,11 @@ from . import setup
 from . import selfupdate
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
 from . import widgets as w
+from .config import APP, VERSION, HOMEPAGE, DONATE_URL, CONFIG_DIR, CONFIG_FILE, AUTOSTART, quit_app, load_config, save_config  # noqa: F401 (ui.VERSION etc. still work)
+from .window_keys import KeysMixin
+from .window_update import UpdateMixin
+from .window_idle import IdleMixin
 from .widgets import ECO, STANDARD, TURBO, CUSTOM, GRAY
-
-APP = "asus-tso-helper"
-VERSION = "0.5.0"
-HOMEPAGE = "https://github.com/sprinterz5/asus-tso-helper"
-DONATE_URL = ""  # PayPal donation link; Credits shows a support link once it is set
-CONFIG_DIR = os.path.join(os.path.expanduser("~/.config"), APP)
-CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
-AUTOSTART = os.path.expanduser(f"~/.config/autostart/{APP}.desktop")
 
 
 MODES = [("quiet", tr("Silent"), "bike", ECO),
@@ -55,26 +51,6 @@ DGPU_APPS_EVERY = 30
 SERVICE_TOOLS = {"asusd": "asusctl", "cardwired": "cardwire"}
 OPTIMIZED_TIP = tr("Switch to Eco on battery and to Standard when plugged in")
 AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
-
-
-def quit_app():
-    """Ends the app. QApplication.quit() would not: in Qt 6 it first asks every window to close,
-    and the main window refuses (it hides to the tray), which cancels the quit silently."""
-    QtWidgets.QApplication.exit(0)
-
-
-def load_config():
-    try:
-        with open(CONFIG_FILE) as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        return {}
-
-
-def save_config(cfg):
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(cfg, f, indent=2)
 
 
 def stylesheet():
@@ -158,7 +134,7 @@ class HoverTip(QtCore.QObject):
         return False
 
 
-class MainWindow(QtWidgets.QWidget):
+class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
     def __init__(self, tray_available):
         super().__init__()
         self.cfg = load_config()
@@ -1256,74 +1232,6 @@ class MainWindow(QtWidgets.QWidget):
         self.battery.activateWindow()
         self.battery.load()
 
-    def on_updates(self):
-        if self.updates is None:
-            self.updates = updates.UpdatesWindow(self, VERSION)
-        self.updates.show()
-        self.updates.raise_()
-        self.updates.activateWindow()
-        if self.updates.proc is None:  # an install still running keeps its rows and bars
-            self.updates.load()
-
-    def check_app_update(self):
-        """AutoUpdateCheck: a newer GitHub release turns the version label into a red
-        'Download Update' link, like G-Helper's labelVersion."""
-        def done(latest):
-            if latest and updates.newer(latest["version"], VERSION):
-                self.latest_release = latest
-                self.release_url = latest["url"] or HOMEPAGE + "/releases"
-                self.version_label.setText(tr("Download Update: {version}", version=latest['version']))
-                f = self.version_label.font()
-                f.setBold(True)
-                f.setUnderline(True)
-                self.version_label.setFont(f)
-                self.version_label.setStyleSheet(f"color: {w.TURBO.name()};")
-                if self.tray and not self.isVisible() and self.cfg.get("update_toast") != latest["version"]:
-                    self.cfg["update_toast"] = latest["version"]
-                    self.save()
-                    self.tray.showMessage(APP, tr("Version {version} is available.", version=latest['version']),
-                                          QtGui.QIcon(w.APP_ICON), 8000)
-        self.bg(updates.app_latest, then=done)
-
-    # -- self-update (AppImage) ------------------------------------------------------------
-    def on_version_clicked(self):
-        if self.can_self_update():
-            self.self_update()
-        else:
-            QtGui.QDesktopServices.openUrl(QtCore.QUrl(self.release_url))
-
-    def can_self_update(self):
-        return bool(self.latest_release and selfupdate.possible()
-                    and selfupdate.asset_of(self.latest_release))
-
-    def self_update(self):
-        """AutoUpdateControl.AutoUpdate: download, swap the AppImage, restart."""
-        version = self.latest_release["version"]
-        answer = QtWidgets.QMessageBox.question(
-            self, tr("Update"), tr("Update to {version} now? The app restarts by itself.", version=version) + "\n\n"
-            + tr("What changed: {url}", url=self.release_url))
-        if answer != QtWidgets.QMessageBox.Yes:
-            return
-        asset = selfupdate.asset_of(self.latest_release)
-        label = self.version_label
-        label.setText(tr("Downloading update ..."))
-
-        def progress(percent):
-            self.bridge.done.emit(lambda p: label.setText(tr("Downloading update: {percent}%", percent=p)), percent)
-
-        def job():
-            ok, path = selfupdate.download(asset, progress)
-            return selfupdate.install(path) if ok else (ok, path)
-
-        def done(result):
-            if not result[0]:
-                label.setText(tr("Download Update: {version}", version=version))
-                QtWidgets.QMessageBox.warning(self, tr("Update"), result[1])
-                return
-            selfupdate.restart()
-            quit_app()
-        self.bg(job, then=done)
-
     def on_setup(self):
         if self.setup is None:
             self.setup = setup.SetupWindow(self)
@@ -1371,220 +1279,6 @@ class MainWindow(QtWidgets.QWidget):
 
     def save(self):
         save_config(self.cfg)
-
-    # -- key bindings ---------------------------------------------------------------
-    def on_hotkeys_state(self, state):
-        self.hotkeys_state = state
-        if self.extra:
-            self.extra.build_bindings()
-
-    def on_hotkey_seen(self, key):
-        seen = self.cfg.setdefault("seen_keys", [])
-        if key not in seen:
-            seen.append(key)
-            self.save()
-            if self.extra:
-                self.extra.build_bindings()
-
-    KBD_HW_CHANGED = "/sys/class/leds/asus::kbd_backlight/brightness_hw_changed"
-
-    def capture_laptop_key(self):
-        """Add -> Laptop key: the next ASUS key pressed becomes a bindable row.
-        Some Fn keys never reach Linux (Fn+F2/F3: the keyboard firmware changes the light
-        itself), so the dialog watches for that and explains instead of waiting forever."""
-        self.hotkeys.capturing = True
-        box = QtWidgets.QMessageBox(QtWidgets.QMessageBox.Information, tr("Add laptop key"),
-                                    tr("Press the laptop key (Fn + ...) you want to bind."),
-                                    QtWidgets.QMessageBox.Cancel, self.extra or self)
-        box.rejected.connect(self.end_capture)
-        self.capture_box = box
-        self.capture_light = hw._read(self.KBD_HW_CHANGED)
-        self.capture_ticks = 0
-        self.capture_timer = QtCore.QTimer(self, interval=300, timeout=self.capture_tick)
-        self.capture_timer.start()
-        box.open()
-
-    def capture_tick(self):
-        if not self.capture_box:
-            return
-        self.capture_ticks += 1
-        light = hw._read(self.KBD_HW_CHANGED)
-        if light != self.capture_light:
-            self.capture_fail(tr("This key is handled by the keyboard's own firmware (it changes the "
-                                 "backlight by itself) and never reaches Linux, so it cannot be rebound."))
-        elif self.capture_ticks >= 34:  # ~10 s
-            self.capture_fail(tr("No laptop key arrived. That key is either handled by the firmware "
-                                 "itself or sent as a normal key combination.") + "\n\n" +
-                              tr("Use Add -> Keyboard shortcut for normal key combinations."))
-
-    def capture_fail(self, text):
-        box = self.capture_box
-        self.end_capture()
-        if box:
-            box.done(0)
-        QtWidgets.QMessageBox.information(self.extra or self, tr("Add laptop key"), text)
-
-    def end_capture(self):
-        self.hotkeys.capturing = False
-        self.capture_box = None
-        timer = getattr(self, "capture_timer", None)
-        if timer:
-            timer.stop()
-
-    def on_key_captured(self, scan, label):
-        box = self.capture_box
-        self.end_capture()
-        if box:
-            box.done(0)
-        builtin = hotkeys.SCAN_TO_KEY.get(scan)
-        name = builtin or f"scan_{scan:02X}"
-        if builtin:
-            self.on_hotkey_seen(builtin)
-        elif name not in self.cfg.get("custom_keys", {}):
-            self.cfg.setdefault("custom_keys", {})[name] = {"scan": scan, "label": label}
-            self.save()
-            if self.extra:
-                self.extra.build_bindings()
-        else:
-            label = self.cfg["custom_keys"][name]["label"]
-        if builtin:
-            label = hotkeys.KEYS[builtin][0]
-        QtWidgets.QMessageBox.information(self.extra or self, tr("Add laptop key"),
-                                          tr("{key} is in the list. Pick what it should do.", key=label))
-
-    def shortcut_description(self, sid):
-        n = list(self.cfg.get("shortcuts", {})).index(sid) + 1 if sid in self.cfg.get("shortcuts", {}) else 0
-        return f"asus-tso-helper custom key {n}"
-
-    def add_shortcut(self):
-        """Add -> Keyboard shortcut: pick keys here, the desktop confirms and owns them."""
-        dlg = QtWidgets.QDialog(self.extra or self)
-        dlg.setWindowTitle(tr("Add keyboard shortcut"))
-        lay = QtWidgets.QVBoxLayout(dlg)
-        lay.addWidget(QtWidgets.QLabel(tr("Press the key combination, then OK.\n"
-                                       "KDE will ask once to confirm it.")))
-        edit = QtWidgets.QKeySequenceEdit()
-        edit.setMaximumSequenceLength(1)
-        lay.addWidget(edit)
-        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
-        buttons.accepted.connect(dlg.accept)
-        buttons.rejected.connect(dlg.reject)
-        lay.addWidget(buttons)
-        if dlg.exec() != QtWidgets.QDialog.Accepted or edit.keySequence().isEmpty():
-            return
-        seq = edit.keySequence().toString(QtGui.QKeySequence.PortableText)
-        sid = "user_" + secrets.token_hex(4)
-        self.cfg.setdefault("shortcuts", {})[sid] = {"trigger": ""}
-        self.save()
-        self.portal_busy = True
-        self.portal.bind([(sid, self.shortcut_description(sid), hotkeys.to_portal_trigger(seq))])
-
-    def on_shortcuts_bound(self, triggers):
-        self.portal_busy = False
-        known = self.cfg.get("shortcuts", {})
-        for sid, trigger in triggers.items():
-            if sid in known:
-                known[sid]["trigger"] = trigger
-        self.save()
-        if self.extra:
-            self.extra.build_bindings()
-
-    def on_shortcut(self, sid):
-        action = self.hotkeys.binding(sid)
-        if not action:
-            return
-        code = hotkeys.KEY_ACTIONS.get(action)
-        if code is not None and self.hotkeys.send_key(code):
-            return
-        self.on_hotkey(action, sid)
-
-    def remove_key(self, key):
-        self.cfg.get("custom_keys", {}).pop(key, None)
-        if self.cfg.get("shortcuts", {}).pop(key, None) is not None:
-            hw.run("busctl", "--user", "call", "org.kde.kglobalaccel", "/kglobalaccel",
-                   "org.kde.KGlobalAccel", "unregister", "ss", shortcuts.APP_ID, key, timeout=5)
-        self.cfg.pop(f"key_{key}", None)
-        self.cfg.pop(f"key_{key}_cmd", None)
-        self.save()
-        if self.extra:
-            self.extra.build_bindings()
-
-    # -- keyboard backlight timeout (swayidle) -----------------------------------------
-    def apply_idle(self):
-        """Extra 'Timeout when plugged / on battery': swayidle tells us when the session idles."""
-        self.stop_idle()
-        timeout = int(self.cfg.get("kbd_timeout_ac" if hw.ac_online() else "kbd_timeout_bat", 0))
-        if timeout <= 0 or not self.idle_available:
-            return
-        me = hw.launcher()
-        self.idle_proc = QtCore.QProcess(self)
-        self.idle_proc.start("swayidle", ["-w", "timeout", str(timeout), f"'{me}' --kbd-idle off",
-                                          "resume", f"'{me}' --kbd-idle on"])
-
-    def install_idle(self):
-        def done(result):
-            self.report(result, tr("Installing swayidle"))
-            self.idle_available = bool(shutil.which("swayidle"))
-            if self.extra:
-                self.extra.show_idle_state(self.idle_available)
-            self.apply_idle()
-        self.bg(hotkeys.install_swayidle, then=done)
-
-    def stop_idle(self):
-        if self.idle_proc:
-            self.idle_proc.terminate()
-            self.idle_proc.waitForFinished(1000)
-            self.idle_proc = None
-            hw.kbd_idle("on")  # do not leave the light off if we stop while idle
-
-    def enable_hotkeys(self):
-        self.bg(hotkeys.install_rule, then=lambda r: (self.report(r, tr("Enabling Key Bindings")),
-                                                     QtCore.QTimer.singleShot(1500, self.hotkeys.start)))
-
-    def on_hotkey(self, action, key):
-        """InputDispatcher.KeyProcess for the actions that are not a plain key press."""
-        def spawn(*cmd):
-            try:
-                subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            except OSError:
-                pass
-        if action == "aura":
-            i = (self.aura_combo.currentIndex() + 1) % self.aura_combo.count()
-            self.aura_combo.setCurrentIndex(i)
-            self.apply_aura()
-            self.toast("input-keyboard-brightness", self.aura_combo.currentText())
-        elif action == "performance":  # Modes.GetNext: Silent, Balanced, Turbo, then custom modes
-            order = [m[0] for m in modes.all_modes(self.cfg)]
-            current = self.cfg.get("active_mode") or hw.get_profile()
-            nxt = order[(order.index(current) + 1) % len(order)] if current in order else "balanced"
-            self.on_profile(nxt, notify=True)
-        elif action.startswith("mode:"):
-            if action[5:] in [m[0] for m in modes.all_modes(self.cfg)]:
-                self.on_profile(action[5:], notify=True)
-        elif action == "screen":
-            spawn("kscreen-doctor", "--dpms", "off")
-        elif action == "lock":
-            spawn("loginctl", "lock-session")
-        elif action == "screenshot":
-            spawn("spectacle")
-        elif action == "calculator":
-            spawn("kcalc")
-        elif action == "ghelper":
-            if self.isVisible():
-                self.hide()
-            else:
-                self.show()
-                self.raise_()
-                self.activateWindow()
-        elif action == "mangohud":  # G-Helper's FPS overlay; MangoHud draws it inside the game
-            if shutil.which("mangohudctl"):
-                spawn("mangohudctl", "toggle", "no_display")
-            else:
-                self.toast("dialog-information", tr("MangoHud is not installed"))
-        elif action == "custom":
-            cmd = self.cfg.get(f"key_{key}_cmd", "").strip()
-            if cmd:
-                spawn("sh", "-c", cmd)
 
     def apply_topmost(self):
         on = bool(self.cfg.get("topmost"))

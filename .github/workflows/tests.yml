@@ -1,0 +1,21 @@
+# Every push and pull request: the unit tests (python3 -m unittest), on the Python and PySide6
+# the app is built with. No hardware needed: the tests feed the parsers recorded tool output.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install PySide6
+      - run: python -m unittest discover -s tests -t . -v
+        env:
+          QT_QPA_PLATFORM: offscreen

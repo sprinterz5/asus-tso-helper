@@ -14,7 +14,7 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 BUILD=$ROOT/build/appimage
 APPDIR=$BUILD/AppDir
 OUT=$ROOT/dist/asus-tso-helper-x86_64.AppImage
-VERSION=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' "$ROOT/asus_tso_helper/ui.py")
+VERSION=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' "$ROOT/asus_tso_helper/config.py")
 
 if command -v dnf >/dev/null; then  # headers to build evdev and dbus-python
     dnf install -y -q dbus-devel glib2-devel kernel-headers file >/dev/null
