@@ -127,7 +127,7 @@ class BatteryWindow(QtWidgets.QWidget):
 
         def job():
             data = (hw.battery_history("charge", span), hw.battery_history("rate", span),
-                    hw.battery_health(), hw.watts_per_mode(span))
+                    hw.battery_capacity(), hw.watts_per_mode(span))
             self.loaded.emit((span, data))
         self.main.bg(job)
 

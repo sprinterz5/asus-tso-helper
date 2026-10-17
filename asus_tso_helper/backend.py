@@ -1076,7 +1076,7 @@ def battery_history(kind, seconds, points=400):
     return sorted(rows)
 
 
-def battery_health():
+def battery_capacity():
     """-> dict(full, design Wh, health %, cycles or None), or None."""
     bat = _battery()
     if not bat:
