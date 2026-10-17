@@ -251,6 +251,15 @@ class MainWindow(QtWidgets.QWidget):
         QtDBus.QDBusConnection.systemBus().connect(
             hw.CARDWIRE, hw.CARDWIRE_PATH, "org.freedesktop.DBus.Properties", "PropertiesChanged",
             self, QtCore.SLOT("on_cardwire_changed(QDBusMessage)"))
+        # a game was kept off the dGPU by Eco: offer Standard
+        QtDBus.QDBusConnection.systemBus().connect(
+            hw.CARDWIRE, hw.CARDWIRE_PATH, hw.CARDWIRE + ".Logger", "ProcessBlockedChanged",
+            self, QtCore.SLOT("on_gpu_blocked(QDBusMessage)"))
+        QtDBus.QDBusConnection.sessionBus().connect(
+            "", "/org/freedesktop/Notifications", "org.freedesktop.Notifications", "ActionInvoked",
+            self, QtCore.SLOT("on_notification_action(QDBusMessage)"))
+        self.note_actions = {}      # notification id -> what its button does
+        self.games_told = set()     # one hint per game and situation in a session
         # back from sleep: firmware and asusd sometimes come back with other settings
         QtDBus.QDBusConnection.systemBus().connect(
             "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
@@ -491,6 +500,47 @@ class MainWindow(QtWidgets.QWidget):
             b.setFixedHeight(24)
             lay.addWidget(b, 1)
         return p
+
+    # -- "you started a game in Eco / Silent" -------------------------------------
+    def hint(self, key, body, action, then):
+        """A notification with a button; each key is shown once a session (no nagging)."""
+        if key in self.games_told or not self.cfg.get("game_hints", True):
+            return
+        self.games_told.add(key)
+
+        def shown(note_id):
+            if note_id is not None:
+                self.note_actions[note_id] = then
+        self.bg(hw.notify_action, "input-gaming", APP, body, action, then=shown)
+
+    @QtCore.Slot(QtDBus.QDBusMessage)
+    def on_notification_action(self, msg):
+        args = msg.arguments()
+        if len(args) == 2 and args[1] == "default":
+            action = self.note_actions.pop(int(args[0]), None)
+            if action:
+                action()
+
+    @QtCore.Slot(QtDBus.QDBusMessage)
+    def on_gpu_blocked(self, _msg):
+        def job():
+            last = hw.cardwire_last_blocked()
+            return last and hw.game_name(last[0])
+        self.bg(job, then=self.game_blocked)
+
+    def game_blocked(self, game):
+        if game and self.gpu_current == "Integrated":
+            self.hint(("eco", game), tr("{game} can't use the NVIDIA GPU in Eco. Switch to Standard? "
+                                        "Restart the game afterwards.", game=game),
+                      tr("Switch to Standard"), lambda: self.on_gpu("Hybrid"))
+
+    def check_games(self):
+        """The dGPU woke up or its users changed: a game in Silent gets a hint."""
+        if hw.get_profile() != "quiet" or self.cfg.get("active_mode"):
+            return
+        self.bg(hw.dgpu_games, then=lambda games: games and self.hint(
+            ("silent", games[0]), tr("{game} is running in Silent mode. Switch to Turbo?", game=games[0]),
+            tr("Switch to Turbo"), lambda: self.on_profile("performance", notify=True)))
 
     @QtCore.Slot(QtDBus.QDBusMessage)
     def on_sleep(self, msg):
@@ -784,6 +834,8 @@ class MainWindow(QtWidgets.QWidget):
             if self.bat_head.info.text():
                 tip += "\n" + self.bat_head.info.text()
             if s.get("dgpu_apps") is not None:
+                if s["dgpu_apps"] and s["dgpu_apps"] != self.dgpu_apps:
+                    self.check_games()
                 self.dgpu_apps = s["dgpu_apps"]
             # the dGPU's state, and what keeps it from sleeping (ROG Control Center)
             if self.gpu_current == "Integrated":

@@ -338,5 +338,10 @@
  "dGPU: awake": "dGPU: работает",
  "Deep sleep (S3): uses almost no battery while asleep": "Глубокий сон (S3): почти не тратит батарею во сне",
  "Instead of Modern Standby (s2idle), which can drain the battery overnight. Waking up takes a few seconds longer.": "Вместо Modern Standby (s2idle), который может посадить батарею за ночь. Просыпается на пару секунд дольше.",
- "Sleep mode": "Режим сна"
+ "Sleep mode": "Режим сна",
+ "{game} can't use the NVIDIA GPU in Eco. Switch to Standard? Restart the game afterwards.": "{game} не может использовать видеокарту NVIDIA в Eco. Переключить на Standard? Потом перезапустите игру.",
+ "Switch to Standard": "Переключить на Standard",
+ "{game} is running in Silent mode. Switch to Turbo?": "{game} запущена в режиме Silent. Переключить на Turbo?",
+ "Switch to Turbo": "Переключить на Turbo",
+ "Tell me when a game runs in Eco or Silent": "Подсказывать, если игра запущена в Eco или Silent"
 }

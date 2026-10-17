@@ -376,6 +376,53 @@ def set_deep_sleep(on):
     return run("pkexec", "sh", "-c", f"echo {mode} > {MEM_SLEEP} && {boot}", timeout=120)
 
 
+def notify_action(icon, title, body, action):
+    """A desktop notification with one button -> its id (for ActionInvoked), or None."""
+    ok, out = run("busctl", "--user", "call", "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+                  "org.freedesktop.Notifications", "Notify", "susssasa{sv}i", "asus-tso-helper", "0", icon,
+                  title, body, "2", "default", action, "0", "15000", timeout=5)
+    words = out.split() if ok else []
+    return int(words[1]) if len(words) == 2 and words[1].isdigit() else None
+
+
+def game_name(pid):
+    """The game's name when this process is one (Steam, Proton, Wine, Lutris, Heroic all leave
+    their marks in its environment), else None. Browsers and launchers probing the GPUs are not."""
+    try:
+        with open(f"/proc/{pid}/environ", "rb") as f:
+            env = dict(v.split(b"=", 1) for v in f.read().split(b"\0") if b"=" in v)
+        with open(f"/proc/{pid}/comm") as f:
+            comm = f.read().strip()
+    except (OSError, ValueError):
+        return None
+    if comm.lower() in ("steam", "steamwebhelper", "pressure-vessel", "reaper", "wineserver", "lutris", "heroic"):
+        return None
+    app = env.get(b"SteamAppId") or env.get(b"SteamGameId") or b"0"
+    if app not in (b"0", b"") or b"STEAM_COMPAT_DATA_PATH" in env or b"WINEPREFIX" in env \
+            or comm.lower().endswith(".exe"):
+        return comm
+    return None
+
+
+def cardwire_last_blocked():
+    """(pid, name) of the newest process Cardwire kept off the dGPU (Eco), or None."""
+    ok, out = run("busctl", "--system", "call", CARDWIRE, CARDWIRE_PATH, CARDWIRE + ".Logger",
+                  "ProcessBlocked", timeout=5)
+    try:
+        words = shlex.split(out) if ok else []
+    except ValueError:
+        return None
+    if len(words) < 7:
+        return None  # a((tu)usus) N  then per entry: secs nanos pid comm gpu app_id
+    pid, comm = words[-4], words[-3]
+    return (int(pid), comm) if pid.isdigit() else None
+
+
+def dgpu_games():
+    """Names of the games now running on the dGPU."""
+    return sorted({n for n in (game_name(pid) for pid, _ in gpu_apps()[0]) if n})
+
+
 DESKTOP_GPU_USERS = {"kwin_wayland", "kwin_x11", "Xwayland", "Xorg", "plasmashell", "gnome-shell",
                      "mutter", "sddm-greeter", "gdm-x-session"}
 

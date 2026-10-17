@@ -204,6 +204,10 @@ class ExtraWindow(QtWidgets.QWidget):
                 hw.platform_set, "DisableNvidiaPowerdOnBattery", "b", on,
                 then=lambda r: self.main.report(r, tr("NVIDIA power daemon"))))
             ol.addWidget(self.powerd)
+        hints = check(tr("Tell me when a game runs in Eco or Silent"), 2)
+        hints.setChecked(self.cfg.get("game_hints", True))
+        hints.toggled.connect(lambda on: (self.cfg.__setitem__("game_hints", on), self.main.save()))
+        ol.addWidget(hints)
         deep = hw.deep_sleep()
         if deep is not None:
             self.deep = check(tr("Deep sleep (S3): uses almost no battery while asleep"), 2)
