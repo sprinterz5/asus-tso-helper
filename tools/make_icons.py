@@ -12,7 +12,7 @@ COLOURS = {"app": "#3aaeef", "eco": "#06b48a", "standard": "#3aaeef", "ultimate"
 
 
 def svg(colour):
-    """G-Helper's icon is a thin white G on a coloured circle; this is the same with an S (Second)."""
+    """G-Helper's icon is a thin white G on a coloured circle; this is the same with the S of Shiftray."""
     return f"""<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <circle cx="128" cy="128" r="120" fill="{colour}"/>
   <path d="M168 88C158 76 144 70 127 70C104 70 87 82 87 101C87 121 105 127 128 131C152 135 170 141 170 161C170 180 152 190 129 190C109 190 94 183 84 170" fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="round"/>
