@@ -99,7 +99,10 @@ def package_version(name):
     return None
 
 
-PACKAGE_ID = re.compile(r"^(?P<name>.+)-(?:\d+:)?(?P<version>[^-]+)-(?P<release>[^-]+)\.(?P<arch>[^.]+)$")
+PACKAGE_ID = re.compile(r"^(?P<name>.+)-(?P<epoch>\d+:)?(?P<version>[^-]+)-(?P<release>[^-]+)\.(?P<arch>[^.]+)$")
+# name -> PackageKit ids of its updates, one per architecture: a bare name with both x86_64 and
+# i686 updates makes pkcon ask "More than one package matches", an exact id never does
+UPDATE_IDS = {}
 
 
 def repo_updates():
@@ -111,13 +114,18 @@ def repo_updates():
                            timeout=90, env={**os.environ, "LANG": "C", "LC_ALL": "C"})
     except (OSError, subprocess.TimeoutExpired):
         return None
-    found = {}
+    found, ids = {}, {}
     for line in p.stdout.splitlines():
         parts = line.split()
         if len(parts) >= 2 and "(" in line:
             m = PACKAGE_ID.match(parts[1])
             if m:
                 found.setdefault(m["name"], m["version"])
+                repo = line[line.rfind("(") + 1:line.rfind(")")]
+                version = f"{m['epoch'] or ''}{m['version']}-{m['release']}"
+                ids.setdefault(m["name"], []).append(f"{m['name']};{version};{m['arch']};{repo}")
+    UPDATE_IDS.clear()
+    UPDATE_IDS.update(ids)
     return found
 
 
@@ -441,8 +449,8 @@ class UpdatesWindow(QtWidgets.QWidget):
             return
         self.install_button.hide()
         self.refresh_button.setEnabled(False)
-        self.packages = packages
-        self.run_step(["pkcon", "update", "--only-download", "--noninteractive", "--plain", *packages],
+        self.packages = [i for p in packages for i in UPDATE_IDS.get(p, [p])]
+        self.run_step(["pkcon", "update", "--only-download", "--noninteractive", "--plain", *self.packages],
                       self.downloaded, tr("Downloading updates"))
 
     def run_step(self, cmd, then, label):
