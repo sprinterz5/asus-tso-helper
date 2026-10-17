@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0
+- **System changes** (Extra → Changes): every change the app made outside its own files, why, how
+  risky, whether it is in place, and **Undo** for each or all (root ones with one password). Things
+  others may rely on (Terra, supergfxd) show the command to undo them by hand.
+- **Setup lists what it will change** before asking for the password; deep sleep warns first;
+  KDE's power profile setting keeps its old values, so Undo puts them back.
+- **Log** in `~/.local/state/asus-tso-helper/app.log`; start with `--debug` to log every command.
+  Diagnostics includes it and the system changes.
+- Code: the hardware layer is split by area (`backend/`), the main window into parts; unit tests
+  run on every push; docs/ARCHITECTURE.md and docs/DEBUGGING.md for contributors.
+- Described as what it is: asusctl and Cardwire in one app, with G-Helper's design.
+
 ## 0.5.0
 - **Battery** window (the small chart button next to Battery Charge Limit, or the tray menu):
   charge and power draw over 24 hours or 7 days, battery health, and the average draw of each mode

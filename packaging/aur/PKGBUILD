@@ -1,6 +1,6 @@
 # Maintainer: sprinterz5 <63397324+sprinterz5@users.noreply.github.com>
 pkgname=asus-tso-helper
-pkgver=0.5.0
+pkgver=0.6.0
 pkgrel=1
 pkgdesc="asusctl and Cardwire in one app: ASUS laptop modes, GPU, fans and battery"
 arch=(any)
