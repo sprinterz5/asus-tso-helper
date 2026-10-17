@@ -796,6 +796,20 @@ class MainWindow(QtWidgets.QWidget):
         super().showEvent(event)
         if hasattr(self, "slow"):  # opened from the tray: catch up at once
             QtCore.QTimer.singleShot(0, self.refresh_slow)
+        # the windows that were open when this one closed come back, beside it (KWin script)
+        hidden, self.hidden_windows = getattr(self, "hidden_windows", []), []
+        for i, window in enumerate(hidden):
+            QtCore.QTimer.singleShot(150 + 50 * i, window.show)
+
+    def hideEvent(self, event):
+        """Closing the main window (or a tray click) closes Fans, Extra, Updates, Battery too."""
+        super().hideEvent(event)
+        if event.spontaneous():  # minimised by the desktop: leave the others alone
+            return
+        self.hidden_windows = [c for c in self.findChildren(QtWidgets.QWidget)
+                               if c.isWindow() and c.isVisible() and not isinstance(c, QtWidgets.QDialog)]
+        for window in self.hidden_windows:
+            window.hide()
 
     def update_charge_label(self):
         if self.full_hover:
