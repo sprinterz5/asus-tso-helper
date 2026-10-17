@@ -345,6 +345,37 @@ def set_clamshell(on):
     return True, ""
 
 
+MEM_SLEEP = "/sys/power/mem_sleep"
+
+
+def deep_sleep():
+    """True / False: the laptop sleeps in S3 ("deep") / in s2idle; None when the firmware has
+    only one of them (most laptops since 2020 have no S3, there is nothing to choose)."""
+    try:
+        with open(MEM_SLEEP) as f:
+            modes = f.read().split()
+    except OSError:
+        return None
+    if "deep" not in " ".join(modes) or "s2idle" not in " ".join(modes):
+        return None
+    return "[deep]" in modes
+
+
+def set_deep_sleep(on):
+    """Now and after every boot (mem_sleep_default on the kernel command line), one password."""
+    mode = "deep" if on else "s2idle"
+    if shutil.which("grubby"):
+        boot = (f"grubby --update-kernel=ALL --args=mem_sleep_default=deep" if on
+                else "grubby --update-kernel=ALL --remove-args=mem_sleep_default")
+    elif shutil.which("update-grub"):  # Debian, Ubuntu
+        conf = "/etc/default/grub.d/asus-tso-helper-sleep.cfg"
+        boot = (f"mkdir -p /etc/default/grub.d && echo 'GRUB_CMDLINE_LINUX_DEFAULT=\"$GRUB_CMDLINE_LINUX_DEFAULT "
+                f"mem_sleep_default=deep\"' > {conf} && update-grub" if on else f"rm -f {conf} && update-grub")
+    else:
+        boot = "true"  # unknown boot loader: for this boot only
+    return run("pkexec", "sh", "-c", f"echo {mode} > {MEM_SLEEP} && {boot}", timeout=120)
+
+
 DESKTOP_GPU_USERS = {"kwin_wayland", "kwin_x11", "Xwayland", "Xorg", "plasmashell", "gnome-shell",
                      "mutter", "sddm-greeter", "gdm-x-session"}
 

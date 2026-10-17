@@ -335,5 +335,8 @@
  "Inspired by {ghelper} by seerge (GPL-3.0): its interface, layout and behaviour are seerge's work. An unofficial project, not affiliated with G-Helper.": "Вдохновлено {ghelper} от seerge (GPL-3.0): интерфейс, расположение и поведение — работа seerge. Неофициальный проект, не связан с G-Helper.",
  "dGPU: off (Eco)": "dGPU: выключена (Eco)",
  "dGPU: sleeping": "dGPU: спит",
- "dGPU: awake": "dGPU: работает"
+ "dGPU: awake": "dGPU: работает",
+ "Deep sleep (S3): uses almost no battery while asleep": "Глубокий сон (S3): почти не тратит батарею во сне",
+ "Instead of Modern Standby (s2idle), which can drain the battery overnight. Waking up takes a few seconds longer.": "Вместо Modern Standby (s2idle), который может посадить батарею за ночь. Просыпается на пару секунд дольше.",
+ "Sleep mode": "Режим сна"
 }

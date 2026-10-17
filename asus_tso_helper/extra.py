@@ -204,6 +204,15 @@ class ExtraWindow(QtWidgets.QWidget):
                 hw.platform_set, "DisableNvidiaPowerdOnBattery", "b", on,
                 then=lambda r: self.main.report(r, tr("NVIDIA power daemon"))))
             ol.addWidget(self.powerd)
+        deep = hw.deep_sleep()
+        if deep is not None:
+            self.deep = check(tr("Deep sleep (S3): uses almost no battery while asleep"), 2)
+            self.deep.setChecked(deep)
+            self.deep.setToolTip(tr("Instead of Modern Standby (s2idle), which can drain the battery "
+                                    "overnight. Waking up takes a few seconds longer."))
+            self.deep.toggled.connect(lambda on: self.main.bg(
+                hw.set_deep_sleep, on, then=lambda r: self.main.report(r, tr("Sleep mode"))))
+            ol.addWidget(self.deep)
         lid = hw.clamshell()
         if lid is not None:
             self.clamshell = check(tr("Keep working with the lid closed on an external display"), 2)
