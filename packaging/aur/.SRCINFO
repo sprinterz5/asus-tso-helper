@@ -20,6 +20,6 @@ pkgbase = shiftray
 	optdepends = swayidle: keyboard backlight timeout
 	optdepends = libkscreen: refresh rate on KDE Plasma
 	source = shiftray-0.7.0.tar.gz::https://github.com/sprinterz5/shiftray/archive/v0.7.0.tar.gz
-	sha256sums = 9bead92805463b5141d4ea0dd4d0b13e4321004c31398c12ce32869c66267841
+	sha256sums = 6cf4571fc1959e60c01377de9e78d3d9ccfec48a2f4734ec30108e2125540559
 
 pkgname = shiftray
