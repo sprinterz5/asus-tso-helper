@@ -1,5 +1,5 @@
 pkgbase = asus-tso-helper
-	pkgdesc = ASUS laptop control inspired by G-Helper: modes, GPU, fans and battery
+	pkgdesc = asusctl and Cardwire in one app: ASUS laptop modes, GPU, fans and battery
 	pkgver = 0.5.0
 	pkgrel = 1
 	url = https://github.com/sprinterz5/asus-tso-helper

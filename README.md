@@ -4,8 +4,8 @@
 </h1>
 
 <p align="center">
-  <b>Inspired by <a href="https://github.com/seerge/g-helper">G-Helper</a>.</b> One small Linux app for ASUS laptops: power modes, fans,<br>
-  GPU modes, keyboard lighting, battery and the Fn keys, with G-Helper's windows and behaviour.
+  <b>asusctl and Cardwire in one small app.</b> Power modes, fans, GPU modes, keyboard lighting,<br>
+  battery and the Fn keys for ASUS laptops on Linux. Its windows follow <a href="https://github.com/seerge/g-helper">G-Helper</a>'s design.
 </p>
 
 <p align="center">
@@ -34,8 +34,14 @@
 
 ## Why
 
-- **Feels like G-Helper.** Same windows, same layout, same colours, same defaults. The
-  interface is [seerge's](https://github.com/seerge) work; this project brings it to Linux.
+- **On the official stack.** asusd (asusctl) and Cardwire do all the hardware work; the app is a
+  window for them. It writes no hardware files itself, and its settings stay in asusd, so they
+  keep working with the app closed and never fight other asusd tools.
+- **Nothing hidden, everything undoable.** Before any password prompt the app lists what it will
+  change and why. Extra → System changes shows every change it made with an Undo button
+  ([details](#what-it-changes-on-your-system)).
+- **G-Helper's design.** Small windows that open at the tray icon, the same layout and defaults.
+  The interface is [seerge's](https://github.com/seerge) work.
 - **Lightweight.** A single 50 MB AppImage, or a 250 KB package on the system's Python and Qt. In
   the tray it starts no background processes, only reads a few system files every 2 seconds.
 - **Eco without a logout.** GPU modes go through [Cardwire](https://opengamingcollective.github.io/cardwire/):
@@ -154,6 +160,26 @@ Gaming Collective people. It never unloads the NVIDIA driver: it stops new progr
 the dGPU, which then powers down by itself. Programs already using the dGPU keep it awake until
 they quit; the app names them and offers to close them.
 
+## What it changes on your system
+
+Day to day, the app only talks to asusd, Cardwire and the desktop. A few one-time steps change
+the system; each is asked for, explained first, and listed in **Extra → System changes** with
+Undo (the root ones together, one password):
+
+| Change | When | Risk | Undo |
+|---|---|---|---|
+| udev rule: your user may read the ASUS hotkey device (not the keyboard) | Setup, for Fn keys | low | Undo |
+| Your group may switch CPU boost (`/etc/tmpfiles.d`) | Setup, for CPU Boost per mode | low | Undo |
+| KDE's power profile on plug / unplug set to "leave unchanged" | first start on KDE | low | Undo (old values restored) |
+| Terra repository (Fedora) | Setup, for asusctl and Cardwire | medium | shown: `dnf remove terra-release` |
+| power-profiles-daemon instead of tuned-ppd (Fedora) | Setup | medium | Undo |
+| Cardwire instead of supergfxd | Setup | medium | shown: re-enable supergfxd |
+| Kernel option `mem_sleep_default=deep` | Extra → Deep sleep (S3 laptops only) | high | Undo |
+| Autostart, menu entry, KWin placement script (home folder) | first start | low | Undo |
+
+The list lives in [`system_changes.py`](asus_tso_helper/system_changes.py); a change that is not
+there is a bug.
+
 ## Troubleshooting
 
 <details>
@@ -192,6 +218,13 @@ the mode you want on battery once, and it comes back every time you unplug.
 Writing the boost switch needs a one-time permission: open **Extra → Setup**, row "CPU Boost switch".
 </details>
 
+<details>
+<summary><b>Something else</b></summary>
+
+The log is in `~/.local/state/asus-tso-helper/app.log`. Start the app with `--debug` to log every
+command it runs. [docs/DEBUGGING.md](docs/DEBUGGING.md) maps symptoms to the code.
+</details>
+
 ### Reporting a problem
 
 **Extra → Diagnostics** saves a text report: laptop model, kernel, package versions, services,
@@ -203,8 +236,10 @@ removed. Attach it to an [issue](https://github.com/sprinterz5/asus-tso-helper/i
 - **Testers with other ASUS laptops** help the most: a Diagnostics report and a few words on what
   works. ASUS mice, keyboards and headsets too; see [ROADMAP.md](ROADMAP.md).
 - **Translations**: copy `asus_tso_helper/translations/ru.json`, translate the values, open a pull request.
-- **Code**: plain Python and Qt (PySide6). [ROADMAP.md](ROADMAP.md) lists what is done, what is
-  next and how each G-Helper feature maps to Linux.
+- **Code**: plain Python and Qt (PySide6). [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) shows
+  where everything is, [docs/DEBUGGING.md](docs/DEBUGGING.md) how to find a bug, and
+  `python3 -m unittest discover -s tests -t .` runs the tests. [ROADMAP.md](ROADMAP.md) lists what
+  is next.
 
 ## Credits
 
