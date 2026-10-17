@@ -243,6 +243,12 @@ class SetupWindow(QtWidgets.QWidget):
         self.log.setFixedHeight(150)
         self.log.hide()
         root.addWidget(self.log)
+        # one line instead of a confirmation box: the list above already says what each step does
+        undo = QtWidgets.QLabel(tr("Everything here can be undone later:") + " "
+                                f"<a style='color:{w.STANDARD.name()}' href='changes'>{tr('Extra → Changes')}</a>")
+        undo.setObjectName("tip")
+        undo.linkActivated.connect(lambda _: self.main.on_changes())
+        root.addWidget(undo)
         buttons = QtWidgets.QHBoxLayout()
         self.links = QtWidgets.QLabel(f"<a style='color:{w.STANDARD.name()}' href='{ASUS_LINUX}'>asus-linux.org guides</a>")
         self.links.setOpenExternalLinks(True)
@@ -292,15 +298,8 @@ class SetupWindow(QtWidgets.QWidget):
         QtCore.QTimer.singleShot(0, self.adjustSize)
 
     def run(self):
-        """First says what will change on the system (and that each can be undone), then one
-        password for all of it."""
+        """One password for everything in the list (each row already says what it does)."""
         self.todo = {r["key"] for r in self.rows if not r["ok"] and r["fix"]}
-        planned = [c for c in system_changes.changes() if c.key in todo_changes(self.todo)]
-        text = tr("These changes will be made to the system:") + "\n\n" + "\n".join(
-            f"• {c.title}: {c.why}" for c in planned)
-        text += "\n\n" + tr("Each can be undone later in Extra → System changes. Continue?")
-        if QtWidgets.QMessageBox.question(self, tr("Set up"), text) != QtWidgets.QMessageBox.Yes:
-            return
         self.go.setEnabled(False)
         self.later.setEnabled(False)
         self.log.clear()

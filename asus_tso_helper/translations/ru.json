@@ -357,8 +357,6 @@
  "What the app changed on the system, and Undo": "Что приложение изменило в системе, и откат",
  "Deep sleep": "Глубокий сон",
  "This adds mem_sleep_default=deep to the kernel command line (asks for your password). On a few laptops S3 does not wake up properly: if that happens, hold the power button, start again and turn this off, or undo it in Extra → System changes.\n\nTurn it on?": "Будет добавлен параметр ядра mem_sleep_default=deep (нужен пароль). На некоторых ноутбуках S3 плохо просыпается: если так случится, зажмите кнопку питания, включите ноутбук и выключите эту опцию или откатите её в Extra → Системные изменения.\n\nВключить?",
- "Each can be undone later in Extra → System changes. Continue?": "Любое из них можно потом откатить в Extra → Системные изменения. Продолжить?",
- "These changes will be made to the system:": "В системе будет изменено:",
  "KDE no longer changes the power mode on plug / unplug: the mode last used on each power source comes back instead. Undo in Extra → System changes.": "KDE больше не меняет режим питания при подключении и отключении зарядки: вместо этого возвращается режим, последний на этом источнике. Откатить: Extra → Системные изменения.",
  "Laptop keys rule": "Правило для клавиш ноутбука",
  "A udev rule lets you (not other users) read the ASUS hotkey device, so Fn keys work. Normal typing is a different device and stays private.": "Правило udev позволяет вам (но не другим пользователям) читать устройство горячих клавиш ASUS, чтобы работали Fn-клавиши. Обычный ввод идёт с другого устройства и остаётся закрытым.",
@@ -393,5 +391,7 @@
  "low": "низкий риск",
  "medium": "средний риск",
  "high": "высокий риск",
- "Changes": "Изменения"
+ "Changes": "Изменения",
+ "Everything here can be undone later:": "Всё это можно потом откатить:",
+ "Extra → Changes": "Extra → Изменения"
 }
