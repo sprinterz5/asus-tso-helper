@@ -251,6 +251,10 @@ class MainWindow(QtWidgets.QWidget):
         QtDBus.QDBusConnection.systemBus().connect(
             hw.CARDWIRE, hw.CARDWIRE_PATH, "org.freedesktop.DBus.Properties", "PropertiesChanged",
             self, QtCore.SLOT("on_cardwire_changed(QDBusMessage)"))
+        # back from sleep: firmware and asusd sometimes come back with other settings
+        QtDBus.QDBusConnection.systemBus().connect(
+            "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
+            "PrepareForSleep", self, QtCore.SLOT("on_sleep(QDBusMessage)"))
         # the portal announces a theme change; Qt without the desktop's plugin (the AppImage) does not
         QtDBus.QDBusConnection.sessionBus().connect(
             "", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings", "SettingChanged",
@@ -487,6 +491,27 @@ class MainWindow(QtWidgets.QWidget):
             b.setFixedHeight(24)
             lay.addWidget(b, 1)
         return p
+
+    @QtCore.Slot(QtDBus.QDBusMessage)
+    def on_sleep(self, msg):
+        if msg.arguments() and not msg.arguments()[0]:   # False: resumed
+            QtCore.QTimer.singleShot(3000, self.after_resume)  # let the firmware settle first
+
+    def after_resume(self):
+        """Puts back what this laptop should have after sleep: the charger may have changed while
+        asleep, and the firmware sometimes resets the mode, the lighting or the screen rate."""
+        ac = hw.ac_online()
+        self.last_ac = ac
+        if self.cfg.get("screen") == "auto":
+            self.apply_screen_auto()
+        if self.cfg.get("gpu_auto"):
+            self.apply_gpu_auto()
+        self.on_power_source(ac)
+        self.restore_kbd_level(ac)
+        if self.cfg.get("aura_effect") and not os.path.exists(hw.KBD_IDLE_FILE):
+            self.bg(hw.set_aura, self.cfg["aura_effect"], self.cfg.get("aura_colour", "ffffff"),
+                    self.cfg.get("aura_speed", "med"))
+        self.refresh_fast()
 
     @QtCore.Slot(QtDBus.QDBusMessage)
     def on_cardwire_changed(self, _msg):
