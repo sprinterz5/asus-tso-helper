@@ -12,7 +12,7 @@ optdepends=('cardwire: Eco / Standard GPU modes (AUR)'
             'libkscreen: refresh rate on KDE Plasma')
 makedepends=(make)
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('e6d1c5c26b296d9af015b2a2a768357d4eec7158adf3f21e04bb97dc362484d9')
+sha256sums=('6fba738222a27248d83a6d282371f68125bc7e119a0cbe488e1c5f37d60526cc')
 
 package() {
     cd "$pkgname-$pkgver"

@@ -17,6 +17,6 @@ pkgbase = asus-tso-helper
 	optdepends = swayidle: keyboard backlight timeout
 	optdepends = libkscreen: refresh rate on KDE Plasma
 	source = asus-tso-helper-0.6.0.tar.gz::https://github.com/sprinterz5/asus-tso-helper/archive/v0.6.0.tar.gz
-	sha256sums = e6d1c5c26b296d9af015b2a2a768357d4eec7158adf3f21e04bb97dc362484d9
+	sha256sums = 6fba738222a27248d83a6d282371f68125bc7e119a0cbe488e1c5f37d60526cc
 
 pkgname = asus-tso-helper
