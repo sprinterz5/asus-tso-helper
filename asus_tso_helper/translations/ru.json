@@ -332,5 +332,8 @@
  "Auto follows the desktop's light / dark setting": "«Авто» повторяет светлую / тёмную тему системы",
  "Accent colour from the desktop": "Акцентный цвет системы",
  "Replaces the blue of Balanced, Standard, checkboxes and sliders; Silent, Turbo and Eco keep their colours": "Заменяет синий у Balanced, Standard, галочек и ползунков; Silent, Turbo и Eco остаются своими цветами",
- "Inspired by {ghelper} by seerge (GPL-3.0): its interface, layout and behaviour are seerge's work. An unofficial project, not affiliated with G-Helper.": "Вдохновлено {ghelper} от seerge (GPL-3.0): интерфейс, расположение и поведение — работа seerge. Неофициальный проект, не связан с G-Helper."
+ "Inspired by {ghelper} by seerge (GPL-3.0): its interface, layout and behaviour are seerge's work. An unofficial project, not affiliated with G-Helper.": "Вдохновлено {ghelper} от seerge (GPL-3.0): интерфейс, расположение и поведение — работа seerge. Неофициальный проект, не связан с G-Helper.",
+ "dGPU: off (Eco)": "dGPU: выключена (Eco)",
+ "dGPU: sleeping": "dGPU: спит",
+ "dGPU: awake": "dGPU: работает"
 }

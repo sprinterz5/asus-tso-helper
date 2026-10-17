@@ -760,8 +760,15 @@ class MainWindow(QtWidgets.QWidget):
                 tip += "\n" + self.bat_head.info.text()
             if s.get("dgpu_apps") is not None:
                 self.dgpu_apps = s["dgpu_apps"]
-            if self.dgpu_apps:  # what keeps the dGPU from sleeping (ROG Control Center)
+            # the dGPU's state, and what keeps it from sleeping (ROG Control Center)
+            if self.gpu_current == "Integrated":
+                tip += "\n" + tr("dGPU: off (Eco)")
+            elif not self.dgpu_was_awake:
+                tip += "\n" + tr("dGPU: sleeping")
+            elif self.dgpu_apps:
                 tip += "\n" + tr("dGPU awake: {apps}", apps=", ".join(self.dgpu_apps))
+            else:
+                tip += "\n" + tr("dGPU: awake")
             self.tray.setToolTip(tip)
 
     def show_gpu(self, data):

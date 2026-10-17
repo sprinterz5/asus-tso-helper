@@ -284,6 +284,7 @@ class SetupWindow(QtWidgets.QWidget):
         self.log.show()
         self.proc = QtCore.QProcess(self)
         self.proc.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+        self.proc.setStandardInputFile(QtCore.QProcess.nullDevice())  # a question must fail, not hang
         self.proc.readyRead.connect(lambda: self.log.appendPlainText(
             bytes(self.proc.readAll()).decode(errors="replace").rstrip()))
         self.proc.finished.connect(self.done)

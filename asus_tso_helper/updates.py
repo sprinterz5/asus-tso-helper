@@ -453,6 +453,8 @@ class UpdatesWindow(QtWidgets.QWidget):
         env.insert("LC_ALL", "C")
         self.proc.setProcessEnvironment(env)
         self.proc.setProcessChannelMode(QtCore.QProcess.MergedChannels)
+        # no stdin: pkcon otherwise waits forever on a question nobody sees (an open, empty pipe)
+        self.proc.setStandardInputFile(QtCore.QProcess.nullDevice())
         self.proc_output = ""
 
         def read():
