@@ -1,6 +1,6 @@
 # Maintainer: sprinterz5 <63397324+sprinterz5@users.noreply.github.com>
 pkgname=asus-tso-helper
-pkgver=0.4.0
+pkgver=0.5.0
 pkgrel=1
 pkgdesc="ASUS laptop control inspired by G-Helper: modes, GPU, fans and battery"
 arch=(any)

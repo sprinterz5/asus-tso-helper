@@ -1,6 +1,6 @@
 pkgbase = asus-tso-helper
 	pkgdesc = ASUS laptop control inspired by G-Helper: modes, GPU, fans and battery
-	pkgver = 0.4.0
+	pkgver = 0.5.0
 	pkgrel = 1
 	url = https://github.com/sprinterz5/asus-tso-helper
 	arch = any
@@ -16,7 +16,7 @@ pkgbase = asus-tso-helper
 	optdepends = cardwire: Eco / Standard GPU modes (AUR)
 	optdepends = swayidle: keyboard backlight timeout
 	optdepends = libkscreen: refresh rate on KDE Plasma
-	source = asus-tso-helper-0.4.0.tar.gz::https://github.com/sprinterz5/asus-tso-helper/archive/v0.4.0.tar.gz
+	source = asus-tso-helper-0.5.0.tar.gz::https://github.com/sprinterz5/asus-tso-helper/archive/v0.5.0.tar.gz
 	sha256sums = 28286926109a7b4a7d436f21208a872830cf7eb4cb80b45ff10dc90bbb8dba54
 
 pkgname = asus-tso-helper

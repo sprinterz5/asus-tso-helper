@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.0
+- **Battery** window (the small chart button next to Battery Charge Limit, or the tray menu):
+  charge and power draw over 24 hours or 7 days, battery health, and the average draw of each mode
+  on battery with the hours a full charge lasts in it.
+- **Game hints**: a notification with a button when a game starts in Eco (Cardwire kept it off the
+  NVIDIA GPU: switch to Standard) or in Silent (switch to Turbo). Once per game; off in Extra.
+- **After sleep** the mode of the current power source, screen rate, GPU auto mode, keyboard
+  level and lighting are put back: the charger may have changed while asleep.
+- **Deep sleep (S3)** option in Extra on laptops whose firmware offers it, instead of s2idle that
+  can drain the battery overnight.
+- Install Updates shows a progress bar under each update and the package being fetched; it no
+  longer hangs on packages with two architectures, and reopening the window keeps a running install.
+- The tray tooltip always shows the dGPU: off (Eco), sleeping, or awake and which apps keep it so.
+- "Keep app window always on top" works on Wayland (through KWin).
+- Closing the main window closes Fans, Extra, Updates and Battery too; opening it brings them back.
+
 ## 0.4.0
 - **AppImage**: one file for any distribution with glibc 2.34+ (2021 on), with Python, Qt and the
   key libraries inside. It adds itself to the app menu on first start.
