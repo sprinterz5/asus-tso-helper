@@ -343,5 +343,14 @@
  "Switch to Standard": "Переключить на Standard",
  "{game} is running in Silent mode. Switch to Turbo?": "{game} запущена в режиме Silent. Переключить на Turbo?",
  "Switch to Turbo": "Переключить на Turbo",
- "Tell me when a game runs in Eco or Silent": "Подсказывать, если игра запущена в Eco или Silent"
+ "Tell me when a game runs in Eco or Silent": "Подсказывать, если игра запущена в Eco или Silent",
+ "Battery": "Батарея",
+ "24 hours": "24 часа",
+ "7 days": "7 дней",
+ "No history yet": "Истории пока нет",
+ "Health: {percent}% ({full} of {design} Wh)": "Здоровье: {percent}% ({full} из {design} Вт·ч)",
+ "On battery: {watts}W on average, a full charge lasts about {hours} h": "От батареи: в среднем {watts} Вт, полного заряда хватает примерно на {hours} ч",
+ "By mode": "По режимам",
+ "Draw per mode appears after some time on battery.": "Расход по режимам появится, когда ноутбук поработает от батареи.",
+ "Battery history and health": "История и здоровье батареи"
 }

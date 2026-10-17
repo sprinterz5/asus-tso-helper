@@ -20,6 +20,7 @@ from . import hotkeys
 from . import modes
 from . import shortcuts
 from . import updates
+from . import battery
 from . import setup
 from . import selfupdate
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
@@ -427,6 +428,12 @@ class MainWindow(QtWidgets.QWidget):
         self.bat_panel = p
         p.installEventFilter(self)
         self.bat_head = w.Header("battery-charging", tr("Battery Charge Limit"), height=22)
+        history = w.RButton("", "chart-line", secondary=True, radius=2)
+        history.setFixedSize(22, 18)
+        history.setToolTip(tr("Battery history and health"))
+        history.clicked.connect(self.on_battery)
+        self.bat_head.right.addSpacing(6)
+        self.bat_head.right.addWidget(history, 0, QtCore.Qt.AlignTop)
         lay.addWidget(self.bat_head)
         row = QtWidgets.QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
@@ -697,6 +704,10 @@ class MainWindow(QtWidgets.QWidget):
             self.last_profile = profile
         if not self.mode_busy:
             self.apply_boost(profile)
+            mode = self.cfg.get("active_mode") or profile
+            if mode and mode != getattr(self, "logged_mode", None):  # for Battery's draw per mode
+                self.logged_mode = mode
+                self.bg(hw.log_mode, mode)
         custom = modes.active(self.cfg)
         if custom and profile != custom["base"] and not self.mode_busy:
             # profile changed outside (Fn+F5, asusd on charger change): the custom mode ended
@@ -1200,6 +1211,14 @@ class MainWindow(QtWidgets.QWidget):
             return result
         self.bg(job, then=lambda r: (self.report(r, tr("Refresh rate")), self.refresh_slow()))
 
+    def on_battery(self):
+        if getattr(self, "battery", None) is None:
+            self.battery = battery.BatteryWindow(self)
+        self.battery.show()
+        self.battery.raise_()
+        self.battery.activateWindow()
+        self.battery.load()
+
     def on_updates(self):
         if self.updates is None:
             self.updates = updates.UpdatesWindow(self, VERSION)
@@ -1655,6 +1674,7 @@ class Tray(QtWidgets.QSystemTrayIcon):
         if window.optimized:
             self.menu.addAction(tr("Optimized"), window.on_optimized)
         self.menu.addSeparator()
+        self.menu.addAction(tr("Battery"), window.on_battery)
         self.menu.addAction(tr("Quit"), quit_app)
 
     def apply_theme(self):
