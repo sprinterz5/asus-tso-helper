@@ -5,8 +5,8 @@ import time
 import unittest
 from unittest import mock
 
-from asus_tso_helper import backend as hw
-from asus_tso_helper.backend import battery, gpu
+from shiftray import backend as hw
+from shiftray.backend import battery, gpu
 
 
 class Facade(unittest.TestCase):
@@ -14,7 +14,7 @@ class Facade(unittest.TestCase):
         """`hw.<name>` anywhere in the app must be re-exported by backend/__init__.py."""
         import glob
         import re
-        root = os.path.join(os.path.dirname(__file__), "..", "asus_tso_helper")
+        root = os.path.join(os.path.dirname(__file__), "..", "shiftray")
         missing = set()
         for path in glob.glob(os.path.join(root, "*.py")):
             with open(path) as f:

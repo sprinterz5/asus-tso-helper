@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0
+- **New name: Shiftray** (was asus-tso-helper). Settings, the log and autostart move over by
+  themselves on the first start; the AppImage, COPR and AUR packages update to the new name.
+- Run from source with `./bin/shiftray`.
+
 ## 0.6.1
 - **Conflicting tools**: TLP, auto-cpufreq, TuneD, supergfxd next to Cardwire, optimus-manager,
   system76-power, EnvyControl and g-helper-linux are found and shown in Setup and as a line in the
@@ -13,7 +18,7 @@
   others may rely on (Terra, supergfxd) show the command to undo them by hand.
 - **Setup lists what it will change** before asking for the password; deep sleep warns first;
   KDE's power profile setting keeps its old values, so Undo puts them back.
-- **Log** in `~/.local/state/asus-tso-helper/app.log`; start with `--debug` to log every command.
+- **Log** in `~/.local/state/shiftray/app.log`; start with `--debug` to log every command.
   Diagnostics includes it and the system changes.
 - Code: the hardware layer is split by area (`backend/`), the main window into parts; unit tests
   run on every push; docs/ARCHITECTURE.md and docs/DEBUGGING.md for contributors.
@@ -42,7 +47,7 @@
   Updates) downloads it, checks GitHub's SHA-256 and restarts into it.
 - Ultimate (MUX) tested both ways; a MUX change asusd keeps queued until shutdown shows as pending.
 - **Russian** translation, picked from the system language or in Extra → Language. Other languages
-  are one JSON file each in `asus_tso_helper/translations/`.
+  are one JSON file each in `shiftray/translations/`.
 - Refresh rate also on **GNOME** (Mutter's display API), **Sway / Hyprland** (wlr-randr) and X11
   (xrandr), not only KDE.
 - **RPM** (COPR) and **AUR** packages on the system's Python and Qt.

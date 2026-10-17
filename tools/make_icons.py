@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the app and tray icons (a white S on a coloured circle, after G-Helper's G) into asus_tso_helper/assets.
+"""Draws the app and tray icons (a white S on a coloured circle, after G-Helper's G) into shiftray/assets.
 
 The S is plain geometry, not text, so it looks the same without any font. Tray icons use the
 GPU mode colours, like G-Helper's eco / standard / ultimate tray icons.
@@ -7,7 +7,7 @@ Run: python3 tools/make_icons.py
 """
 import os
 
-ASSETS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "asus_tso_helper", "assets")
+ASSETS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "shiftray", "assets")
 COLOURS = {"app": "#3aaeef", "eco": "#06b48a", "standard": "#3aaeef", "ultimate": "#ff2020"}
 
 
@@ -36,8 +36,8 @@ def main():
         p.setRenderHint(QtGui.QPainter.Antialiasing)
         renderer.render(p)
         p.end()
-        img.save(os.path.join(ASSETS, "asus-tso-helper.png"))
-        print(os.path.join(ASSETS, "asus-tso-helper.png"))
+        img.save(os.path.join(ASSETS, "shiftray.png"))
+        print(os.path.join(ASSETS, "shiftray.png"))
     except ImportError:
         pass
 

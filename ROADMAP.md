@@ -1,6 +1,6 @@
 # Features and roadmap
 
-asus-tso-helper aims to look and behave like [G-Helper](https://github.com/seerge/g-helper)
+Shiftray aims to look and behave like [G-Helper](https://github.com/seerge/g-helper)
 on Linux. The reference is G-Helper's current `main` branch, not old screenshots.
 Hardware access goes through `asusd` (asusctl) and Cardwire (`cardwired`). The goal is that a user never
 has to edit system files by hand: anything that needs root happens behind a single polkit
@@ -33,7 +33,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | New app version notice | AutoUpdateCheck | GitHub latest release at start and daily: red "Download Update" version label, tray notification | `ui.check_app_update` |
 | Translations | Strings.<lang>.resx | `i18n.tr()`, one JSON per language in `translations/` (English text -> translation, missing entries stay English); language from Extra → Language or the system. Russian complete (313 strings). Language is read at start, like G-Helper | `i18n.py` |
 | Refresh rate outside KDE | — | GNOME through Mutter's DisplayConfig D-Bus API (works on GNOME 3.26+, so older Ubuntu LTS too; tested on a headless mutter), wlroots through `wlr-randr` (JSON parsing and mode format checked on headless sway and against wlr-randr's source), X11 through `xrandr` | `backend.screen_backend` |
-| RPM and AUR packages | — | `make install` puts the app in /usr/share/asus-tso-helper on the system's Python and PySide6, the key rule in /usr/lib/udev/rules.d. RPM spec: Requires PySide6 / evdev / dbus, Recommends asusctl / cardwire (Terra) / swayidle; built and installed in a clean Fedora 44 container, rpmlint clean apart from name spellings. PKGBUILD: depends on asusctl (Arch extra), cardwire optional (AUR); built with makepkg in an Arch container. Arch already ships evdev 2.0 / PySide6 6.12, nothing the app uses changed | `Makefile`, `packaging/rpm`, `packaging/aur` |
+| RPM and AUR packages | — | `make install` puts the app in /usr/share/shiftray on the system's Python and PySide6, the key rule in /usr/lib/udev/rules.d. RPM spec: Requires PySide6 / evdev / dbus, Recommends asusctl / cardwire (Terra) / swayidle; built and installed in a clean Fedora 44 container, rpmlint clean apart from name spellings. PKGBUILD: depends on asusctl (Arch extra), cardwire optional (AUR); built with makepkg in an Arch container. Arch already ships evdev 2.0 / PySide6 6.12, nothing the app uses changed | `Makefile`, `packaging/rpm`, `packaging/aur` |
 | AppImage + one-click update | AutoUpdateControl | Built in manylinux_2_34 (podman locally, GitHub Actions on a `v*` tag): python-appimage's Python 3.12, PySide6-Essentials (unused Qt modules dropped), evdev, dbus-python. The label or the Updates row downloads the new AppImage next to the running one, checks GitHub's SHA-256 digest, renames it over and restarts. On start it writes its menu entry and icon; root steps get file contents inline, since root cannot read the FUSE mount | `packaging/appimage/`, `selfupdate.py`, `backend.integrate_desktop` |
 | Icons | Icons8 | Lucide (ISC, `assets/icons/LICENSE`); app and tray icon: white S on a circle in the GPU mode colour (`tools/make_icons.py`) | `widgets.icon` |
 | Banner when asusd / cardwired are not running | — | Click to start them (polkit), or Setup when not installed | `ui.show_services` |
@@ -69,7 +69,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | # | Feature | How | Seen in |
 |---|---|---|---|
 | 1 | **Donations** | GitHub Sponsors with Open Source Collective as fiscal host (Stripe and PayPal receiving are unavailable in Kazakhstan); apply once the repo is public, then set `DONATE_URL` and `.github/FUNDING.yml` | G-Helper |
-| 2 | **Release** | Done: GitHub (tags build the AppImage release), COPR `thesecondone/asus-tso-helper` (`.copr/Makefile`; `copr-cli build-package asus-tso-helper --name asus-tso-helper` after a tag). Left: AUR, once its registration reopens (`packaging/aur` has the 0.4.0 checksum) | — |
+| 2 | **Release** | Done: GitHub (tags build the AppImage release), COPR `thesecondone/shiftray` (`.copr/Makefile`; `copr-cli build-package shiftray --name shiftray` after a tag). Left: AUR, once its registration reopens (`packaging/aur` has the 0.4.0 checksum) | — |
 
 ### Priority 2: useful
 | # | Feature | How | Notes |

@@ -1,4 +1,4 @@
-# How asus-tso-helper is built
+# How Shiftray is built
 
 A small Qt (PySide6) app in plain Python. It owns no hardware itself: it is a front end for the
 daemons that do the work.
@@ -18,30 +18,30 @@ Setup, the deep sleep option and Undo, and every such change is listed in `syste
 
 | File | What it does |
 |---|---|
-| `asus-tso-helper` | Launcher for a source checkout (`./asus-tso-helper`, add `--debug` for a verbose log) |
-| `asus_tso_helper/ui.py` | The main window: layout, refresh loops, mode / GPU / screen actions, tray icon, `main()` |
-| `asus_tso_helper/window_keys.py` | Main window part: key bindings (laptop keys and desktop shortcuts) |
-| `asus_tso_helper/window_update.py` | Main window part: the app's own update, the Updates window |
-| `asus_tso_helper/window_idle.py` | Main window part: keyboard backlight timeout (swayidle) |
-| `asus_tso_helper/config.py` | App name, version, links; the settings file |
-| `asus_tso_helper/fans.py` | Fans + Power window: fan curves, power limits, CPU boost, EPP |
-| `asus_tso_helper/extra.py` | Extra window: lighting, other options, language, theme, Setup / Diagnostics / System changes |
-| `asus_tso_helper/updates.py` | BIOS and driver updates window (PackageKit `pkcon`) |
-| `asus_tso_helper/battery.py` | Battery window: history chart, health, draw per mode |
-| `asus_tso_helper/setup.py` | First-run Setup: checks what is missing and installs it behind one password |
-| `asus_tso_helper/system_changes.py` | **Every change outside the app's own files**: what, why, risk, state, undo |
-| `asus_tso_helper/conflicts.py` | Other tools that change the same settings (TLP, supergfxd, ...): found, stopped in Setup |
-| `asus_tso_helper/changes_window.py` | Extra → System changes window (Undo) |
-| `asus_tso_helper/modes.py` | Custom modes (Turbo+ 30W, ...) on top of asusd's three profiles |
-| `asus_tso_helper/hotkeys.py` | Reads the "Asus WMI hotkeys" input device (needs the udev rule) |
-| `asus_tso_helper/shortcuts.py` | Desktop shortcuts through the GlobalShortcuts portal |
-| `asus_tso_helper/selfupdate.py` | Downloads a new AppImage and checks its SHA-256 |
-| `asus_tso_helper/diagnostics.py` | Extra → Diagnostics report |
-| `asus_tso_helper/log.py` | The log file and `--debug` |
-| `asus_tso_helper/widgets.py` | G-Helper's controls (RButton, slider, ...) and the theme colours |
-| `asus_tso_helper/i18n.py`, `translations/` | `tr("English")` → the user's language |
-| `asus_tso_helper/backend/` | **All hardware access**, one module per area (below) |
-| `asus_tso_helper/assets/` | Icons, the udev rule, the KWin window placement script |
+| `bin/shiftray` | Launcher for a source checkout (`./bin/shiftray`, add `--debug` for a verbose log) |
+| `shiftray/ui.py` | The main window: layout, refresh loops, mode / GPU / screen actions, tray icon, `main()` |
+| `shiftray/window_keys.py` | Main window part: key bindings (laptop keys and desktop shortcuts) |
+| `shiftray/window_update.py` | Main window part: the app's own update, the Updates window |
+| `shiftray/window_idle.py` | Main window part: keyboard backlight timeout (swayidle) |
+| `shiftray/config.py` | App name, version, links; the settings file |
+| `shiftray/fans.py` | Fans + Power window: fan curves, power limits, CPU boost, EPP |
+| `shiftray/extra.py` | Extra window: lighting, other options, language, theme, Setup / Diagnostics / System changes |
+| `shiftray/updates.py` | BIOS and driver updates window (PackageKit `pkcon`) |
+| `shiftray/battery.py` | Battery window: history chart, health, draw per mode |
+| `shiftray/setup.py` | First-run Setup: checks what is missing and installs it behind one password |
+| `shiftray/system_changes.py` | **Every change outside the app's own files**: what, why, risk, state, undo |
+| `shiftray/conflicts.py` | Other tools that change the same settings (TLP, supergfxd, ...): found, stopped in Setup |
+| `shiftray/changes_window.py` | Extra → System changes window (Undo) |
+| `shiftray/modes.py` | Custom modes (Turbo+ 30W, ...) on top of asusd's three profiles |
+| `shiftray/hotkeys.py` | Reads the "Asus WMI hotkeys" input device (needs the udev rule) |
+| `shiftray/shortcuts.py` | Desktop shortcuts through the GlobalShortcuts portal |
+| `shiftray/selfupdate.py` | Downloads a new AppImage and checks its SHA-256 |
+| `shiftray/diagnostics.py` | Extra → Diagnostics report |
+| `shiftray/log.py` | The log file and `--debug` |
+| `shiftray/widgets.py` | G-Helper's controls (RButton, slider, ...) and the theme colours |
+| `shiftray/i18n.py`, `translations/` | `tr("English")` → the user's language |
+| `shiftray/backend/` | **All hardware access**, one module per area (below) |
+| `shiftray/assets/` | Icons, the udev rule, the KWin window placement script |
 | `tests/` | Unit tests: `python3 -m unittest discover -s tests -t .` |
 | `packaging/` | AppImage, RPM (COPR) and AUR builds |
 
@@ -72,7 +72,7 @@ only re-exports, so a function can move between modules without touching its cal
   `ActionInvoked` (buttons in notifications).
 - **Slow calls run in a thread pool**: `self.bg(fn, *args, then=callback)` runs `fn` off the GUI
   thread and `callback(result)` back on it. A failure in `fn` is logged with its traceback.
-- **Settings** live in `~/.config/asus-tso-helper/config.json` (`self.cfg`, saved with
+- **Settings** live in `~/.config/shiftray/config.json` (`self.cfg`, saved with
   `self.save()`). Hardware settings themselves stay in asusd, so they work with the app closed.
 
 ## Adding something

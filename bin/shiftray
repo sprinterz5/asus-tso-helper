@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+"""Launcher: run Shiftray from a source checkout (./bin/shiftray, add --debug for a verbose log)."""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))  # the repository root
+from shiftray import migrate  # noqa: E402  before anything reads the settings
+MIGRATED = migrate.run()
+if "--kbd-idle" in sys.argv:  # run by swayidle; must not start the GUI
+    from shiftray.backend import kbd_idle  # noqa: E402
+    kbd_idle(sys.argv[sys.argv.index("--kbd-idle") + 1])
+    sys.exit(0)
+
+from shiftray.ui import main  # noqa: E402
+
+main()

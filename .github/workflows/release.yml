@@ -19,8 +19,8 @@ jobs:
       - name: Tag matches the app, RPM and AUR versions
         run: |
           v="${GITHUB_REF_NAME#v}"
-          test "$(sed -n 's/^VERSION = "\(.*\)"/\1/p' asus_tso_helper/config.py)" = "$v"
-          test "$(sed -n 's/^Version: *//p' packaging/rpm/asus-tso-helper.spec)" = "$v"
+          test "$(sed -n 's/^VERSION = "\(.*\)"/\1/p' shiftray/config.py)" = "$v"
+          test "$(sed -n 's/^Version: *//p' packaging/rpm/shiftray.spec)" = "$v"
           test "$(sed -n 's/^pkgver=//p' packaging/aur/PKGBUILD)" = "$v"
 
       - name: Build
@@ -29,7 +29,14 @@ jobs:
       - name: Release notes from CHANGELOG.md
         run: awk -v v="${GITHUB_REF_NAME#v}" '/^## /{p = ($2 == v)} p && !/^## /' CHANGELOG.md > notes.md
 
+      # asus-tso-helper (up to 0.6.x) updates itself from the asset with its old name: the same
+      # file under that name too, so those installs still reach Shiftray
+      - name: Copy under the old name
+        run: cp dist/shiftray-x86_64.AppImage dist/asus-tso-helper-x86_64.AppImage
+
       - uses: softprops/action-gh-release@v2
         with:
-          files: dist/asus-tso-helper-x86_64.AppImage
+          files: |
+            dist/shiftray-x86_64.AppImage
+            dist/asus-tso-helper-x86_64.AppImage
           body_path: notes.md

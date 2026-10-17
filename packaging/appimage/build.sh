@@ -1,5 +1,5 @@
 #!/bin/bash
-# Builds dist/asus-tso-helper-x86_64.AppImage: a relocatable Python 3.12 (python-appimage), PySide6,
+# Builds dist/shiftray-x86_64.AppImage: a relocatable Python 3.12 (python-appimage), PySide6,
 # evdev and dbus-python, plus the app. Meant for quay.io/pypa/manylinux_2_34_x86_64 (glibc 2.34,
 # what PySide6 6.11 needs), so the AppImage runs on distributions from 2021 on. Run it through
 # build-in-podman.sh locally; the release workflow runs it in the same container.
@@ -13,8 +13,8 @@ PACKAGES=("PySide6-Essentials==6.11.2" "evdev==1.9.3" "dbus-python==1.4.0")
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 BUILD=$ROOT/build/appimage
 APPDIR=$BUILD/AppDir
-OUT=$ROOT/dist/asus-tso-helper-x86_64.AppImage
-VERSION=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' "$ROOT/asus_tso_helper/config.py")
+OUT=$ROOT/dist/shiftray-x86_64.AppImage
+VERSION=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' "$ROOT/shiftray/config.py")
 
 if command -v dnf >/dev/null; then  # headers to build evdev and dbus-python
     dnf install -y -q dbus-devel glib2-devel kernel-headers file >/dev/null
@@ -48,17 +48,17 @@ rm -rf "$QT"/Qt/plugins/{sqldrivers,qmltooling,designer,sceneparsers,assetimport
 find "$APPDIR" -name __pycache__ -prune -exec rm -rf {} +
 
 # the app
-APP=$APPDIR/opt/asus-tso-helper
+APP=$APPDIR/opt/shiftray
 mkdir -p "$APP"
-cp -r "$ROOT/asus_tso_helper" "$ROOT/asus-tso-helper" "$ROOT/LICENSE" "$APP/"
+cp -r "$ROOT/shiftray" "$ROOT/bin" "$ROOT/LICENSE" "$APP/"
 find "$APP" -name __pycache__ -prune -exec rm -rf {} +
 "$PY" -m compileall -q "$APP" "$SITE" >/dev/null || true
 cp "$ROOT/packaging/appimage/AppRun" "$APPDIR/AppRun"
-sed -e "s|@EXEC@|asus-tso-helper|; s|@ICON@|asus-tso-helper|" \
-    "$ROOT/asus_tso_helper/assets/asus-tso-helper.desktop" > "$APPDIR/asus-tso-helper.desktop"
-echo "X-AppImage-Version=$VERSION" >> "$APPDIR/asus-tso-helper.desktop"
-cp "$ROOT/asus_tso_helper/assets/asus-tso-helper.png" "$APPDIR/asus-tso-helper.png"
-ln -sf asus-tso-helper.png "$APPDIR/.DirIcon"
+sed -e "s|@EXEC@|shiftray|; s|@ICON@|shiftray|" \
+    "$ROOT/shiftray/assets/shiftray.desktop" > "$APPDIR/shiftray.desktop"
+echo "X-AppImage-Version=$VERSION" >> "$APPDIR/shiftray.desktop"
+cp "$ROOT/shiftray/assets/shiftray.png" "$APPDIR/shiftray.png"
+ln -sf shiftray.png "$APPDIR/.DirIcon"
 
 rm -f "$OUT"
 ARCH=x86_64 VERSION=$VERSION ./appimagetool --appimage-extract-and-run --no-appstream -n "$APPDIR" "$OUT" >/dev/null

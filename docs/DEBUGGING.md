@@ -1,9 +1,9 @@
-# Debugging asus-tso-helper
+# Debugging Shiftray
 
 ## First: the log
 
 ```bash
-tail -f ~/.local/state/asus-tso-helper/app.log
+tail -f ~/.local/state/shiftray/app.log
 ```
 
 A normal run logs what the user did (mode, GPU, charger, sleep), every failure, and every crash
@@ -11,7 +11,7 @@ with its traceback. For **every command** the app runs, with exit code, time and
 it with `--debug`. It then also prints to the terminal:
 
 ```bash
-./asus-tso-helper --debug
+./bin/shiftray --debug
 ```
 
 The AppImage takes the same flag. Quit the running copy first (tray → Quit): a second start only
@@ -42,7 +42,7 @@ changes, the last lines of this log and of the asusd / cardwired journals.
 Every hardware function can be called without the GUI:
 
 ```bash
-python3 -c "from asus_tso_helper import backend as hw; print(hw.get_profile(), hw.gpu_mode(), hw.screen_info())"
+python3 -c "from shiftray import backend as hw; print(hw.get_profile(), hw.gpu_mode(), hw.screen_info())"
 ```
 
 ## Tests

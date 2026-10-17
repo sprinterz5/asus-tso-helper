@@ -1,6 +1,6 @@
 <h1 align="center">
-  <img src="asus_tso_helper/assets/app-icon.svg" width="96" alt=""><br>
-  asus-tso-helper
+  <img src="shiftray/assets/app-icon.svg" width="96" alt=""><br>
+  Shiftray
 </h1>
 
 <p align="center">
@@ -9,14 +9,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/sprinterz5/asus-tso-helper/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/sprinterz5/asus-tso-helper?color=3aaeef"></a>
-  <a href="https://github.com/sprinterz5/asus-tso-helper/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sprinterz5/asus-tso-helper/total?color=06b48a"></a>
-  <a href="https://copr.fedorainfracloud.org/coprs/thesecondone/asus-tso-helper/"><img alt="Fedora COPR" src="https://img.shields.io/badge/Fedora-COPR-51a2da"></a>
+  <a href="https://github.com/sprinterz5/shiftray/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/sprinterz5/shiftray?color=3aaeef"></a>
+  <a href="https://github.com/sprinterz5/shiftray/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/sprinterz5/shiftray/total?color=06b48a"></a>
+  <a href="https://copr.fedorainfracloud.org/coprs/thesecondone/shiftray/"><img alt="Fedora COPR" src="https://img.shields.io/badge/Fedora-COPR-51a2da"></a>
   <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-a8a8a8"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/sprinterz5/asus-tso-helper/releases/latest/download/asus-tso-helper-x86_64.AppImage"><b>⬇ Download the AppImage</b></a>
+  <a href="https://github.com/sprinterz5/shiftray/releases/latest/download/shiftray-x86_64.AppImage"><b>⬇ Download the AppImage</b></a>
   &nbsp;·&nbsp; <a href="#install">Fedora and Arch packages</a>
   &nbsp;·&nbsp; <a href="#troubleshooting">Troubleshooting</a>
   &nbsp;·&nbsp; <a href="ROADMAP.md">Roadmap</a>
@@ -28,6 +28,8 @@
 </p>
 
 > [!NOTE]
+> **Formerly asus-tso-helper.** Same app, new name since 0.7.0; installs update and keep their settings.
+>
 > **Early release.** Built and tested every day on an ASUS TUF Gaming A15 (FA507NV), Fedora 44,
 > KDE Plasma 6 on Wayland. Other ASUS laptops supported by asusctl should work, but nobody has
 > confirmed them yet. If you try one, a [report](#reporting-a-problem) helps a lot.
@@ -84,15 +86,15 @@
 
 ### AppImage (any distribution)
 
-Download [`asus-tso-helper-x86_64.AppImage`](https://github.com/sprinterz5/asus-tso-helper/releases/latest/download/asus-tso-helper-x86_64.AppImage),
+Download [`shiftray-x86_64.AppImage`](https://github.com/sprinterz5/shiftray/releases/latest/download/shiftray-x86_64.AppImage),
 then run it:
 
 ```bash
-chmod +x asus-tso-helper-x86_64.AppImage
+chmod +x shiftray-x86_64.AppImage
 ```
 
 ```bash
-./asus-tso-helper-x86_64.AppImage
+./shiftray-x86_64.AppImage
 ```
 
 It adds itself to the app menu and opens Setup for anything the laptop is missing. Runs on
@@ -104,26 +106,26 @@ For Fedora 43, 44, 45 and rawhide. asusctl and Cardwire come from the Terra repo
 the app's Setup adds.
 
 ```bash
-sudo dnf copr enable thesecondone/asus-tso-helper
+sudo dnf copr enable thesecondone/shiftray
 ```
 
 ```bash
-sudo dnf install asus-tso-helper
+sudo dnf install shiftray
 ```
 
 ### Arch (AUR)
 
-`asus-tso-helper` goes up on the AUR as soon as its registration reopens. Until then, build it
+`shiftray` goes up on the AUR as soon as its registration reopens. Until then, build it
 from [`packaging/aur/PKGBUILD`](packaging/aur/PKGBUILD) with `makepkg -si`. Cardwire is in the AUR.
 
 ### From source
 
 ```bash
-git clone https://github.com/sprinterz5/asus-tso-helper
+git clone https://github.com/sprinterz5/shiftray
 ```
 
 ```bash
-./asus-tso-helper/asus-tso-helper
+./shiftray/bin/shiftray
 ```
 
 Needs Python 3 with PySide6, python-evdev and dbus-python. Build the AppImage with
@@ -177,14 +179,14 @@ Undo (the root ones together, one password):
 | Kernel option `mem_sleep_default=deep` | Extra → Deep sleep (S3 laptops only) | high | Undo |
 | Autostart, menu entry, KWin placement script (home folder) | first start | low | Undo |
 
-The list lives in [`system_changes.py`](asus_tso_helper/system_changes.py); a change that is not
+The list lives in [`system_changes.py`](shiftray/system_changes.py); a change that is not
 there is a bug.
 
 **Tools that change the same things.** TLP, auto-cpufreq, TuneD, supergfxd (next to Cardwire),
 optimus-manager, system76-power, EnvyControl and g-helper-linux all set the power mode, the charge
 limit or the GPU themselves, so modes stop sticking or the dGPU misbehaves. The app shows them in
 Setup and as a line in the main window; Set up stops the services (Undo starts them again) and
-says how to remove the rest. See [`conflicts.py`](asus_tso_helper/conflicts.py).
+says how to remove the rest. See [`conflicts.py`](shiftray/conflicts.py).
 
 ## Troubleshooting
 
@@ -227,7 +229,7 @@ Writing the boost switch needs a one-time permission: open **Extra → Setup**, 
 <details>
 <summary><b>Something else</b></summary>
 
-The log is in `~/.local/state/asus-tso-helper/app.log`. Start the app with `--debug` to log every
+The log is in `~/.local/state/shiftray/app.log`. Start the app with `--debug` to log every
 command it runs. [docs/DEBUGGING.md](docs/DEBUGGING.md) maps symptoms to the code.
 </details>
 
@@ -235,13 +237,13 @@ command it runs. [docs/DEBUGGING.md](docs/DEBUGGING.md) maps symptoms to the cod
 
 **Extra → Diagnostics** saves a text report: laptop model, kernel, package versions, services,
 what asusd and Cardwire report, and their recent logs. Your home folder and computer name are
-removed. Attach it to an [issue](https://github.com/sprinterz5/asus-tso-helper/issues).
+removed. Attach it to an [issue](https://github.com/sprinterz5/shiftray/issues).
 
 ## Contributing
 
 - **Testers with other ASUS laptops** help the most: a Diagnostics report and a few words on what
   works. ASUS mice, keyboards and headsets too; see [ROADMAP.md](ROADMAP.md).
-- **Translations**: copy `asus_tso_helper/translations/ru.json`, translate the values, open a pull request.
+- **Translations**: copy `shiftray/translations/ru.json`, translate the values, open a pull request.
 - **Code**: plain Python and Qt (PySide6). [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) shows
   where everything is, [docs/DEBUGGING.md](docs/DEBUGGING.md) how to find a bug, and
   `python3 -m unittest discover -s tests -t .` runs the tests. [ROADMAP.md](ROADMAP.md) lists what
@@ -253,7 +255,7 @@ removed. Attach it to an [issue](https://github.com/sprinterz5/asus-tso-helper/i
   behaviour and defaults this app follows. If you like this app, support G-Helper too.
 - **[asus-linux](https://asus-linux.org)** and **[Open Gaming Collective](https://github.com/OpenGamingCollective)**:
   asusctl / asusd and Cardwire, which do the actual hardware work.
-- **[Lucide](https://lucide.dev)**: icons (ISC licence, `asus_tso_helper/assets/icons/LICENSE`).
+- **[Lucide](https://lucide.dev)**: icons (ISC licence, `shiftray/assets/icons/LICENSE`).
 
 ## Support
 

@@ -1,6 +1,6 @@
 # System install for distribution packages (RPM spec, AUR PKGBUILD):
 #   make install DESTDIR=<package root> PREFIX=/usr
-# The app goes to $(PREFIX)/share/asus-tso-helper and runs on the system's Python and PySide6.
+# The app goes to $(PREFIX)/share/shiftray and runs on the system's Python and PySide6.
 # The udev rule ships with the package, so Setup has no key step to do.
 
 PREFIX ?= /usr
@@ -8,9 +8,9 @@ DESTDIR ?=
 PYTHON ?= /usr/bin/python3
 UDEVDIR ?= $(PREFIX)/lib/udev/rules.d
 
-APP = asus-tso-helper
+APP = shiftray
 SHARE = $(PREFIX)/share/$(APP)
-ASSETS = asus_tso_helper/assets
+ASSETS = shiftray/assets
 
 .PHONY: install uninstall
 
@@ -18,10 +18,10 @@ install:
 	install -d $(DESTDIR)$(SHARE) $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/share/applications \
 		$(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps \
 		$(DESTDIR)$(UDEVDIR)
-	cp -r asus_tso_helper $(DESTDIR)$(SHARE)/
+	cp -r shiftray $(DESTDIR)$(SHARE)/
 	find $(DESTDIR)$(SHARE) -name __pycache__ -prune -exec rm -rf {} +
-	install -m 755 $(APP) $(DESTDIR)$(SHARE)/$(APP)
-	printf '#!/bin/sh\nexec %s %s/%s "$$@"\n' '$(PYTHON)' '$(SHARE)' '$(APP)' > $(DESTDIR)$(PREFIX)/bin/$(APP)
+	install -D -m 755 bin/$(APP) $(DESTDIR)$(SHARE)/bin/$(APP)
+	printf '#!/bin/sh\nexec %s %s/bin/%s "$$@"\n' '$(PYTHON)' '$(SHARE)' '$(APP)' > $(DESTDIR)$(PREFIX)/bin/$(APP)
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/$(APP)
 	sed -e 's|@EXEC@|$(APP)|; s|@ICON@|$(APP)|' $(ASSETS)/$(APP).desktop \
 		> $(DESTDIR)$(PREFIX)/share/applications/$(APP).desktop

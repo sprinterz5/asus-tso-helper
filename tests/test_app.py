@@ -8,9 +8,9 @@ import tempfile
 import unittest
 from unittest import mock
 
-from asus_tso_helper import setup, system_changes as sc, updates
+from shiftray import setup, system_changes as sc, updates
 
-ROOT = os.path.join(os.path.dirname(__file__), "..", "asus_tso_helper")
+ROOT = os.path.join(os.path.dirname(__file__), "..", "shiftray")
 
 
 class SetupScript(unittest.TestCase):
@@ -65,7 +65,7 @@ class SystemChanges(unittest.TestCase):
 
 class Conflicts(unittest.TestCase):
     def test_found_conflict_becomes_a_setup_row_and_a_stop_step(self):
-        from asus_tso_helper import conflicts
+        from shiftray import conflicts
         tlp = next(c for c in conflicts.CONFLICTS if c.key == "tlp")
         with mock.patch.object(conflicts, "found", return_value=[tlp]), \
                 mock.patch.object(setup, "is_asus", return_value=True), \
@@ -78,7 +78,7 @@ class Conflicts(unittest.TestCase):
 
     def test_every_stopped_service_can_be_started_again(self):
         keys = {c.key: c for c in sc.changes()}
-        from asus_tso_helper import conflicts
+        from shiftray import conflicts
         for c in conflicts.CONFLICTS:
             if c.service:
                 self.assertIn(f"enable --now {c.service}", keys["stopped:" + c.key].undo_root)

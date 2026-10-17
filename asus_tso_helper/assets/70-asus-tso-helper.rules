@@ -1,4 +1,0 @@
-# Let the logged-in user read the ASUS hotkey device (Fn+F4 Aura, Fn+F5, Fn+C, Fn+V, ...)
-# so asus-tso-helper can run Key Bindings. Only the special keys are on this device:
-# normal typing comes from the keyboard device and is NOT exposed by this rule.
-SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="Asus WMI hotkeys", TAG+="uaccess"

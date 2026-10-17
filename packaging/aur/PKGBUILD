@@ -1,16 +1,19 @@
 # Maintainer: sprinterz5 <63397324+sprinterz5@users.noreply.github.com>
-pkgname=asus-tso-helper
-pkgver=0.6.1
+pkgname=shiftray
+pkgver=0.7.0
 pkgrel=1
-pkgdesc="asusctl and Cardwire in one app: ASUS laptop modes, GPU, fans and battery"
+pkgdesc="asusctl and Cardwire in one small app: modes, GPU, fans and battery for ASUS laptops"
 arch=(any)
-url="https://github.com/sprinterz5/asus-tso-helper"
+url="https://github.com/sprinterz5/shiftray"
 license=(GPL-3.0-only ISC)
 depends=(python pyside6 python-evdev python-dbus asusctl hicolor-icon-theme)
 optdepends=('cardwire: Eco / Standard GPU modes (AUR)'
             'swayidle: keyboard backlight timeout'
             'libkscreen: refresh rate on KDE Plasma')
 makedepends=(make)
+provides=(asus-tso-helper)
+conflicts=(asus-tso-helper)
+replaces=(asus-tso-helper)  # the old name, up to 0.6.1
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
 sha256sums=('9bead92805463b5141d4ea0dd4d0b13e4321004c31398c12ce32869c66267841')
 
@@ -19,5 +22,5 @@ package() {
     make install DESTDIR="$pkgdir" PREFIX=/usr
     python -m compileall -q -d /usr/share/$pkgname "$pkgdir/usr/share/$pkgname"
     install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-    install -Dm644 asus_tso_helper/assets/icons/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE.lucide"
+    install -Dm644 shiftray/assets/icons/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE.lucide"
 }
