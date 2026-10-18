@@ -3,9 +3,10 @@ import glob
 import os
 import re
 import shlex
+import time
 
 from ..log import log
-from .common import ARMOURY, _bus_get, _read, run
+from .common import ARMOURY, _bus_get, _cached, _read, run
 from .profile import set_armoury
 
 
@@ -37,6 +38,7 @@ def set_cardwire_mode(mode):
         # asked to look again, then the switch is tried once more.
         log.info("Cardwire missed the dGPU at boot: asking it to look again")
         run("busctl", "--system", "call", CARDWIRE, CARDWIRE_PATH, CARDWIRE + ".Debug", "RefreshGpu", timeout=15)
+        _cardwire_missed[0] = None  # it may know the dGPU now
         ok, out = attempt()
     return ok, out
 
@@ -48,7 +50,7 @@ def restart_cardwire_and_set(mode):
     ok, out = run("pkexec", "systemctl", "restart", "cardwired", timeout=120)
     if not ok:
         return ok, out
-    import time
+    _cardwire_missed[0] = None  # it may know the dGPU now
     for _ in range(30):  # until it answers on D-Bus again, with the GPUs looked at
         if cardwire_mode() is not None:
             break
@@ -222,12 +224,10 @@ def dgpu_power(blocked=False):
     While Cardwire blocks the dGPU (Eco) it also hides its sysfs files from programs, so then
     (blocked=True, or the files are gone) the state comes from Cardwire."""
     if not blocked:
-        for vendor in glob.glob("/sys/bus/pci/devices/*/vendor"):
-            dev = os.path.dirname(vendor)
-            if _read(vendor) == "0x10de" and (_read(os.path.join(dev, "class")) or "").startswith("0x03"):
-                state = _read(os.path.join(dev, "power", "runtime_status"))
-                if state:
-                    return state
+        dev = _cached("nvidia", _nvidia_device)
+        state = _read(os.path.join(dev, "power", "runtime_status")) if dev else None
+        if state:
+            return state
     path = cardwire_dgpu()
     if not path:
         return None
@@ -236,12 +236,23 @@ def dgpu_power(blocked=False):
     return None if not m else "active" if m.group(1) == "D0" else "suspended"
 
 
+def _nvidia_device():
+    """The NVIDIA GPU's PCI device directory in sysfs."""
+    for vendor in glob.glob("/sys/bus/pci/devices/*/vendor"):
+        dev = os.path.dirname(vendor)
+        if _read(vendor) == "0x10de" and (_read(os.path.join(dev, "class")) or "").startswith("0x03"):
+            return dev
+    return None
+
+
 _cardwire_dgpu = []
+_cardwire_missed = [None]  # when the last look found none: asked again a minute later, not every 2 s
 
 
 def cardwire_dgpu():
     """Cardwire's D-Bus object of the offload dGPU (discrete, not the default GPU), or None."""
-    if not _cardwire_dgpu:
+    missed = _cardwire_missed[0]
+    if not _cardwire_dgpu and (missed is None or time.monotonic() - missed >= 60):
         for i in range(8):
             path = f"{CARDWIRE_PATH}/Gpu/{i}"
             ok, out = run("busctl", "--system", "call", CARDWIRE, path, CARDWIRE + ".Gpu", "GetDevice", timeout=5)
@@ -254,6 +265,8 @@ def cardwire_dgpu():
             if len(fields) > 6 and fields[5] == "false" and fields[6] == "true":
                 _cardwire_dgpu.append(path)
                 break
+        if not _cardwire_dgpu:
+            _cardwire_missed[0] = time.monotonic()
     return _cardwire_dgpu[0] if _cardwire_dgpu else None
 
 

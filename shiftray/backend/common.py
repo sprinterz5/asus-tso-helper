@@ -51,11 +51,30 @@ def run(*cmd, timeout=15):
     return p.returncode == 0, out
 
 
+_found = {}  # what _cached found: key -> (path or None, when it looked)
+
+
+def _cached(key, find, retry=60):
+    """A sysfs path that takes a scan to find (a hwmon by name, the dGPU's PCI device). It is kept
+    while it exists, since hwmon numbers and PCI addresses hold until a reboot; when there was none,
+    the scan is repeated only after retry seconds. The 2-second refresh calls these every time."""
+    path, at = _found.get(key, (None, None))
+    if path and os.path.exists(path):
+        return path
+    if path is None and at is not None and time.monotonic() - at < retry:
+        return None
+    path = find()
+    _found[key] = (path, time.monotonic())
+    return path
+
+
 def _hwmon(name):
-    for path in glob.glob("/sys/class/hwmon/hwmon*"):
-        if _read(os.path.join(path, "name")) == name:
-            return path
-    return None
+    def find():
+        for path in glob.glob("/sys/class/hwmon/hwmon*"):
+            if _read(os.path.join(path, "name")) == name:
+                return path
+        return None
+    return _cached(("hwmon", name), find)
 
 
 def _bus(*args):

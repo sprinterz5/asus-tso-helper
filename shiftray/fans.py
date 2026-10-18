@@ -10,7 +10,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from . import backend as hw
 from . import modes as custom
 from . import widgets as w
-from .widgets import CUSTOM, ECO, STANDARD, TURBO, with_alpha
+from .widgets import CUSTOM, STANDARD, TURBO, with_alpha
 from .i18n import tr
 
 TEMP_MIN, TEMP_MAX = 20, 110  # Fans.cs tempMin / tempMax
@@ -477,8 +477,7 @@ class FansWindow(QtWidgets.QWidget):
         root.addWidget(self.build_sliders())
         root.addWidget(self.build_fans(), 1)
 
-        self.poll = QtCore.QTimer(self, interval=2000, timeout=self.check_profile)
-        self.poll.start()
+        self.poll = QtCore.QTimer(self, interval=2000, timeout=self.check_profile)  # while open
 
     # -- layout -----------------------------------------------------------------
     def build_sliders(self):
@@ -698,12 +697,17 @@ class FansWindow(QtWidgets.QWidget):
     # -- data -------------------------------------------------------------------
     def showEvent(self, e):
         self.load()
+        self.poll.start()
         super().showEvent(e)
+
+    def hideEvent(self, e):
+        self.poll.stop()
+        super().hideEvent(e)
 
     def check_profile(self):
         # asusd keeps limits per mode *and* per power source, and the firmware ranges change
         # with the charger too, so reload on either
-        if self.isVisible() and (hw.get_profile() != self.profile or hw.ac_online() != self.ac):
+        if hw.get_profile() != self.profile or hw.ac_online() != self.ac:
             self.load()
 
     def load(self):

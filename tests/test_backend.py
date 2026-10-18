@@ -24,6 +24,32 @@ class Facade(unittest.TestCase):
         self.assertEqual(missing, set())
 
 
+class SysfsCache(unittest.TestCase):
+    def setUp(self):
+        from shiftray.backend import common
+        self.common = common
+        common._found.clear()
+
+    def test_found_path_is_kept_until_it_disappears(self):
+        find = mock.Mock(return_value="/sys/class/hwmon/hwmon3")
+        with mock.patch.object(os.path, "exists", return_value=True) as exists:
+            self.assertEqual(self.common._cached("k", find), "/sys/class/hwmon/hwmon3")
+            self.common._cached("k", find)
+            self.assertEqual(find.call_count, 1)
+            exists.return_value = False  # gone (a driver reloaded): look again
+            self.common._cached("k", find)
+            self.assertEqual(find.call_count, 2)
+
+    def test_nothing_found_is_looked_for_again_later(self):
+        find = mock.Mock(return_value=None)
+        self.assertIsNone(self.common._cached("k", find))
+        self.common._cached("k", find)
+        self.assertEqual(find.call_count, 1)
+        with mock.patch.object(time, "monotonic", return_value=time.monotonic() + 61):
+            self.common._cached("k", find)
+        self.assertEqual(find.call_count, 2)
+
+
 class Cardwire(unittest.TestCase):
     def test_dgpu_users_parses_lsof(self):
         # busctl prints a{sas}: count, then per node: path, count, names
@@ -50,6 +76,32 @@ class CardwireRetry(unittest.TestCase):
         with mock.patch.object(gpu, "run", side_effect=lambda *a, **k: calls.append(a) or next(answers)):
             self.assertEqual(gpu.set_cardwire_mode("Integrated"), (True, ""))
         self.assertTrue(any("RefreshGpu" in c for c in calls))
+
+
+class CardwireLookup(unittest.TestCase):
+    def setUp(self):
+        gpu._cardwire_dgpu.clear()
+        gpu._cardwire_missed[0] = None
+
+    tearDown = setUp
+
+    def test_no_dgpu_is_not_asked_every_refresh(self):
+        """A laptop without a dGPU (or Cardwire that missed it): one look a minute, not every 2 s."""
+        with mock.patch.object(gpu, "run", return_value=(False, "no such object")) as run:
+            self.assertIsNone(gpu.cardwire_dgpu())
+            self.assertIsNone(gpu.cardwire_dgpu())
+            self.assertEqual(run.call_count, 1)
+            with mock.patch.object(time, "monotonic", return_value=time.monotonic() + 61):
+                gpu.cardwire_dgpu()
+            self.assertEqual(run.call_count, 2)
+
+    def test_found_dgpu_is_kept(self):
+        answers = [(True, 'ssuubbbbssbs "AMD Radeon 660M" "0000:36:00.0" 128 1 true false false true "AMD" "amdgpu" false "none"'),
+                   (True, 'ssuubbbbssbs "NVIDIA GeForce RTX 4060 Laptop GPU" "0000:01:00.0" 129 0 false true false true "Nvidia" "nvidia" true "0"')]
+        with mock.patch.object(gpu, "run", side_effect=answers) as run:
+            self.assertTrue(gpu.cardwire_dgpu().endswith("/Gpu/1"))
+            self.assertTrue(gpu.cardwire_dgpu().endswith("/Gpu/1"))
+            self.assertEqual(run.call_count, 2)
 
 
 class Games(unittest.TestCase):

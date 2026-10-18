@@ -2,9 +2,7 @@
 
 Panel order, sizes, texts and colours follow app/Settings.Designer.cs and app/Settings.cs.
 """
-import json
 import os
-import secrets
 import shutil
 import subprocess
 import sys
@@ -20,16 +18,14 @@ from .extra import ExtraWindow
 from . import hotkeys
 from . import modes
 from . import shortcuts
-from . import updates
 from . import battery
 from . import system_changes
 from . import changes_window
 from . import conflicts
 from . import setup
-from . import selfupdate
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
 from . import widgets as w
-from .config import APP, NAME, VERSION, HOMEPAGE, DONATE_URL, CONFIG_DIR, CONFIG_FILE, AUTOSTART, quit_app, load_config, save_config  # noqa: F401 (ui.VERSION etc. still work)
+from .config import APP, NAME, VERSION, HOMEPAGE, DONATE_URL, AUTOSTART, quit_app, load_config, save_config  # noqa: F401 (ui.VERSION etc. still work)
 from .window_keys import KeysMixin
 from .window_update import UpdateMixin
 from .window_idle import IdleMixin
@@ -49,6 +45,9 @@ GPU_MODES = [("Integrated", tr("Eco"), "leaf", ECO, tr("iGPU only"),
 # every 2 s kept it awake forever. G-Helper falls back to the EC's GPU sensor, which Linux lacks.
 DGPU_TEMP_EVERY = 12
 DGPU_APPS_EVERY = 30
+# in the tray, fan speeds and the keyboard light are read every TRAY_SLOW-th refresh only: each read
+# is an ACPI call into the firmware (about 2 and 3.5 ms), and only the tooltip shows them
+TRAY_SLOW = 5
 SERVICE_TOOLS = {"asusd": "asusctl", "cardwired": "cardwire"}
 OPTIMIZED_TIP = tr("Switch to Eco on battery and to Standard when plugged in")
 AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
@@ -142,6 +141,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         self.tray_available = tray_available
         self.tray = None
         self.pool = ThreadPoolExecutor(max_workers=4)
+        self.bg_running = set()  # keys of the timers' jobs still running (bg)
         self.bridge = Bridge()
         self.bridge.done.connect(lambda cb, result: cb(result))
         self.last_ac = None
@@ -150,6 +150,8 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         self.kbd_restoring = 0.0
         self.dgpu_temp = None
         self.dgpu_temp_at = 0.0
+        self.ticks = 0
+        self.last_fans = {}
         self.theme_state = None
         self.dgpu_was_awake = False
         self.dgpu_apps = []
@@ -604,14 +606,23 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             self.tray.apply_theme()
 
     # -- plumbing -------------------------------------------------------------
-    def bg(self, fn, *args, then=None):
-        """Run fn(*args) off the GUI thread, then call `then(result)` on it."""
+    def bg(self, fn, *args, then=None, key=None):
+        """Run fn(*args) off the GUI thread, then call `then(result)` on it. The timers' jobs pass a
+        key and are skipped while the last one with it still runs: a hung busctl or nvidia-smi
+        must not pile them up in front of what the user clicked."""
+        if key:
+            if key in self.bg_running:
+                return
+            self.bg_running.add(key)
+
         def job():
             try:
                 result = fn(*args)
             except Exception:  # the pool would keep it in a Future nobody reads
                 log.exception(f"background job {getattr(fn, '__name__', fn)} failed")
                 return
+            finally:
+                self.bg_running.discard(key)
             if then:
                 self.bridge.done.emit(then, result)
         self.pool.submit(job)
@@ -693,6 +704,8 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             if not first:
                 self.restore_kbd_level(ac)
 
+        self.ticks += 1
+        full = self.isVisible() or self.ticks % TRAY_SLOW == 1  # also the first refresh
         profile = hw.get_profile()
         if not self.mode_busy and profile != self.last_profile:
             if self.last_profile is not None and profile in hw.ASUSD_PROFILE:
@@ -742,8 +755,8 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             self.dgpu_apps_at = now
         elif not awake:
             self.dgpu_apps = []
-        self.bg(lambda: dict(hw.sensors(query), dgpu_apps=hw.dgpu_users() if ask_apps else None),
-                then=self.show_sensors)
+        self.bg(lambda: dict(hw.sensors(query, fans=full), dgpu_apps=hw.dgpu_users() if ask_apps else None),
+                then=self.show_sensors, key="sensors")
 
         limit = hw.get_charge_limit()
         if limit is not None and not self.slider.dragging:
@@ -763,15 +776,17 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
                 text = tr("Discharging: {watts}W", watts=f"{self.bat['watts']:.1f}")
         self.bat_head.info.setText(text)
         if text and self.isVisible():  # time left / to full is shown in the window only
-            self.bg(hw.battery_time, then=lambda t: (setattr(self, "bat_time", t), self.update_charge_label()))
+            self.bg(hw.battery_time, then=lambda t: (setattr(self, "bat_time", t), self.update_charge_label()),
+                    key="battery_time")
         else:
             self.bat_time = None
         self.update_charge_label()
 
-        level = hw.get_kbd_level()
-        self.backlight_label.setText("")
-        self.kbd_level = level
-        self.remember_kbd_level(ac, level)
+        if full:
+            level = hw.get_kbd_level()
+            self.backlight_label.setText("")
+            self.kbd_level = level
+            self.remember_kbd_level(ac, level)
 
         if self.bat and self.cfg.get("full_once") and self.bat["percent"] == 100:
             self.end_full_charge()
@@ -781,13 +796,16 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         runs; a GPU mode change elsewhere still arrives as Cardwire's signal."""
         if not self.isVisible():
             return
-        self.bg(hw.services_running, then=self.show_services)
-        self.refresh_gpu()
-        self.bg(lambda: (hw.screen_info(), hw.get_overdrive()), then=self.show_screen)
+        self.bg(hw.services_running, then=self.show_services, key="services")
+        self.refresh_gpu(key="gpu")
+        self.bg(lambda: (hw.screen_info(), hw.get_overdrive()), then=self.show_screen, key="screen")
 
-    def refresh_gpu(self):
+    def refresh_gpu(self, key=None):
+        """key: from the timer. After a switch or Cardwire's signal it always runs, so the state it
+        reads is newer than the change."""
         eco = self.gpu_current == "Integrated"
-        self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power(blocked=eco)), then=self.show_gpu)
+        self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power(blocked=eco)), then=self.show_gpu,
+                key=key)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -831,7 +849,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         self.bat_head.title.setText(tr("Battery Charge Limit: {value}%", value=value))
 
     def show_sensors(self, s):
-        fans = s["fans"]
+        fans = self.last_fans = s["fans"] if s["fans"] is not None else self.last_fans
 
         def fan(name):
             """FanSensorControl.FormatFan: percent of the (calibrated) max RPM."""

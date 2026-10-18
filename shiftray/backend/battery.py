@@ -4,7 +4,7 @@ import os
 import time
 import re
 
-from .common import _bus, _read, _read_int, run
+from .common import _bus, _cached, _read, _read_int, run
 
 
 def one_shot_full_charge():
@@ -14,9 +14,7 @@ def one_shot_full_charge():
 
 
 def _battery():
-    for path in sorted(glob.glob("/sys/class/power_supply/BAT*")):
-        return path
-    return None
+    return _cached("battery", lambda: next(iter(sorted(glob.glob("/sys/class/power_supply/BAT*"))), None))
 
 
 def get_charge_limit():
@@ -28,11 +26,16 @@ def set_charge_limit(percent):
     return run("asusctl", "battery", "limit", str(percent))
 
 
-def ac_online():
+def _mains():
     for path in glob.glob("/sys/class/power_supply/*/online"):
         if _read(os.path.join(os.path.dirname(path), "type")) == "Mains":
-            return _read(path) == "1"
+            return path
     return None
+
+
+def ac_online():
+    path = _cached("mains", _mains)
+    return _read(path) == "1" if path else None
 
 
 def battery_health():
