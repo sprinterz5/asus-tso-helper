@@ -1,5 +1,5 @@
 Name:           shiftray
-Version:        0.7.0
+Version:        0.7.1
 Release:        1%{?dist}
 Summary:        asusctl and Cardwire in one small app: modes, GPU, fans and battery for ASUS laptops
 
@@ -61,6 +61,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/%{name}.desktop
 %{_udevrulesdir}/70-%{name}.rules
 
 %changelog
+* Sun Oct 18 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.7.1-1
+- AppImage 30 MB, faster start, less CPU in the tray; Cardwire restart after a kernel update
+
 * Sun Oct 18 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.7.0-1
 - Renamed from asus-tso-helper to Shiftray
 

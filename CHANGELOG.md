@@ -1,9 +1,18 @@
 # Changelog
 
-## Unreleased
+## 0.7.1
 - Eco after a kernel update: Cardwire, started before the NVIDIA driver was built and loaded,
   does not know the NVIDIA GPU is a discrete one and refuses Eco. The app now explains that and
   offers to restart Cardwire (one password), then switches again.
+- **AppImage 30 MB instead of 50** and about 350 ms faster to start: the Python standard library is
+  shipped compiled (the AppImage is read-only, so Python compiled it on every start), and Qt and
+  Python parts the app never loads are left out, ICU's 30 MB of locale tables among them.
+- Less work in the tray: the 2-second refresh no longer scans every PCI device, hwmon sensor and
+  power supply each time, and the Fans window stops polling while it is closed. In the tray, fan
+  speeds and the keyboard light (ACPI calls into the firmware) are read every 10 s instead of 2:
+  about 2.5x less CPU while the window is closed.
+- A hung busctl or nvidia-smi can no longer pile up the refresh jobs in front of a click, and
+  without a dGPU (or when Cardwire missed it) Cardwire is asked once a minute, not every 2 s.
 
 ## 0.7.0
 - **New name: Shiftray** (was asus-tso-helper). Settings, the log and autostart move over by
