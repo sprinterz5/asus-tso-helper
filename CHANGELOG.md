@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.9.0
+- **Situations** (experimental, Extra → Other): four tiles, On the go, Desk, Gaming and Quiet, each
+  setting the mode, GPU mode, screen rate and keyboard light at once, so a tile always gives the same
+  result (Optimized and Auto follow the charger).
+  They replace the Mode, GPU Mode and Screen blocks; under them the picked one's settings, which
+  fold away once set. A situation with Ultimate asks about the reboot, like the Ultimate button.
+- **Charge limit on TUF and some ROG models** (G-Helper's list): their firmware stops charging only
+  at 60-80% or at 100%, and any other limit charged to full. The slider now stops only at 60, 80 and
+  100 there, and a limit set before (85%, say) is shown as working like 100%.
+- **Main window, tidier**: the battery title says the charge and the time left ("Battery: 22% · 1h 11m
+  left", orange under 20%, red under 10%; "not charging, limit 80%" on the charger above the limit),
+  the limit is the slider's caption, and "Full once" says
+  what the 100% chip did. The keyboard effect and colour moved to Extra → Laptop Backlight (set once;
+  Fn+F4 still walks through the effects). Version, Updates, Extra and Quit share one row; Credits
+  moved to Extra. Even, smaller gaps between the blocks; the screen buttons fill the row. Fans read
+  in RPM by default.
+- **Extra**: Key Bindings, Laptop Backlight and Other open and close with a click on their title (the
+  app remembers which); Setup, Diagnostics, Changes and Credits are one row of equal buttons at the
+  bottom, under the asusd / Cardwire line. On KDE a window that gets shorter or taller (a section
+  closed, the GPU note) keeps the edge on the panel's side in place, and Fans, Extra and the others
+  line up with the main window on that side too (tops under a top panel, bottoms above a bottom one).
+
 ## 0.8.0
 - **Battery tips** (notifications only; Extra → "Battery tips" turns them off):
   - after a sleep of an hour or more on battery, how much it cost; when it was a lot and the laptop
