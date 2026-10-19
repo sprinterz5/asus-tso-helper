@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Situations: the header shows the GPU's temperature and fan under the CPU's, as the GPU Mode block
+  does in the classic layout.
+
 ## 0.9.0
 - **Situations** (experimental, Extra → Other): four tiles, On the go, Desk, Gaming and Quiet, each
   setting the mode, GPU mode, screen rate and keyboard light at once, so a tile always gives the same

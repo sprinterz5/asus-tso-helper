@@ -25,7 +25,7 @@ class SituationsMixin:
         lay = QtWidgets.QVBoxLayout(p)
         lay.setContentsMargins(10, 10, 10, 16)  # the battery block assumes a tip line above it
         lay.setSpacing(0)
-        self.sit_head = w.Header("sparkles", tr("Situation"))
+        self.sit_head = w.Header("sparkles", tr("Situation"), height=34)  # CPU and GPU lines on the right
         lay.addWidget(self.sit_head)
         holder = QtWidgets.QWidget()
         g = QtWidgets.QGridLayout(holder)

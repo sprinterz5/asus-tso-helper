@@ -988,8 +988,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         else:
             gpu = ""
         self.perf_head.info.setText(f"CPU{cpu}  {fan('cpu')}")
-        self.sit_head.info.setText(self.perf_head.info.text())
+
         self.gpu_head.info.setText(f"GPU{gpu}  {fan('gpu')}")
+        self.sit_head.info.setText(f"{self.perf_head.info.text()}\n{self.gpu_head.info.text()}")
         if self.tray:
             tip = f"CPU{cpu} {fan('cpu')}\nGPU{gpu} {fan('gpu')}"
             if self.bat_head.info.text():
