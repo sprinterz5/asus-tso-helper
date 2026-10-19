@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.1
 - Situations: the header shows the GPU's temperature and fan under the CPU's, as the GPU Mode block
   does in the classic layout.
 
