@@ -22,6 +22,33 @@ def get_charge_limit():
     return _read_int(os.path.join(bat, "charge_control_end_threshold")) if bat else None
 
 
+# AppConfig.IsChargeLimit6080 in G-Helper: on these models the firmware stops charging only at 60-80% or
+# at 100%; anything else charges to full (seen on a TUF A15 FA507NV: 85% kept charging at 95%, 80% stopped)
+LIMIT_6080_MODELS = ("GU405", "GU606", "H760", "GA403", "GU605", "GA605", "GA503R")
+LIMIT_6080_EXCEPT = ("FX507Z", "FA617", "FA607", "FX607")
+LIMIT_6080_STEPS = (60, 80, 100)  # G-Helper also offers 65-75; the three the firmware is known for
+
+
+def charge_limit_steps(model):
+    """The limits the slider offers on this model (Settings.cs: sliderBattery.supportedValues), or None
+    when every 5% from 40 to 100 works."""
+    tuf = any(t in model for t in ("TUF", "TX Gaming", "TX Air"))
+    if any(m in model for m in LIMIT_6080_MODELS) or (tuf and not any(m in model for m in LIMIT_6080_EXCEPT)):
+        return LIMIT_6080_STEPS
+    return None
+
+
+def firmware_limit(percent, steps):
+    """BatteryControl.SetBatteryChargeLimit: what a wanted limit becomes on a 60/80 model."""
+    if not steps:
+        return percent
+    if percent > 85:
+        return 100
+    if percent >= 80:
+        return 80
+    return max(percent, 60)
+
+
 def set_charge_limit(percent):
     return run("asusctl", "battery", "limit", str(percent))
 

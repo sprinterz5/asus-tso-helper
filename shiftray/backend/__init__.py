@@ -99,6 +99,8 @@ from .battery import (  # noqa: F401
     _battery,
     get_charge_limit,
     set_charge_limit,
+    charge_limit_steps,
+    firmware_limit,
     ac_online,
     battery_health,
     battery_status,

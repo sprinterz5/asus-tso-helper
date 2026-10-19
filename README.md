@@ -62,6 +62,8 @@
 - Fan curves for CPU and GPU, calibrated to real RPM, with factory defaults
 - CPU power limits (SPL, sPPT, fPPT), NVIDIA Dynamic Boost and temperature target
 - CPU Boost and the CPU's power mode (EPP) per mode
+- Situations (experimental): On the go, Desk, Gaming, Quiet, each setting the mode, GPU, screen and
+  keyboard light with one click
 
 **GPU**
 - Eco, Standard, Ultimate (MUX) and Optimized (Eco on battery)
@@ -70,7 +72,8 @@
 **Screen, keyboard, battery**
 - 60 Hz, max Hz or automatic by power source, panel overdrive
 - Aura effects, colour, speed, brightness, backlight timeout, lighting on boot and sleep
-- Charge limit, one-time charge to 100%, battery health, time left
+- Charge limit (only the values the firmware keeps, on models that take just 60 / 80 / 100),
+  one-time charge to 100%, battery health, time left
 
 **Keys and system**
 - Actions for Fn+F4, the Armoury key and other laptop keys, plus any keyboard shortcut

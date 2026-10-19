@@ -259,6 +259,36 @@ class RButton(QtWidgets.QAbstractButton):
             p.drawText(rect, QtCore.Qt.AlignCenter, text)
 
 
+class TileButton(RButton):
+    """A situation tile: icon, title, and under it a grey line of what it sets."""
+
+    def __init__(self, text, icon_name, accent=None):
+        super().__init__(text, icon_name, accent=accent, vertical=True)
+        self.line = ""
+
+    def set_line(self, line):
+        self.line = line
+        self.update()
+
+    def paint_content(self, p, rect):
+        fm = QtGui.QFontMetrics(self.font())
+        small = QtGui.QFont(self.font())
+        small.setPointSizeF(self.font().pointSizeF() * 0.82)
+        sfm = QtGui.QFontMetrics(small)
+        gap = 3
+        y = rect.top() + (rect.height() - (16 + gap + fm.height() + sfm.height())) / 2
+        p.drawPixmap(QtCore.QPointF(rect.center().x() - 8, y), icon(self.icon_name))
+        p.setPen(THEME.fore if self.isEnabled() else THEME.gray_text)
+        p.setFont(self.font())
+        p.drawText(QtCore.QRectF(rect.left(), y + 16 + gap, rect.width(), fm.height()), QtCore.Qt.AlignCenter,
+                   self.text())
+        p.setPen(THEME.control_dark)
+        p.setFont(small)
+        line = sfm.elidedText(self.line, QtCore.Qt.ElideRight, int(rect.width()) - 12)
+        p.drawText(QtCore.QRectF(rect.left(), y + 16 + gap + fm.height(), rect.width(), sfm.height()),
+                   QtCore.Qt.AlignCenter, line)
+
+
 class IconButton(RButton):
     """A small square button with only an icon, centred, and a soft shadow under it."""
 
@@ -336,6 +366,48 @@ class Header(QtWidgets.QWidget):
         p.drawPixmap(QtCore.QPointF(4, 0), icon(self.icon_name))
 
 
+class FoldHeader(QtWidgets.QWidget):
+    """A title that opens and closes the part under it: chevron, bold title, and on the right a grey
+    summary shown while closed."""
+
+    toggled = QtCore.Signal(bool)
+
+    def __init__(self, title, opened=False, height=20):
+        super().__init__()
+        self.opened = opened
+        self.setFixedHeight(height)
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+        lay = QtWidgets.QHBoxLayout(self)
+        lay.setContentsMargins(23, 0, 0, 0)  # the chevron is painted left of the title, like Header's icon
+        lay.setSpacing(0)
+        self.title = QtWidgets.QLabel(title)
+        f = self.title.font()
+        f.setBold(True)
+        self.title.setFont(f)
+        self.title.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        self.summary = QtWidgets.QLabel("")
+        self.summary.setObjectName("tip")
+        self.summary.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignTop)
+        lay.addWidget(self.title)
+        lay.addWidget(self.summary, 1)
+        self.summary.setVisible(not opened)
+
+    def set_opened(self, opened):
+        if opened != self.opened:
+            self.opened = opened
+            self.summary.setVisible(not opened)
+            self.update()
+            self.toggled.emit(opened)
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.set_opened(not self.opened)
+
+    def paintEvent(self, _):
+        p = QtGui.QPainter(self)
+        p.drawPixmap(QtCore.QPointF(5, 1), icon("chevron-down" if self.opened else "chevron-right", 14))
+
+
 class RComboBox(QtWidgets.QComboBox):
     """RComboBox: rounded flat box with a thin border and a chevron."""
 
@@ -372,6 +444,7 @@ class Slider(QtWidgets.QWidget):
     def __init__(self, minimum=40, maximum=100, step=5):
         super().__init__()
         self.min, self.max, self.step = minimum, maximum, step
+        self.values = None  # only these, when the hardware takes no others (Slider.supportedValues)
         self.value = maximum
         self.accent = STANDARD
         self.dragging = False
@@ -384,6 +457,8 @@ class Slider(QtWidgets.QWidget):
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
 
     def set_value(self, v, emit=False):
+        if self.values:
+            v = min(self.values, key=lambda allowed: abs(allowed - v))
         v = max(self.min, min(self.max, int(round(v / self.step) * self.step)))
         if v != self.value:
             self.value = v
@@ -452,9 +527,14 @@ class Slider(QtWidgets.QWidget):
         self.released.emit(self.value)
 
     def keyPressEvent(self, e):
-        delta = {QtCore.Qt.Key_Left: -self.step, QtCore.Qt.Key_Down: -self.step,
-                 QtCore.Qt.Key_Right: self.step, QtCore.Qt.Key_Up: self.step}.get(e.key())
+        delta = {QtCore.Qt.Key_Left: -1, QtCore.Qt.Key_Down: -1,
+                 QtCore.Qt.Key_Right: 1, QtCore.Qt.Key_Up: 1}.get(e.key())
         if delta is None:
             return super().keyPressEvent(e)
-        self.set_value(self.value + delta, emit=True)
+        if self.values:  # the next allowed value, not the next 5%
+            options = sorted(self.values)
+            i = options.index(self.value) if self.value in options else 0
+            self.set_value(options[max(0, min(len(options) - 1, i + delta))], emit=True)
+        else:
+            self.set_value(self.value + delta * self.step, emit=True)
         self.released.emit(self.value)

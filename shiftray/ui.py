@@ -29,6 +29,7 @@ from .config import APP, NAME, VERSION, HOMEPAGE, DONATE_URL, AUTOSTART, quit_ap
 from .window_keys import KeysMixin
 from .window_update import UpdateMixin
 from .window_idle import IdleMixin
+from .window_situations import SituationsMixin
 from .widgets import ECO, STANDARD, TURBO, CUSTOM, GRAY
 
 
@@ -53,6 +54,8 @@ SLEEP_DRAIN_HIGH = 1.5   # % per hour; Modern Standby that works costs about 0.5
 SLEEP_REPORT_AFTER = 3600  # s asleep before the drain is worth a notification
 DGPU_AWAKE_TELL = 120    # s on battery with apps keeping the dGPU awake before saying which
 LOW_BATTERY = 20         # % at which Silent (and Eco) is offered once per discharge
+SECTION_GAP = 18         # px from a block's buttons to the next block's title (G-Helper: 22 to 28)
+TIP_LINE = 16            # the grey hover-tip line under the GPU and screen buttons
 
 
 def duration(seconds):
@@ -63,7 +66,6 @@ def duration(seconds):
     return tr("{h}h {m}m", h=seconds // 3600, m=f"{seconds % 3600 // 60:02d}")
 SERVICE_TOOLS = {"asusd": "asusctl", "cardwired": "cardwire"}
 OPTIMIZED_TIP = tr("Switch to Eco on battery and to Standard when plugged in")
-AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
 
 
 def stylesheet():
@@ -152,7 +154,7 @@ class HoverTip(QtCore.QObject):
         return False
 
 
-class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
+class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.QWidget):
     def __init__(self, tray_available):
         super().__init__()
         self.cfg = load_config()
@@ -217,14 +219,15 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         root.addWidget(self.conflict_line)
         self.root_layout = root
 
-        root.addWidget(self.build_performance())
-        root.addWidget(self.build_gpu())
-        root.addWidget(self.build_screen())
-        root.addWidget(self.build_keyboard())
+        self.perf_panel = self.build_performance()
+        self.gpu_panel = self.build_gpu()
+        self.screen_panel = self.build_screen()
+        root.addWidget(self.build_situations())
+        for panel in (self.perf_panel, self.gpu_panel, self.screen_panel):
+            root.addWidget(panel)
         root.addWidget(self.build_battery())
-        root.addWidget(self.build_startup())
-        root.addWidget(self.build_version())
         root.addWidget(self.build_footer())
+        self.apply_situations_layout()
         self.setFixedHeight(root.sizeHint().height())
 
         if self.cfg.get("calibration_backup"):
@@ -297,7 +300,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
 
     # -- layout -----------------------------------------------------------------
     def build_performance(self):
-        p, lay = panel(10, 10, 10, 10)  # Padding(20)
+        # every block below starts SECTION_GAP under the buttons above it; the GPU and screen blocks
+        # keep a line for their hover tips in that gap
+        p, lay = panel(10, 10, 10, 0)
         self.perf_head = w.Header("gauge", tr("Mode"))
         lay.addWidget(self.perf_head)
         holder, g = grid(4, 64)
@@ -316,13 +321,13 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         return p
 
     def build_gpu(self):
-        p, lay = panel(10, 10, 10, 0)  # Padding(20, 20, 20, 0)
+        p, lay = panel(10, SECTION_GAP - 2, 10, 0)
         self.gpu_head = w.Header("gpu", tr("GPU Mode"))
         lay.addWidget(self.gpu_head)
         holder, g = grid(4, 64)
         self.gpu_tip = QtWidgets.QLabel("")
         self.gpu_tip.setObjectName("tip")
-        self.gpu_tip.setFixedHeight(18)
+        self.gpu_tip.setFixedHeight(TIP_LINE)
         self.gpu_tip.setWordWrap(True)
         self.gpu_tip.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         supported = hw.gpu_supported() or [m[0] for m in GPU_MODES]
@@ -356,14 +361,13 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         return p
 
     def build_screen(self):
-        p, lay = panel(10, 6, 10, 0)  # Padding(20, 11, 20, 0)
+        p, lay = panel(10, SECTION_GAP - 2 - TIP_LINE, 10, 0)
         self.screen_head = w.Header("laptop", tr("Screen"))
         lay.addWidget(self.screen_head)
-        holder, g = grid(4, 40)
-        g.setRowMinimumHeight(1, 10 - 4)
+        holder, g = grid(3, 40)  # three choices, no empty fourth cell
         self.screen_tip = QtWidgets.QLabel("")
         self.screen_tip.setObjectName("tip")
-        self.screen_tip.setFixedHeight(18)
+        self.screen_tip.setFixedHeight(TIP_LINE)
         self.screen_tip.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         self.screen_auto = w.RButton(tr("Auto"), accent=GRAY)
         self.screen_60 = w.RButton(tr("60Hz"), accent=GRAY)
@@ -383,67 +387,13 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         lay.addWidget(self.screen_tip)
         return p
 
-    def build_keyboard(self):
-        # Padding(20, 20, 20, 0) in G-Helper, where the Visual Mode and Slash panels sit above; without
-        # them the screen panel's tip line already makes the gap
-        p, lay = panel(10, 0, 10, 0)
-        self.kbd_head = w.Header("keyboard", tr("Laptop Keyboard"))
-        self.fn_lock = w.RButton(tr("FN-Lock"), secondary=True, radius=2, borderless=True)
-        f = self.fn_lock.font()
-        f.setPointSizeF(f.pointSizeF() * 7.125 / 9)
-        f.setBold(True)
-        self.fn_lock.setFont(f)
-        self.fn_lock.setFixedSize(62, 20)
-        self.fn_lock.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        self.fn_lock.text_colour = w.THEME.control_dark
-        self.fn_lock.setToolTip(tr("FN-Lock is toggled with Fn + Esc on this laptop"))
-        self.kbd_head.right.addWidget(self.fn_lock)
-        self.kbd_head.right.setContentsMargins(23, 0, 2, 0)
-        lay.addWidget(self.kbd_head)
-
-        holder = QtWidgets.QWidget()
-        g = QtWidgets.QGridLayout(holder)
-        g.setContentsMargins(0, 0, 0, 0)
-        g.setHorizontalSpacing(0)
-        for c in range(3):
-            g.setColumnStretch(c, 1)
-        self.aura_combo = w.RComboBox()
-        for key, label in AURA:
-            self.aura_combo.addItem(label, key)
-        idx = self.aura_combo.findData(self.cfg.get("aura_effect", "static"))
-        self.aura_combo.setCurrentIndex(max(idx, 0))
-        self.aura_combo.activated.connect(lambda _: self.apply_aura())
-        combo_box = QtWidgets.QWidget()
-        cl = QtWidgets.QVBoxLayout(combo_box)
-        cl.setContentsMargins(3, 3, 3, 2)  # Margin(7, 7, 7, 4)
-        cl.addWidget(self.aura_combo)
-        self.colour_button = w.ColorButton(tr("Color"), "#" + self.cfg.get("aura_colour", "ffffff"), radius=2)
-        self.colour_button.setFixedHeight(24)
-        self.colour_button.clicked.connect(self.pick_colour)
-        self.extra_button = w.RButton(tr("Extra"), "settings", secondary=True, radius=2)
-        self.extra_button.setFixedHeight(24)
-        self.extra_button.clicked.connect(self.on_extra)
-        g.addWidget(combo_box, 0, 0)
-        for col, b in ((1, self.colour_button), (2, self.extra_button)):
-            cell = QtWidgets.QWidget()
-            bl = QtWidgets.QVBoxLayout(cell)
-            bl.setContentsMargins(2, 2, 2, 0)
-            bl.addWidget(b)
-            g.addWidget(cell, 0, col)
-        lay.addWidget(holder)
-        self.backlight_label = QtWidgets.QLabel("")
-        self.backlight_label.setObjectName("tip")
-        self.backlight_label.setFixedHeight(17)
-        self.backlight_label.setContentsMargins(2, 0, 2, 0)
-        self.backlight_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
-        lay.addWidget(self.backlight_label)
-        return p
-
     def build_battery(self):
-        p, lay = panel(10, 8, 10, 0)  # Padding(20, 15, 20, 0)
+        """Below the modes, where G-Helper has it, but saying first what people look for: the charge
+        and the time left. The limit is the slider's own caption."""
+        p, lay = panel(10, SECTION_GAP - 2 - TIP_LINE, 10, 0)
         self.bat_panel = p
         p.installEventFilter(self)
-        self.bat_head = w.Header("battery-charging", tr("Battery Charge Limit"), height=22)
+        self.bat_head = w.Header("battery-charging", tr("Battery"), height=22)
         self.bat_history = history = w.IconButton("chart-line", size=18, nudge=(0.5, -0.5))
         history.setToolTip(tr("Battery history and health"))
         history.clicked.connect(self.on_battery)
@@ -455,19 +405,28 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         row = QtWidgets.QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(0)
-        self.slider = w.Slider(40, 100, 5)
+        self.limit_label = QtWidgets.QLabel("")
+        self.limit_label.setObjectName("tip")
+        self.limit_label.setContentsMargins(4, 0, 0, 0)
+        self.limit_label.setFixedWidth(QtGui.QFontMetrics(self.font()).horizontalAdvance(
+            tr("Limit {value}%", value=100)) + 10)
+        self.limit_label.setToolTip(tr("Charging stops here, so the battery lasts more years"))
+        self.limit_steps = hw.charge_limit_steps(hw.model_name())
+        self.slider = w.Slider(self.limit_steps[0] if self.limit_steps else 40, 100, 5)
+        self.slider.values = self.limit_steps
         self.slider.valueChanged.connect(self.show_limit)
         self.slider.released.connect(self.on_limit)
-        self.full_button = w.RButton(tr("100%"), secondary=True, radius=2, borderless=True)
+        self.full_button = w.RButton(tr("Full once"), secondary=True, radius=2, borderless=True)
         f = self.full_button.font()
         f.setPointSizeF(f.pointSizeF() * 7.125 / 9)
         f.setBold(True)
         self.full_button.setFont(f)
         self.full_button.text_colour = w.THEME.control_dark
-        self.full_button.setFixedSize(36, 18)
+        self.full_button.setFixedSize(QtGui.QFontMetrics(f).horizontalAdvance(self.full_button.text()) + 14, 18)
         self.full_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.full_button.clicked.connect(self.on_full_charge)
         self.full_button.installEventFilter(self)
+        row.addWidget(self.limit_label)
         row.addWidget(self.slider, 1)
         row.addSpacing(4)
         row.addWidget(self.full_button, 0, QtCore.Qt.AlignVCenter)
@@ -475,29 +434,33 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         holder.setLayout(row)
         holder.setFixedHeight(22)
         lay.addWidget(holder)
-        return p
-
-    def build_startup(self):
-        p = QtWidgets.QWidget()
-        p.setFixedHeight(25)
-        lay = QtWidgets.QHBoxLayout(p)
-        lay.setContentsMargins(15, 0, 10, 0)
+        # G-Helper's row under the slider: Run on Startup (set once, but people look for it here) and
+        # a line: health while hovering the panel, what "Full once" does while hovering it, otherwise
+        # who keeps the NVIDIA GPU awake on battery or why the limit does not hold
+        row = QtWidgets.QHBoxLayout()
+        row.setContentsMargins(5, 0, 0, 0)
         self.startup = QtWidgets.QCheckBox(tr("Run on Startup"))
         self.startup.setChecked(os.path.exists(AUTOSTART))
         self.startup.toggled.connect(self.on_startup)
         self.charge_label = QtWidgets.QLabel("")
         self.charge_label.setObjectName("dim")
         self.charge_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        lay.addWidget(self.startup)
-        lay.addStretch()
-        lay.addWidget(self.charge_label)
+        self.charge_label.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
+        row.addWidget(self.startup)
+        row.addWidget(self.charge_label, 1)
+        holder = QtWidgets.QWidget()
+        holder.setLayout(row)
+        holder.setFixedHeight(25)
+        lay.addWidget(holder)
         return p
 
-    def build_version(self):
+    def build_footer(self):
+        """One row: the version (a link, or the update when there is one), then Updates, Extra, Quit.
+        Credits moved into Extra."""
         p = QtWidgets.QWidget()
-        p.setMinimumHeight(25)
         lay = QtWidgets.QHBoxLayout(p)
-        lay.setContentsMargins(12, 2, 12, 2)
+        lay.setContentsMargins(12, 6, 10, 10)
+        lay.setSpacing(4)
         version = QtWidgets.QLabel(tr("Version: {version}", version=VERSION))
         version.setObjectName("version")
         version.setCursor(QtCore.Qt.PointingHandCursor)
@@ -507,22 +470,16 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         self.latest_release = None
         lay.addWidget(version)
         lay.addStretch()
-        return p
-
-    def build_footer(self):
-        p = QtWidgets.QWidget()
-        lay = QtWidgets.QHBoxLayout(p)
-        lay.setContentsMargins(10, 5, 10, 10)  # Padding(20, 10, 20, 20)
-        lay.setSpacing(4)
-        credits = w.RButton(tr("Credits"), "heart", secondary=True, radius=2)
-        credits.clicked.connect(self.on_credits)
         updates = w.RButton(tr("Updates"), "download", secondary=True, radius=2)
         updates.clicked.connect(self.on_updates)
+        self.extra_button = w.RButton(tr("Extra"), "settings", secondary=True, radius=2)
+        self.extra_button.clicked.connect(self.on_extra)
         quit_b = w.RButton(tr("Quit"), "log-out", secondary=True, radius=2)
         quit_b.clicked.connect(quit_app)
-        for b in (credits, updates, quit_b):
-            b.setFixedHeight(24)
-            lay.addWidget(b, 1)
+        for b in (updates, self.extra_button, quit_b):
+            b.setFixedSize(84, 24)
+            b.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            lay.addWidget(b)
         return p
 
     # -- "you started a game in Eco / Silent" -------------------------------------
@@ -725,7 +682,6 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         w.set_theme(dark)
         w.set_accent(QtGui.QColor(*accent) if accent else None)
         self.setStyleSheet(stylesheet())
-        self.fn_lock.text_colour = w.THEME.control_dark
         self.full_button.text_colour = w.THEME.control_dark
         for child in self.findChildren(QtWidgets.QWidget):
             child.update()
@@ -914,12 +870,12 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
 
         if full:
             level = hw.get_kbd_level()
-            self.backlight_label.setText("")
             self.kbd_level = level
             self.remember_kbd_level(ac, level)
 
         if self.bat and self.cfg.get("full_once") and self.bat["percent"] == 100:
             self.end_full_charge()
+        self.show_situations()
 
     def refresh_slow(self):
         """What only the open window shows: services, GPU panel, screen. In the tray none of it
@@ -957,6 +913,28 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             window.hide()
 
     def update_charge_label(self):
+        """The battery title (charge, and the time left, to the limit or to full) and the line under
+        the slider."""
+        bat = getattr(self, "bat", None)
+        title = tr("Battery")
+        if bat and bat["percent"] is not None:
+            percent = f"{bat['percent']}%"
+            if bat["status"] == "Discharging" and bat["percent"] < LOW_BATTERY:
+                colour = TURBO if bat["percent"] < LOW_BATTERY / 2 else CUSTOM
+                percent = f"<span style='color:{colour.name()}'>{percent}</span>"
+            title = tr("Battery: {percent}", percent=percent)
+            if self.bat_time:
+                kind, secs = self.bat_time
+                time_text = duration(secs)
+                title += " · " + (tr("{time} left", time=time_text) if kind == "left" else
+                                  tr("{time} to {limit}%", time=time_text, limit=self.charge_limit)
+                                  if kind == "to limit" else tr("{time} to full", time=time_text))
+            elif bat["status"] == "Not charging" and self.last_ac:
+                # above the limit it stays where it is until it drops below; it does not discharge to it
+                title += " · " + tr("not charging, limit {limit}%", limit=self.charge_limit)
+        self.bat_head.title.setText(title)
+
+        tip = ""
         if self.full_hover:
             text = tr("One time charge to 100%")
         elif self.battery_hover:
@@ -965,19 +943,23 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             text = tr("Battery Health: {health}%", health=f"{health:.1f}") if health else ""
             if text and cycles:
                 text += ", " + tr("{count} cycles", count=cycles)
+        elif self.limit_steps and self.charge_limit not in self.limit_steps:
+            text = tr("{limit}% works as 100% here", limit=self.charge_limit)
+            tip = tr("This laptop's firmware stops charging only at 60-80% or at 100%; other limits "
+                     "charge to full. Pick 80% or less to keep a limit.")
+        elif self.dgpu_seen and self.last_ac is False:
+            # the same apps the "NVIDIA awake on battery" tip names, but here from the first minute
+            since = time.monotonic() - min(self.dgpu_seen.values())
+            text = tr("NVIDIA awake on battery for {time}: {apps}", time=duration(since),
+                      apps=", ".join(sorted(self.dgpu_seen)))
+            tip = tr("Eco turns it off; the apps keep running on the other GPU")
         else:
-            bat = getattr(self, "bat", None)
-            text = tr("Charge: {percent}%", percent=bat["percent"]) if bat and bat["percent"] is not None else ""
-            if text and self.bat_time:
-                kind, secs = self.bat_time
-                time_text = duration(secs)
-                text += " (" + (tr("{time} left", time=time_text) if kind == "left" else
-                                tr("{time} to {limit}%", time=time_text, limit=self.charge_limit)
-                                if kind == "to limit" else tr("{time} to full", time=time_text)) + ")"
+            text = ""
         self.charge_label.setText(text)
+        self.charge_label.setToolTip(tip)
 
     def show_limit(self, value):
-        self.bat_head.title.setText(tr("Battery Charge Limit: {value}%", value=value))
+        self.limit_label.setText(tr("Limit {value}%", value=value))
 
     def show_sensors(self, s):
         fans = self.last_fans = s["fans"] if s["fans"] is not None else self.last_fans
@@ -990,8 +972,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             if fan_max(self.cfg, name) < rpm < INADEQUATE_RPM and not self.cfg.get("calibration_backup"):
                 self.cfg[f"fan_max_{name}"] = rpm
                 save_config(self.cfg)
-            calibrated = any(k.startswith("fan_table_") for k in self.cfg)
-            if self.cfg.get("fan_rpm", calibrated):
+            if self.cfg.get("fan_rpm", True):  # RPM by default: a reading, true without calibration
                 return tr("Fan: {value}", value=f"{rpm}RPM")
             return tr("Fan: {value}", value=f"{min(100, round(rpm * 100 / fan_max(self.cfg, name)))}%")
 
@@ -1007,6 +988,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         else:
             gpu = ""
         self.perf_head.info.setText(f"CPU{cpu}  {fan('cpu')}")
+        self.sit_head.info.setText(self.perf_head.info.text())
         self.gpu_head.info.setText(f"GPU{gpu}  {fan('gpu')}")
         if self.tray:
             tip = f"CPU{cpu} {fan('cpu')}\nGPU{gpu} {fan('gpu')}"
@@ -1061,6 +1043,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             self.gpu_head.title.setText(tr("GPU Mode: {mode}", mode=label))
         if self.tray:
             self.tray.set_gpu(mode)
+        self.show_situations()
 
     def show_gpu_pending(self, mode, target, pending):
         for key, b in self.gpu_buttons.items():
@@ -1081,7 +1064,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             self.gpu_tip.unsetCursor()
         self.gpu_tip.style().unpolish(self.gpu_tip)
         self.gpu_tip.style().polish(self.gpu_tip)
-        height = 32 if (target or pending) else 18  # the pending note takes two lines
+        height = 2 * TIP_LINE if (target or pending) else TIP_LINE  # the pending note takes two lines
         if self.gpu_tip.height() != height:
             self.gpu_tip.setFixedHeight(height)
             # layouts pick the new height up on the next event loop pass
@@ -1114,6 +1097,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         self.screen_auto.set_activated(auto)
         self.screen_60.set_activated(not auto and hz <= min(rates))
         self.screen_max.set_activated(not auto and hz > min(rates))
+        self.show_situations()  # the "Max" button and tiles say the real rate
 
     # -- actions ----------------------------------------------------------------
     def on_profile(self, key, notify=False):
@@ -1490,21 +1474,14 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             if visible:
                 self.show()
 
-    def pick_colour(self):
-        colour = QtWidgets.QColorDialog.getColor(
-            QtGui.QColor("#" + self.cfg.get("aura_colour", "ffffff")), self, tr("Color"))
-        if colour.isValid():
-            self.cfg["aura_colour"] = colour.name()[1:]
-            self.colour_button.set_swatch(colour)
-            self.apply_aura()
-
     def apply_aura(self):
-        self.cfg["aura_effect"] = self.aura_combo.currentData()
+        """The keyboard effect, colour and speed in cfg (set in Extra or by the Fn+F4 action)."""
         save_config(self.cfg)
-        self.bg(hw.set_aura, self.cfg["aura_effect"], self.cfg.get("aura_colour", "ffffff"),
+        self.bg(hw.set_aura, self.cfg.get("aura_effect", "static"), self.cfg.get("aura_colour", "ffffff"),
                 self.cfg.get("aura_speed", "med"), then=lambda r: self.report(r, tr("Keyboard lighting")))
 
     def on_limit(self, percent):
+        percent = hw.firmware_limit(percent, self.limit_steps)
         if self.cfg.pop("full_once", None) is not None:
             self.cfg.pop("limit_before_full", None)
             save_config(self.cfg)
@@ -1525,7 +1502,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         self.bg(hw.one_shot_full_charge, then=lambda r: self.report(r, tr("Charge limit")))
 
     def end_full_charge(self):
-        limit = self.cfg.pop("limit_before_full", 80)
+        limit = hw.firmware_limit(self.cfg.pop("limit_before_full", 80), self.limit_steps)
         self.cfg.pop("full_once", None)
         save_config(self.cfg)
         self.full_button.set_activated(False)

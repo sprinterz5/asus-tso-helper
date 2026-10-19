@@ -143,5 +143,21 @@ class Battery(unittest.TestCase):
         self.assertAlmostEqual(modes["quiet"][0], 10.0)
 
 
+class ChargeLimit6080(unittest.TestCase):
+    """G-Helper's AppConfig.IsChargeLimit6080 and BatteryControl.SetBatteryChargeLimit."""
+
+    def test_models(self):
+        self.assertEqual(battery.charge_limit_steps("ASUS TUF Gaming A15 FA507NV"), battery.LIMIT_6080_STEPS)
+        self.assertEqual(battery.charge_limit_steps("ROG Zephyrus G14 GA403UV"), battery.LIMIT_6080_STEPS)
+        self.assertIsNone(battery.charge_limit_steps("ASUS TUF Gaming A16 FA607PV"))  # a TUF that takes any
+        self.assertIsNone(battery.charge_limit_steps("ROG Strix G16 G614JV"))
+
+    def test_what_a_limit_becomes(self):
+        steps = battery.LIMIT_6080_STEPS
+        self.assertEqual([battery.firmware_limit(v, steps) for v in (40, 60, 75, 80, 85, 90, 100)],
+                         [60, 60, 75, 80, 80, 100, 100])
+        self.assertEqual(battery.firmware_limit(85, None), 85)
+
+
 if __name__ == "__main__":
     unittest.main()

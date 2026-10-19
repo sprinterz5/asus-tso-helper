@@ -39,6 +39,11 @@ function placeMain(window) {
     window.frameGeometry = {x: Math.round(x), y: Math.round(y), width: g.width, height: g.height};
 }
 
+function nearBottom(g, area) {
+    // the window sits nearer the work area's bottom (a panel at the bottom) than its top
+    return area.y + area.height - (g.y + g.height) < g.y - area.y;
+}
+
 function placeBeside(window, main) {
     var m = main.frameGeometry;
     var area = workArea(main.output || workspace.activeScreen);
@@ -53,22 +58,43 @@ function placeBeside(window, main) {
     else                                            // no room either side: the wider side, overlapping
         x = m.x - area.x > area.x + area.width - m.x - m.width ? area.x + MARGIN
                                                                 : area.x + area.width - g.width - MARGIN;
-    // bottom edges level, as both sit above the panel; kept inside the work area
-    var y = clamp(m.y + m.height - g.height, area.y + MARGIN, area.y + area.height - g.height - MARGIN);
+    // edges level on the panel's side (bottoms above a bottom panel, tops under a top one); kept
+    // inside the work area
+    var y = nearBottom(m, area) ? m.y + m.height - g.height : m.y;
+    y = clamp(y, area.y + MARGIN, area.y + area.height - g.height - MARGIN);
     window.frameGeometry = {x: Math.round(x), y: Math.round(y), width: g.width, height: g.height};
+}
+
+function keepPanelEdge(window) {
+    // the app changed the window's height (a section folded, the GPU note): Wayland keeps the top
+    // edge, which is right under a top panel; above a bottom panel the bottom edge goes back where
+    // it was instead. Not while the user drags an edge.
+    window.frameGeometryChanged.connect(function (a, b) {
+        var old = b || a;                           // KWin 6 passes the old geometry, KWin 5 the window first
+        var g = window.frameGeometry;
+        if (!old || window.move || window.resize || g.height === old.height || g.width !== old.width)
+            return;
+        var area = workArea(window.output || workspace.activeScreen);
+        // the panel's side is where the main window opened (from the tray); a tall window beside it
+        // can reach nearer the other edge
+        var main = isMain(window) ? null : mainWindow();
+        if (!nearBottom(main ? main.frameGeometry : old, area))
+            return;
+        var y = clamp(old.y + old.height - g.height, area.y + MARGIN, area.y + area.height - g.height - MARGIN);
+        if (Math.round(y) !== Math.round(g.y))
+            window.frameGeometry = {x: g.x, y: Math.round(y), width: g.width, height: g.height};
+    });
 }
 
 function place(window) {
     if (!ours(window) || window.dialog || window.specialWindow)
         return;                                     // message boxes stay centred on their window
     window.keepAbove = KEEP_ABOVE;
-    if (isMain(window)) {
+    if (isMain(window))
         placeMain(window);
-        return;
-    }
-    var main = mainWindow();
-    if (main)
-        placeBeside(window, main);
+    else if (mainWindow())
+        placeBeside(window, mainWindow());
+    keepPanelEdge(window);
 }
 workspace.windowAdded.connect(place);
 
@@ -76,6 +102,8 @@ workspace.windowAdded.connect(place);
 (function () {
     var list = workspace.windowList ? workspace.windowList() : workspace.clientList();
     for (var i = 0; i < list.length; i++)
-        if (ours(list[i]) && !list[i].dialog && !list[i].specialWindow)
+        if (ours(list[i]) && !list[i].dialog && !list[i].specialWindow) {
             list[i].keepAbove = KEEP_ABOVE;
+            keepPanelEdge(list[i]);
+        }
 })();

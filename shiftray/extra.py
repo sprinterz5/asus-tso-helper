@@ -20,15 +20,19 @@ from .config import HOMEPAGE
 from .i18n import tr
 
 ISSUE_URL = HOMEPAGE + "/issues/new?template=bug_report.md"
+# keyboard effects (Laptop Backlight; Fn+F4's "Toggle Aura" walks through them)
+AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
 SPEEDS = [("low", tr("Slow")), ("med", tr("Normal")), ("high", tr("Fast"))]
 
 
 class HeaderPanel(QtWidgets.QWidget):
-    """panel*Header: ButtonSecond strip, Padding(11, 5, 11, 5), icon at 21, bold title at 56."""
+    """panel*Header: ButtonSecond strip, Padding(11, 5, 11, 5), icon at 21, bold title at 56. With
+    fold() a click on the strip opens and closes the section under it (a chevron shows which)."""
 
     def __init__(self, icon_name, title):
         super().__init__()
         self.icon_name = icon_name
+        self.body = None
         self.setObjectName("header")
         self.setAttribute(QtCore.Qt.WA_StyledBackground)
         self.setFixedHeight(25)
@@ -43,10 +47,33 @@ class HeaderPanel(QtWidgets.QWidget):
         lay.addStretch()
         self.right = lay
 
+    def fold(self, body, key, cfg, changed):
+        """body opens and closes; cfg["extra_closed"] remembers the closed ones by key."""
+        self.body, self.key, self.cfg, self.changed = body, key, cfg, changed
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+        self.right.setContentsMargins(44, 0, 6, 0)
+        body.setVisible(key not in cfg.get("extra_closed", []))
+
+    def mousePressEvent(self, event):
+        if self.body is None or event.button() != QtCore.Qt.LeftButton:
+            return super().mousePressEvent(event)
+        closed = set(self.cfg.get("extra_closed", []))
+        opened = self.key in closed
+        closed.symmetric_difference_update({self.key})
+        self.cfg["extra_closed"] = sorted(closed)
+        self.body.setVisible(opened)
+        self.update()
+        self.changed()
+
     def paintEvent(self, e):
         p = QtGui.QPainter(self)
         p.fillRect(self.rect(), w.THEME.button_second)
-        p.drawPixmap(QtCore.QPointF(10, (self.height() - 16) / 2), w.icon(self.icon_name))
+        x = 10
+        if self.body is not None:
+            chevron = "chevron-down" if self.body.isVisibleTo(self.parentWidget()) else "chevron-right"
+            p.drawPixmap(QtCore.QPointF(8, (self.height() - 14) / 2), w.icon(chevron, 14))
+            x = 26
+        p.drawPixmap(QtCore.QPointF(x, (self.height() - 16) / 2), w.icon(self.icon_name))
 
 
 def check(text, left=8):
@@ -104,10 +131,12 @@ class ExtraWindow(QtWidgets.QWidget):
         self.bind_grid.setColumnStretch(2, 2)
         self.bind_grid.setColumnStretch(3, 0)
         root.addWidget(self.bindings)
+        self.bind_head.fold(self.bindings, "bindings", self.cfg, self.folded)
         self.bind_rows = {}
 
         # Laptop Backlight
-        head = HeaderPanel("sunrise", tr("Laptop Backlight"))
+        root.addSpacing(3)  # closed sections stay apart, not one strip
+        backlight_head = head = HeaderPanel("sunrise", tr("Laptop Backlight"))
         self.brightness = w.Slider(0, 3, 1)
         self.brightness.setFixedWidth(250)
         self.brightness.released.connect(self.on_brightness)
@@ -118,6 +147,25 @@ class ExtraWindow(QtWidgets.QWidget):
         bl = QtWidgets.QVBoxLayout(body)
         bl.setContentsMargins(2, 2, 0, 2)
         bl.setSpacing(0)
+        # in G-Helper's main window; set once, so it lives here with the rest of the lighting
+        effect_row = QtWidgets.QHBoxLayout()
+        effect_row.setContentsMargins(6, 4, 6, 4)
+        effect_row.addWidget(QtWidgets.QLabel(tr("Effect")))
+        effect_row.addStretch()
+        self.aura_combo = w.RComboBox()
+        self.aura_combo.setFixedWidth(146)
+        self.aura_combo.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        for key, label in AURA:
+            self.aura_combo.addItem(label, key)
+        self.aura_combo.activated.connect(self.on_effect)
+        effect_row.addWidget(self.aura_combo)
+        self.colour_button = w.ColorButton(tr("Color"), "#" + self.cfg.get("aura_colour", "ffffff"), radius=2)
+        self.colour_button.setFixedSize(90, 20)
+        self.colour_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        self.colour_button.clicked.connect(self.pick_colour)
+        effect_row.addWidget(self.colour_button)
+        bl.addLayout(effect_row)
+        self.show_aura()
         self.awake = check(tr("Awake"))
         self.boot = check(tr("Boot/Shutdown"))
         self.sleep = check(tr("Sleep"))
@@ -168,13 +216,20 @@ class ExtraWindow(QtWidgets.QWidget):
         note_row.addWidget(self.install_idle)
         bl.addLayout(note_row)
         root.addWidget(body)
+        backlight_head.fold(body, "backlight", self.cfg, self.folded)
 
         # Other
-        root.addWidget(HeaderPanel("settings", tr("Other")))
+        root.addSpacing(3)
+        other_head = HeaderPanel("settings", tr("Other"))
+        root.addWidget(other_head)
         other = QtWidgets.QWidget()
         ol = QtWidgets.QVBoxLayout(other)
         ol.setContentsMargins(10, 2, 5, 2)  # Padding(21, 5, 11, 5)
         ol.setSpacing(0)
+        self.situations = check(tr("Situations (experimental): one tile sets the mode, GPU, screen and keyboard"), 2)
+        self.situations.setChecked(bool(self.cfg.get("situations_on")))
+        self.situations.toggled.connect(self.main.set_situations)
+        ol.addWidget(self.situations)
         self.topmost = check(tr("Keep app window always on top"), 2)
         self.topmost.setChecked(bool(self.cfg.get("topmost")))
         self.topmost.toggled.connect(self.on_topmost)
@@ -293,11 +348,12 @@ class ExtraWindow(QtWidgets.QWidget):
         self.accent.toggled.connect(lambda on: self.set_look("desktop_accent", on))
         ol.addWidget(self.accent)
         root.addWidget(other)
+        other_head.fold(other, "other", self.cfg, self.folded)
 
-        # Services
+        # Services: what runs, and Start when something does not
         services = QtWidgets.QWidget()
         sl = QtWidgets.QHBoxLayout(services)
-        sl.setContentsMargins(10, 8, 6, 8)
+        sl.setContentsMargins(10, 8, 0, 6)
         sl.setSpacing(4)
         self.services_icon = QtWidgets.QLabel()
         self.services_label = QtWidgets.QLabel("")
@@ -312,30 +368,37 @@ class ExtraWindow(QtWidgets.QWidget):
         self.services_start.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.services_start.clicked.connect(lambda: (self.main.start_services(), QtCore.QTimer.singleShot(3000, self.refresh)))
         sl.addWidget(self.services_start)
+        root.addWidget(services)
+
+        # one row of equal buttons at the very bottom (Credits came from the main window)
+        bottom = QtWidgets.QHBoxLayout()
+        bottom.setContentsMargins(0, 0, 0, 0)
+        bottom.setSpacing(6)
         self.setup_button = w.RButton(tr("Setup"), "cog", secondary=True, radius=2)
-        self.setup_button.setFixedSize(90, 26)
-        self.setup_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.setup_button.setToolTip(tr("Check and install what this laptop needs (one password)"))
         self.setup_button.clicked.connect(self.main.on_setup)
-        sl.addWidget(self.setup_button)
         self.diag_button = w.RButton(tr("Diagnostics"), secondary=True, radius=2)
-        self.diag_button.setFixedSize(90, 26)
-        self.diag_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.diag_button.setToolTip(tr("Report a problem on GitHub, or save the report: versions, "
                                     "settings and logs, without serial numbers or the computer's name"))
         self.diag_button.clicked.connect(self.on_diagnostics)
-        sl.addWidget(self.diag_button)
         self.changes_button = w.RButton(tr("Changes"), secondary=True, radius=2)
-        self.changes_button.setFixedSize(80, 26)
-        self.changes_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         self.changes_button.setToolTip(tr("What the app changed on the system, and Undo"))
         self.changes_button.clicked.connect(self.main.on_changes)
-        sl.addWidget(self.changes_button)
-        root.addWidget(services)
+        credits = w.RButton(tr("Credits"), "heart", secondary=True, radius=2)
+        credits.clicked.connect(self.main.on_credits)
+        for b in (self.setup_button, self.diag_button, self.changes_button, credits):
+            b.setFixedHeight(26)
+            bottom.addWidget(b, 1)
+        root.addLayout(bottom)
 
         self.root = root
         self.build_bindings()
         self.refresh()
+
+    def folded(self):
+        """A section opened or closed: remember it, and fit the window to what is open."""
+        self.main.save()
+        QtCore.QTimer.singleShot(0, lambda: self.setFixedHeight(self.root.sizeHint().height()))
 
     def set_look(self, key, value):
         self.cfg[key] = value
@@ -551,6 +614,22 @@ class ExtraWindow(QtWidgets.QWidget):
     def on_power(self):
         self.main.bg(hw.set_aura_power, self.awake.isChecked(), self.boot.isChecked(),
                      self.sleep.isChecked(), then=lambda r: self.main.report(r, tr("Backlight power")))
+
+    def show_aura(self):
+        """The effect in cfg, also after Fn+F4 changed it."""
+        self.aura_combo.setCurrentIndex(max(0, self.aura_combo.findData(self.cfg.get("aura_effect", "static"))))
+
+    def on_effect(self, _index):
+        self.cfg["aura_effect"] = self.aura_combo.currentData()
+        self.main.apply_aura()
+
+    def pick_colour(self):
+        colour = QtWidgets.QColorDialog.getColor(
+            QtGui.QColor("#" + self.cfg.get("aura_colour", "ffffff")), self, tr("Color"))
+        if colour.isValid():
+            self.cfg["aura_colour"] = colour.name()[1:]
+            self.colour_button.set_swatch(colour)
+            self.main.apply_aura()
 
     def on_speed(self):
         self.cfg["aura_speed"] = self.speed.currentData()

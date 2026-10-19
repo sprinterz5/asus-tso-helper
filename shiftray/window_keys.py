@@ -13,6 +13,7 @@ from . import backend as hw
 from . import hotkeys
 from . import modes
 from . import shortcuts
+from .extra import AURA
 from .i18n import tr
 
 
@@ -167,10 +168,13 @@ class KeysMixin:
             except OSError:
                 pass
         if action == "aura":
-            i = (self.aura_combo.currentIndex() + 1) % self.aura_combo.count()
-            self.aura_combo.setCurrentIndex(i)
+            keys = [k for k, _ in AURA]
+            current = self.cfg.get("aura_effect", "static")
+            self.cfg["aura_effect"] = keys[(keys.index(current) + 1) % len(keys)] if current in keys else keys[0]
             self.apply_aura()
-            self.toast("input-keyboard-brightness", self.aura_combo.currentText())
+            self.toast("input-keyboard-brightness", dict(AURA)[self.cfg["aura_effect"]])
+            if self.extra is not None:
+                self.extra.show_aura()
         elif action == "performance":  # Modes.GetNext: Silent, Balanced, Turbo, then custom modes
             order = [m[0] for m in modes.all_modes(self.cfg)]
             current = self.cfg.get("active_mode") or hw.get_profile()
