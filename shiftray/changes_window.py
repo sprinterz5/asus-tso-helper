@@ -41,6 +41,9 @@ class ChangesWindow(QtWidgets.QWidget):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
         scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        # the window's background, not the palette's (white with Fusion's light palette): the titles
+        # are drawn in the theme's text colour
+        scroll.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
         self.list_widget = QtWidgets.QWidget()
         self.grid = QtWidgets.QGridLayout(self.list_widget)
         self.grid.setContentsMargins(0, 0, 0, 0)

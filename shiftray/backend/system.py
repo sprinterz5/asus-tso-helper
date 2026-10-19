@@ -59,15 +59,11 @@ def sensors(include_dgpu, fans=True):
     """Cheap sysfs reads, plus nvidia-smi when include_dgpu. Each nvidia-smi run keeps the dGPU
     awake for a few seconds more, so the caller asks rarely (ui.DGPU_TEMP_EVERY). Fan speeds are
     ACPI calls into the firmware: fans=False leaves them out ("fans": None)."""
-    out = {"cpu": None, "igpu": None, "dgpu": None, "fans": {} if fans else None}
+    out = {"cpu": None, "dgpu": None, "fans": {} if fans else None}
     k10 = _hwmon("k10temp") or _hwmon("coretemp")
     if k10:
         t = _read_int(os.path.join(k10, "temp1_input"))
         out["cpu"] = t / 1000 if t is not None else None
-    amdgpu = _hwmon("amdgpu")
-    if amdgpu:
-        t = _read_int(os.path.join(amdgpu, "temp1_input"))
-        out["igpu"] = t / 1000 if t is not None else None
     asus = _hwmon("asus") if fans else None
     if asus:
         for n in (1, 2, 3):
@@ -81,3 +77,12 @@ def sensors(include_dgpu, fans=True):
         if ok and val.strip().isdigit():
             out["dgpu"] = int(val.strip())
     return out
+
+
+def dgpu_watts():
+    """The NVIDIA GPU's power draw in W (nvidia-smi: only ask while it is awake anyway), or None."""
+    ok, val = run("nvidia-smi", "--query-gpu=power.draw", "--format=csv,noheader,nounits", timeout=3)
+    try:
+        return float(val.strip()) if ok else None
+    except ValueError:
+        return None

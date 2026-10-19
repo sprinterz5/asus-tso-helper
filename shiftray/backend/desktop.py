@@ -158,6 +158,13 @@ def set_clamshell(on):
     return True, ""
 
 
+def notify(icon, title, body):
+    """A desktop notification without buttons."""
+    return run("busctl", "--user", "call", "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+               "org.freedesktop.Notifications", "Notify", "susssasa{sv}i", "Shiftray", "0", icon,
+               title, body, "0", "0", "15000", timeout=5)
+
+
 def notify_action(icon, title, body, action):
     """A desktop notification with one button -> its id (for ActionInvoked), or None."""
     ok, out = run("busctl", "--user", "call", "org.freedesktop.Notifications", "/org/freedesktop/Notifications",

@@ -16,8 +16,10 @@ from . import modes
 from . import system_changes
 from . import widgets as w
 from .widgets import ECO, STANDARD
+from .config import HOMEPAGE
 from .i18n import tr
 
+ISSUE_URL = HOMEPAGE + "/issues/new?template=bug_report.md"
 SPEEDS = [("low", tr("Slow")), ("med", tr("Normal")), ("high", tr("Fast"))]
 
 
@@ -209,6 +211,11 @@ class ExtraWindow(QtWidgets.QWidget):
         hints.setChecked(self.cfg.get("game_hints", True))
         hints.toggled.connect(lambda on: (self.cfg.__setitem__("game_hints", on), self.main.save()))
         ol.addWidget(hints)
+        tips = check(tr("Battery tips: sleep drain, NVIDIA awake on battery, low battery"), 2)
+        tips.setChecked(self.cfg.get("battery_tips", True))
+        tips.setToolTip(tr("Notifications only; nothing changes unless you press their button"))
+        tips.toggled.connect(lambda on: (self.cfg.__setitem__("battery_tips", on), self.main.save()))
+        ol.addWidget(tips)
         deep = hw.deep_sleep()
         if deep is not None:
             self.deep = check(tr("Deep sleep (S3): uses almost no battery while asleep"), 2)
@@ -314,8 +321,8 @@ class ExtraWindow(QtWidgets.QWidget):
         self.diag_button = w.RButton(tr("Diagnostics"), secondary=True, radius=2)
         self.diag_button.setFixedSize(90, 26)
         self.diag_button.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-        self.diag_button.setToolTip(tr("Save a report for a bug report: versions, settings and logs, "
-                                    "without serial numbers or the computer's name"))
+        self.diag_button.setToolTip(tr("Report a problem on GitHub, or save the report: versions, "
+                                    "settings and logs, without serial numbers or the computer's name"))
         self.diag_button.clicked.connect(self.on_diagnostics)
         sl.addWidget(self.diag_button)
         self.changes_button = w.RButton(tr("Changes"), secondary=True, radius=2)
@@ -345,6 +352,32 @@ class ExtraWindow(QtWidgets.QWidget):
             QtWidgets.QApplication.exit(0)  # not quit(): the main window would veto it (see ui.quit_app)
 
     def on_diagnostics(self):
+        menu = QtWidgets.QMenu(self)
+        menu.addAction(tr("Report a problem on GitHub…"), self.report_problem)
+        menu.addAction(tr("Save the report to a file…"), self.save_diagnostics)
+        menu.exec(self.diag_button.mapToGlobal(QtCore.QPoint(0, self.diag_button.height())))
+
+    def report_problem(self):
+        """The report goes to the clipboard (not into the link: it is long and personal enough), then
+        a new issue opens with the template that says where to paste it."""
+        self.diag_button.setEnabled(False)
+
+        def done(text):
+            self.diag_button.setEnabled(True)
+            if not text:
+                self.main.report((False, tr("Could not make the report")), tr("Diagnostics"))
+                return
+            QtWidgets.QApplication.clipboard().setText(text)
+            QtGui.QDesktopServices.openUrl(QtCore.QUrl(ISSUE_URL))
+            QtWidgets.QMessageBox.information(
+                self, tr("Report a problem"),
+                tr("The report is copied. In the page that opened, say what happened and paste the "
+                   "report under it (Ctrl+V).") + "\n\n"
+                + tr("Have a look before posting: it has no serial numbers or computer name, but it "
+                     "does have your settings and the app's log."))
+        self.main.bg(lambda: diagnostics.report(self.cfg, self.main.version), then=done)
+
+    def save_diagnostics(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(
             self, tr("Save diagnostics"), os.path.expanduser("~/shiftray-report.txt"), tr("Text (*.txt)"))
         if not path:

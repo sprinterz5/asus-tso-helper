@@ -48,6 +48,19 @@ DGPU_APPS_EVERY = 30
 # in the tray, fan speeds and the keyboard light are read every TRAY_SLOW-th refresh only: each read
 # is an ACPI call into the firmware (about 2 and 3.5 ms), and only the tooltip shows them
 TRAY_SLOW = 5
+# battery tips (Extra: "Battery tips"): a sleep that cost this much per hour gets a hint about deep sleep
+SLEEP_DRAIN_HIGH = 1.5   # % per hour; Modern Standby that works costs about 0.5-1
+SLEEP_REPORT_AFTER = 3600  # s asleep before the drain is worth a notification
+DGPU_AWAKE_TELL = 120    # s on battery with apps keeping the dGPU awake before saying which
+LOW_BATTERY = 20         # % at which Silent (and Eco) is offered once per discharge
+
+
+def duration(seconds):
+    """'1h 07m', or '13m' under an hour."""
+    seconds = int(seconds)
+    if seconds < 3600:
+        return tr("{m}m", m=seconds // 60)
+    return tr("{h}h {m}m", h=seconds // 3600, m=f"{seconds % 3600 // 60:02d}")
 SERVICE_TOOLS = {"asusd": "asusctl", "cardwired": "cardwire"}
 OPTIMIZED_TIP = tr("Switch to Eco on battery and to Standard when plugged in")
 AURA = [("static", tr("Static")), ("breathe", tr("Breathe")), ("rainbow-cycle", tr("Rainbow")), ("pulse", tr("Strobe"))]
@@ -84,6 +97,11 @@ def stylesheet():
     QLabel#pending {{ color: {STANDARD.name()}; }}
     QLabel#banner {{ color: {TURBO.name()}; }}
     QToolTip {{ background: {t.button_main.name()}; color: {t.fore.name()}; border: 1px solid {t.border_main.name()}; }}
+    QScrollBar:vertical {{ background: transparent; width: 8px; margin: 0; }}
+    QScrollBar::handle:vertical {{ background: {t.border_main.name()}; border-radius: 4px; min-height: 24px; }}
+    QScrollBar::handle:vertical:hover {{ background: {t.control_dark.name()}; }}
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
     """
 
 
@@ -252,6 +270,11 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             self, QtCore.SLOT("on_notification_action(QDBusMessage)"))
         self.note_actions = {}      # notification id -> what its button does
         self.games_told = set()     # one hint per game and situation in a session
+        self.sleep_mark = None      # (time, Wh, on AC) when the laptop went to sleep
+        self.dgpu_seen = {}         # app -> since when it keeps the dGPU awake on battery
+        self.dgpu_told = {}         # app -> when the last "dGPU awake on battery" named it
+        self.low_told = False       # the low battery tip came this discharge
+        self.charge_limit = 100
         # back from sleep: firmware and asusd sometimes come back with other settings
         QtDBus.QDBusConnection.systemBus().connect(
             "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
@@ -361,7 +384,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         return p
 
     def build_keyboard(self):
-        p, lay = panel(10, 10, 10, 0)  # Padding(20, 20, 20, 0)
+        # Padding(20, 20, 20, 0) in G-Helper, where the Visual Mode and Slash panels sit above; without
+        # them the screen panel's tip line already makes the gap
+        p, lay = panel(10, 0, 10, 0)
         self.kbd_head = w.Header("keyboard", tr("Laptop Keyboard"))
         self.fn_lock = w.RButton(tr("FN-Lock"), secondary=True, radius=2, borderless=True)
         f = self.fn_lock.font()
@@ -512,6 +537,19 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
                 self.note_actions[note_id] = then
         self.bg(hw.notify_action, "input-gaming", NAME, body, action, then=shown)
 
+    def tip(self, icon, body, action=None, then=None):
+        """A battery tip (Extra: "Battery tips"): a notification, with a button when action is given."""
+        if not self.cfg.get("battery_tips", True):
+            return
+        if not action:
+            self.bg(hw.notify, icon, NAME, body)
+            return
+
+        def shown(note_id):
+            if note_id is not None:
+                self.note_actions[note_id] = then
+        self.bg(hw.notify_action, icon, NAME, body, action, then=shown)
+
     @QtCore.Slot(QtDBus.QDBusMessage)
     def on_notification_action(self, msg):
         args = msg.arguments()
@@ -519,6 +557,91 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             action = self.note_actions.pop(int(args[0]), None)
             if action:
                 action()
+
+    def report_sleep(self, ac):
+        """How much battery the sleep cost; when it was a lot and deep sleep is off, where to change it."""
+        mark, self.sleep_mark = self.sleep_mark, None
+        energy = hw.battery_energy()
+        if not mark or not energy or ac or mark[2]:  # charging before or after: nothing to tell
+            return
+        seconds = time.time() - mark[0]
+        lost_wh = mark[1][0] - energy[0]
+        if seconds < 60 or lost_wh < 0:
+            return
+        hours = seconds / 3600
+        percent = lost_wh / energy[1] * 100
+        log.info(f"sleep: {hours:.1f} h, -{percent:.1f}% ({lost_wh / hours:.2f} W)")
+        if seconds < SLEEP_REPORT_AFTER:
+            return
+        body = tr("Asleep for {time}: the battery lost {percent}% ({watts} W).",
+                  time=duration(seconds),
+                  percent=f"{percent:.0f}", watts=f"{lost_wh / hours:.1f}")
+        if percent / hours >= SLEEP_DRAIN_HIGH and hw.deep_sleep() is False:
+            self.tip("battery-low", body + " " + tr("Deep sleep uses almost none."),
+                     tr("Deep sleep settings"), self.on_extra)
+        else:
+            self.tip("battery", body)
+
+    def check_dgpu_on_battery(self):
+        """On battery, apps that kept the dGPU awake for DGPU_AWAKE_TELL s: one notification
+        listing them all, with Eco. Each app is named again a day later at the earliest."""
+        now = time.monotonic()
+        on_battery = (self.last_ac is False and self.dgpu_was_awake
+                      and self.gpu_current not in ("Integrated", "AsusMuxDgpu", None))
+        apps = self.dgpu_apps if on_battery else []
+        self.dgpu_seen = {a: self.dgpu_seen.get(a, now) for a in apps}
+        due = [a for a, since in self.dgpu_seen.items()
+               if now - since >= DGPU_AWAKE_TELL and now - self.dgpu_told.get(a, -86400) >= 86400]
+        if not due or not self.cfg.get("battery_tips", True):
+            return
+        for a in apps:
+            self.dgpu_told[a] = now
+
+        def told(data):
+            games, watts = data
+            if games:  # playing on battery is a choice
+                return
+            body = tr("On battery, the NVIDIA GPU is kept awake by: {apps}.", apps=", ".join(apps))
+            if watts:
+                body += " " + tr("It draws about {watts} W; Eco turns it off.", watts=f"{watts:.0f}")
+            self.tip("video-display", body, tr("Switch to Eco"), lambda: self.on_gpu("Integrated"))
+        self.bg(lambda: (hw.dgpu_games(), hw.dgpu_watts()), then=told)
+
+    def check_low_battery(self):
+        """At LOW_BATTERY % on battery in a heavier mode: Silent (and Eco), once per discharge."""
+        bat = self.bat
+        if not bat or bat["percent"] is None:
+            return
+        if bat["status"] != "Discharging":
+            if bat["status"] in ("Charging", "Full"):
+                self.low_told = False
+            return
+        if self.low_told or bat["percent"] > LOW_BATTERY or self.gpu_current is None:  # GPU not read yet
+            return
+        self.low_told = True
+        silent = self.last_profile == "quiet" and not self.cfg.get("active_mode")
+        eco = self.gpu_current == "Hybrid" and hw.cardwire_mode() is not None
+        if silent and not eco:
+            return
+
+        # no "N min more in Silent": the week's average per mode mixes in what was done in each mode
+        # (Silent often averages more than Balanced), so it is not the mode's cost
+        if eco and not silent:
+            body = tr("Battery at {percent}%. Silent and Eco make it last longer.", percent=bat["percent"])
+            action = tr("Switch to Silent and Eco")
+        elif eco:
+            body = tr("Battery at {percent}%. Eco makes it last longer.", percent=bat["percent"])
+            action = tr("Switch to Eco")
+        else:
+            body = tr("Battery at {percent}%. Silent makes it last longer.", percent=bat["percent"])
+            action = tr("Switch to Silent")
+
+        def switch():
+            if not silent:
+                self.on_profile("quiet", notify=True)
+            if eco:
+                self.on_gpu("Integrated")
+        self.tip("battery-caution", body, action, switch)
 
     @QtCore.Slot(QtDBus.QDBusMessage)
     def on_gpu_blocked(self, _msg):
@@ -543,7 +666,10 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
 
     @QtCore.Slot(QtDBus.QDBusMessage)
     def on_sleep(self, msg):
-        if msg.arguments() and not msg.arguments()[0]:   # False: resumed
+        if msg.arguments() and msg.arguments()[0]:   # True: going to sleep, read it now (sysfs, quick)
+            energy = hw.battery_energy()
+            self.sleep_mark = (time.time(), energy, hw.ac_online()) if energy else None
+        elif msg.arguments():                        # False: resumed
             QtCore.QTimer.singleShot(3000, self.after_resume)  # let the firmware settle first
 
     def after_resume(self):
@@ -551,6 +677,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         asleep, and the firmware sometimes resets the mode, the lighting or the screen rate."""
         log.info("resumed from sleep")
         ac = hw.ac_online()
+        self.report_sleep(ac)
         self.last_ac = ac
         if self.cfg.get("screen") == "auto":
             self.apply_screen_auto()
@@ -755,10 +882,12 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             self.dgpu_apps_at = now
         elif not awake:
             self.dgpu_apps = []
+            self.dgpu_seen = {}
         self.bg(lambda: dict(hw.sensors(query, fans=full), dgpu_apps=hw.dgpu_users() if ask_apps else None),
                 then=self.show_sensors, key="sensors")
 
         limit = hw.get_charge_limit()
+        self.charge_limit = limit or 100
         if limit is not None and not self.slider.dragging:
             self.slider.set_value(limit)
             self.show_limit(limit)
@@ -776,11 +905,12 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
                 text = tr("Discharging: {watts}W", watts=f"{self.bat['watts']:.1f}")
         self.bat_head.info.setText(text)
         if text and self.isVisible():  # time left / to full is shown in the window only
-            self.bg(hw.battery_time, then=lambda t: (setattr(self, "bat_time", t), self.update_charge_label()),
-                    key="battery_time")
+            self.bg(hw.battery_time, self.charge_limit,
+                    then=lambda t: (setattr(self, "bat_time", t), self.update_charge_label()), key="battery_time")
         else:
             self.bat_time = None
         self.update_charge_label()
+        self.check_low_battery()
 
         if full:
             level = hw.get_kbd_level()
@@ -840,9 +970,10 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
             text = tr("Charge: {percent}%", percent=bat["percent"]) if bat and bat["percent"] is not None else ""
             if text and self.bat_time:
                 kind, secs = self.bat_time
-                time_text = tr("{h}h {m}m", h=secs // 3600, m=f"{secs % 3600 // 60:02d}")
+                time_text = duration(secs)
                 text += " (" + (tr("{time} left", time=time_text) if kind == "left" else
-                                tr("{time} to full", time=time_text)) + ")"
+                                tr("{time} to {limit}%", time=time_text, limit=self.charge_limit)
+                                if kind == "to limit" else tr("{time} to full", time=time_text)) + ")"
         self.charge_label.setText(text)
 
     def show_limit(self, value):
@@ -867,7 +998,14 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
         if s["dgpu"] is not None:
             self.dgpu_temp = s["dgpu"]
         cpu = f": {s['cpu']:.0f}°C" if s["cpu"] is not None else ""
-        gpu = f": {self.dgpu_temp}°C" if self.dgpu_temp is not None else ""
+        if self.dgpu_temp is not None:
+            gpu = f": {self.dgpu_temp}°C"
+        elif self.gpu_current == "Integrated":
+            gpu = ": " + tr("off")
+        elif not self.dgpu_was_awake:
+            gpu = ": " + tr("sleeping")
+        else:
+            gpu = ""
         self.perf_head.info.setText(f"CPU{cpu}  {fan('cpu')}")
         self.gpu_head.info.setText(f"GPU{gpu}  {fan('gpu')}")
         if self.tray:
@@ -878,6 +1016,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, QtWidgets.QWidget):
                 if s["dgpu_apps"] and s["dgpu_apps"] != self.dgpu_apps:
                     self.check_games()
                 self.dgpu_apps = s["dgpu_apps"]
+                self.check_dgpu_on_battery()
             # the dGPU's state, and what keeps it from sleeping (ROG Control Center)
             if self.gpu_current == "Integrated":
                 tip += "\n" + tr("dGPU: off (Eco)")

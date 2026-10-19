@@ -72,16 +72,47 @@ def battery_status():
     }
 
 
-def battery_time():
-    """UPower's smoothed estimate -> ("left" | "to full", seconds), or None."""
-    path = "/org/freedesktop/UPower/devices/DisplayDevice"
-    for prop, kind in (("TimeToEmpty", "left"), ("TimeToFull", "to full")):
-        ok, out = run("busctl", "--system", "get-property", "org.freedesktop.UPower", path,
-                      "org.freedesktop.UPower.Device", prop, timeout=3)
+def battery_energy():
+    """(Wh now, Wh when full) from sysfs, or None. Batteries that report charge (µAh) instead are
+    converted with their voltage."""
+    bat = _battery()
+    if not bat:
+        return None
+    now, full = _read_int(os.path.join(bat, "energy_now")), _read_int(os.path.join(bat, "energy_full"))
+    if now is None or full is None:
+        charge, charge_full = _read_int(os.path.join(bat, "charge_now")), _read_int(os.path.join(bat, "charge_full"))
+        volts = _read_int(os.path.join(bat, "voltage_min_design")) or _read_int(os.path.join(bat, "voltage_now"))
+        if None in (charge, charge_full, volts):
+            return None
+        now, full = charge * volts / 1e6, charge_full * volts / 1e6  # µAh x µV -> µWh
+    return (now / 1e6, full / 1e6) if full else None
+
+
+def time_to_limit(limit):
+    """Seconds until charging stops at limit %: the energy still missing over the charging power."""
+    energy, status = battery_energy(), battery_status()
+    if not energy or not status or status["status"] != "Charging" or not status["watts"]:
+        return None
+    missing = energy[1] * limit / 100 - energy[0]
+    return int(missing / status["watts"] * 3600) if missing > 0 else None
+
+
+def battery_time(limit=100):
+    """UPower's smoothed estimate -> ("left" | "to full" | "to limit", seconds), or None. UPower
+    counts to 100% even when the charge limit stops earlier: then the time is to the limit."""
+    def upower(prop):
+        ok, out = run("busctl", "--system", "get-property", "org.freedesktop.UPower",
+                      "/org/freedesktop/UPower/devices/DisplayDevice", "org.freedesktop.UPower.Device", prop, timeout=3)
         m = re.match(r"x (\d+)", out) if ok else None
-        if m and int(m.group(1)) > 0:
-            return kind, int(m.group(1))
-    return None
+        return int(m.group(1)) if m and int(m.group(1)) > 0 else None
+    left = upower("TimeToEmpty")
+    if left:
+        return "left", left
+    if limit < 100:
+        secs = time_to_limit(limit)
+        return ("to limit", secs) if secs else None
+    full = upower("TimeToFull")
+    return ("to full", full) if full else None
 
 
 def battery_cycles():

@@ -102,7 +102,9 @@ from .battery import (  # noqa: F401
     ac_online,
     battery_health,
     battery_status,
+    battery_energy,
     battery_time,
+    time_to_limit,
     battery_cycles,
     usb_c_charger,
     MODE_LOG,
@@ -142,6 +144,7 @@ from .desktop import (  # noqa: F401
     _clamshell_key,
     clamshell,
     set_clamshell,
+    notify,
     notify_action,
 )
 from .system import (  # noqa: F401
@@ -151,5 +154,6 @@ from .system import (  # noqa: F401
     cpu_name,
     services_running,
     model_name,
+    dgpu_watts,
     sensors,
 )
