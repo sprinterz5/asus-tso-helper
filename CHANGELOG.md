@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.8.0
+- **Battery tips** (notifications only; Extra → "Battery tips" turns them off):
+  - after a sleep of an hour or more on battery, how much it cost; when it was a lot and the laptop
+    sleeps in s2idle, a button to the deep sleep setting;
+  - on battery, the apps that kept the NVIDIA GPU awake for 2 minutes, in one notification, with
+    its draw and Eco;
+  - at 20% in a heavier mode, Silent and Eco, once per discharge.
+- The charge time counts to the charge limit ("35m to 85%"), not to 100%.
+- Extra → Diagnostics → **Report a problem on GitHub**: copies the report and opens a new issue
+  with a template that says where to paste it. Saving it to a file is still there.
+- The GPU line says "GPU: off" in Eco and "GPU: sleeping" while the NVIDIA GPU sleeps, instead of
+  an empty temperature.
+- System changes: the list was white with white titles when Qt used its light palette; scroll bars
+  follow the app's theme everywhere.
+- The integrated GPU's temperature is no longer read: nothing showed it, and on some AMD laptops
+  reading it can hang the kernel.
+
 ## 0.7.1
 - Eco after a kernel update: Cardwire, started before the NVIDIA driver was built and loaded,
   does not know the NVIDIA GPU is a discrete one and refuses Eco. The app now explains that and
