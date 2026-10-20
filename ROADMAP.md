@@ -79,6 +79,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 | 8 | ~~CPU Boost on/off per mode (Fans → Advanced)~~ | **Done in 0.4.0**: cpufreq `boost`; Setup lets the user's group write it (tmpfiles.d) | Grant write access in Setup (udev/tmpfiles), no prompt per change |
 | 9 | GPU clock limits | `nvidia-smi -lgc / -lmc` (root) | Core/memory **offsets** depend on the driver version (NVML `SetClockOffsets`) |
 | 10 | ~~MangoHud toggle as a key action~~ | **Done in 0.4.0**: `mangohudctl toggle no_display` | Only a key action, no overlay of our own |
+| 11 | **Screen power saving on battery** | AMD's content-adaptive backlight (`/sys/class/drm/card*-eDP-*/amdgpu/panel_power_savings`, 0-4) on battery, off when plugged, next to Screen's Auto (60 Hz). Writing it needs root: a udev rule giving the user's group write access, like CPU Boost's, listed in Changes | ~0.5-1 W at idle on the FA507NV (≈ +40 min on 10 W). AMD iGPUs only; the image's contrast changes slightly. Other savings found there (PCIe ASPM, Wi-Fi power save, PSR) were left out: risky with Realtek Wi-Fi, and amdgpu turns PSR off on this panel |
 
 ### Priority 3: other laptops, distributions and desktops
 Everything here is needed by someone, but cannot be tested on the FA507NV this was built on.
