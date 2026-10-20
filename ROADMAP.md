@@ -74,7 +74,7 @@ Legend: ✅ done · 🟡 planned · ⛔ not possible / not worth it (reason give
 ### Priority 2: useful
 | # | Feature | How | Notes |
 |---|---|---|---|
-| 6 | **Smart mode** (Cardwire) | dGPU blocked for everything except allowed apps (Steam games, "Launch using Discrete Graphics Card" in KDE) | Stable in Cardwire 0.12; a fifth GPU button or an Eco option |
+| 6 | **GPU per app** (Cardwire Smart mode) | A window listing the apps Cardwire knows (`SmartPolicy.GetAppPolicies`), each set to the integrated GPU or the NVIDIA one (`SetAppPolicy`); Smart mode keeps the dGPU off for everything else. Asked for on Reddit (TUF F16, CachyOS) | Waits for Cardwire 0.13 stable, which adds "force this GPU" to the policies. Until then: KDE's "Run using dedicated graphics card", Steam's `prime-run %command%` |
 | 7 | ~~Hint when an app keeps the dGPU awake~~ | **Done in 0.4.0**: tray tooltip "dGPU awake: firefox" from Cardwire's `Gpu.Lsof` | ROG Control Center, g-helper-linux |
 | 8 | ~~CPU Boost on/off per mode (Fans → Advanced)~~ | **Done in 0.4.0**: cpufreq `boost`; Setup lets the user's group write it (tmpfiles.d) | Grant write access in Setup (udev/tmpfiles), no prompt per change |
 | 9 | GPU clock limits | `nvidia-smi -lgc / -lmc` (root) | Core/memory **offsets** depend on the driver version (NVML `SetClockOffsets`) |
