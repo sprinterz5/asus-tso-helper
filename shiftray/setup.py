@@ -19,6 +19,7 @@ from . import system_changes
 from . import conflicts
 
 REQUIRED, RECOMMENDED, OPTIONAL, INFO = "required", "recommended", "optional", "info"
+USER_STEPS = {"powerdevil"}  # done as the user, in the home folder: no password
 OLD_COPR = "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:lukenukem:asus-linux.repo"
 TERRA_INSTALL = ("dnf install -y --nogpgcheck --repofrompath "
                  "'terra,https://repos.fyralabs.com/terra$releasever' terra-release")
@@ -129,6 +130,12 @@ def checks():
                "level": RECOMMENDED, "fix": bool(c.service), "conflict": c,
                "detail": c.why + (" " + tr("Set up stops it (Undo starts it again).") if c.service else "")}
         rows.append(row)
+    if hw.powerdevil_ddcutil_crash():
+        rows.append(check("powerdevil", "KDE power management in Eco",
+                          any(os.path.exists(p) for p in hw.POWERDEVIL_DROPINS), RECOMMENDED,
+                          "PowerDevil crashes at start while Eco hides the NVIDIA GPU (a ddcutil bug, fixed in "
+                          "ddcutil 3.0): no battery icon, dimming or lid action. Starts it without ddcutil; "
+                          "only external monitors' brightness over DDC is lost. No password."))
     desktop = os.environ.get("XDG_CURRENT_DESKTOP", "")
     rows.append(check("kde", "KDE Plasma", "KDE" in desktop.upper(), INFO,
                       "" if "KDE" in desktop.upper() else
@@ -313,15 +320,27 @@ class SetupWindow(QtWidgets.QWidget):
         fixable = any(not r["ok"] and r["fix"] for r in self.rows)
         self.go.setEnabled(fixable and self.proc is None)
         self.go.setText(tr("Set up") if fixable else tr("All set"))
-        QtCore.QTimer.singleShot(0, self.adjustSize)
+        QtCore.QTimer.singleShot(0, self.fit)
+
+    def fit(self):
+        """adjustSize() takes the wrapped details at one line each; the layout's height for this
+        width counts them all."""
+        self.resize(self.width(), max(self.layout().heightForWidth(self.width()), self.minimumSizeHint().height()))
 
     def run(self):
-        """One password for everything in the list (each row already says what it does)."""
+        """One password for everything in the list (each row already says what it does); the steps in
+        the home folder first, without one."""
         self.todo = {r["key"] for r in self.rows if not r["ok"] and r["fix"]}
         self.go.setEnabled(False)
         self.later.setEnabled(False)
         self.log.clear()
         self.log.show()
+        if "powerdevil" in self.todo:
+            ok, out = hw.set_powerdevil_ddcutil(True)
+            self.log.appendPlainText("== " + tr("KDE power management in Eco") + "\n" + (out or ("OK" if ok else "")))
+        if not self.todo - USER_STEPS:
+            self.done(0, None)
+            return
         self.proc = QtCore.QProcess(self)
         self.proc.setProcessChannelMode(QtCore.QProcess.MergedChannels)
         self.proc.setStandardInputFile(QtCore.QProcess.nullDevice())  # a question must fail, not hang

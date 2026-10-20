@@ -159,5 +159,35 @@ class ChargeLimit6080(unittest.TestCase):
         self.assertEqual(battery.firmware_limit(85, None), 85)
 
 
+class PowerdevilDdcutil(unittest.TestCase):
+    """PowerDevil crashes in libddcutil 2.x while Cardwire's Eco blocks the card (ddcutil#641)."""
+
+    def run_with(self, result="success", version="2.2.1", lockdown="none [integrity] confidentiality",
+                 cardwire=True, desktop="KDE"):
+        from shiftray.backend import desktop as d
+
+        def fake_run(*cmd, timeout=None):
+            if cmd[:2] == ("systemctl", "--user"):
+                return True, result
+            if cmd[0] == "rpm":
+                return True, version
+            if cmd[:2] == ("systemctl", "is-active"):
+                return cardwire, ""
+            return False, ""
+        with mock.patch.object(d, "run", side_effect=fake_run), \
+                mock.patch.object(d.shutil, "which", side_effect=lambda n: n == "rpm"), \
+                mock.patch.object(d, "_read_lockdown", return_value=lockdown), \
+                mock.patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": desktop}):
+            return d.powerdevil_ddcutil_crash()
+
+    def test_who_gets_the_fix(self):
+        self.assertTrue(self.run_with())                                   # the author's laptop
+        self.assertFalse(self.run_with(version="3.0.2"))                   # fixed ddcutil
+        self.assertFalse(self.run_with(lockdown="[none] integrity"))       # no Secure Boot: card unbound
+        self.assertFalse(self.run_with(cardwire=False))
+        self.assertTrue(self.run_with(version="3.0.2", result="core-dump"))  # crashed anyway
+        self.assertIsNone(self.run_with(desktop="GNOME"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -462,5 +462,9 @@
  "Med": "Средне",
  "High": "Ярко",
  "lights med": "подсветка средне",
- "lights high": "подсветка ярко"
+ "lights high": "подсветка ярко",
+ "KDE power management in Eco": "Управление питанием KDE в Eco",
+ "KDE power management without ddcutil": "Управление питанием KDE без ddcutil",
+ "PowerDevil crashed at start while Eco hides the NVIDIA GPU (a ddcutil bug, fixed in ddcutil 3.0), leaving no battery icon, dimming or lid action. It now starts without ddcutil; only external monitors' brightness over DDC is lost.": "PowerDevil падал при запуске, пока Eco прячет видеокарту NVIDIA (ошибка ddcutil, исправлена в ddcutil 3.0): не было значка батареи, затемнения и реакции на крышку. Теперь он запускается без ddcutil; теряется только яркость внешних мониторов по DDC.",
+ "PowerDevil crashes at start while Eco hides the NVIDIA GPU (a ddcutil bug, fixed in ddcutil 3.0): no battery icon, dimming or lid action. Starts it without ddcutil; only external monitors' brightness over DDC is lost. No password.": "PowerDevil падает при запуске, пока Eco прячет видеокарту NVIDIA (ошибка ddcutil, исправлена в ddcutil 3.0): нет значка батареи, затемнения и реакции на крышку. Запускает его без ddcutil; теряется только яркость внешних мониторов по DDC. Без пароля."
 }

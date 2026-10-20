@@ -203,6 +203,7 @@ Undo (the root ones together, one password):
 | power-profiles-daemon instead of tuned-ppd (Fedora) | Setup | medium | Undo |
 | Cardwire instead of supergfxd | Setup | medium | shown: re-enable supergfxd |
 | Kernel option `mem_sleep_default=deep` | Extra → Deep sleep (S3 laptops only) | high | Undo |
+| KDE's PowerDevil starts without ddcutil (a drop-in in your home folder) | Setup, on KDE with Secure Boot and ddcutil 2.x, where PowerDevil crashes in Eco ([ddcutil#641](https://github.com/rockowitz/ddcutil/issues/641)) | low | Undo |
 | Autostart, menu entry, KWin placement script (home folder) | first start | low | Undo |
 
 The list lives in [`system_changes.py`](shiftray/system_changes.py); a change that is not
@@ -253,6 +254,14 @@ Most TUF and some ROG models stop charging only at 60-80% or at 100%; any other 
 full, so the slider offers only 60, 80 and 100 there. Also, while the laptop is switched off and
 plugged in, the firmware forgets the limit and charges to 100%; the limit is back once asusd
 starts. In sleep it holds.
+</details>
+
+<details>
+<summary><b>KDE lost the battery icon, screen dimming or the lid action</b></summary>
+
+PowerDevil, KDE's power manager, crashes at start while Eco hides the NVIDIA GPU, on Secure Boot
+systems with ddcutil 2.x (Fedora 44 among them; fixed in ddcutil 3.0). **Extra → Setup** has a row
+for it: PowerDevil then starts without ddcutil, losing only external monitors' brightness over DDC.
 </details>
 
 <details>

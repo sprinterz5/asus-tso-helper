@@ -186,6 +186,12 @@ def changes():
                    tr("KDE's own switch is set to \"leave unchanged\", so it does not fight the mode this app "
                       "remembers per power source."),
                    LOW, False, _kde_profiles_applied, undo_user=_kde_profiles_undo),
+            Change("powerdevil", tr("KDE power management without ddcutil"),
+                   tr("PowerDevil crashed at start while Eco hides the NVIDIA GPU (a ddcutil bug, fixed in "
+                      "ddcutil 3.0), leaving no battery icon, dimming or lid action. It now starts without "
+                      "ddcutil; only external monitors' brightness over DDC is lost."),
+                   LOW, False, lambda: any(os.path.exists(p) for p in hw.POWERDEVIL_DROPINS),
+                   undo_user=lambda: hw.set_powerdevil_ddcutil(False)),
             Change("clamshell", tr("Keep working with the lid closed"),
                    tr("KDE setting you can turn on in Extra."),
                    LOW, False, lambda: bool(hw.clamshell()) and "clamshell" in journal(), undo_user=_clamshell_undo),

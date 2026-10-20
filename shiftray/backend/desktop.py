@@ -135,6 +135,70 @@ def _powerdevil_reload():
         "org.kde.Solid.PowerManagement", "reparseConfiguration", timeout=5)
 
 
+# PowerDevil 6 with libddcutil 2.x crashes at start while Cardwire's Eco hides the NVIDIA GPU: under
+# Secure Boot (kernel lockdown) Cardwire blocks the card but leaves its /sys/class/drm entries listed,
+# and ddcutil 2.x dereferences the connector it cannot read (rockowitz/ddcutil#641, fixed in 3.0).
+# Without PowerDevil KDE has no battery icon, dimming or lid action. Its POWERDEVIL_NO_DDCUTIL skips
+# ddcutil; only DDC brightness of external monitors is lost.
+POWERDEVIL_DIR = os.path.expanduser("~/.config/systemd/user/plasma-powerdevil.service.d")
+POWERDEVIL_DROPIN = os.path.join(POWERDEVIL_DIR, "shiftray-no-ddcutil.conf")
+POWERDEVIL_DROPINS = [POWERDEVIL_DROPIN, os.path.join(POWERDEVIL_DIR, "no-ddcutil.conf")]  # + a hand-made one
+
+
+def ddcutil_version():
+    """libddcutil's version from the package manager as (major, minor), or None."""
+    for cmd in (("rpm", "-q", "--qf", "%{VERSION}", "libddcutil"), ("pacman", "-Q", "ddcutil"),
+                ("dpkg-query", "-W", "-f", "${Version}", "libddcutil5")):
+        if shutil.which(cmd[0]):
+            ok, out = run(*cmd, timeout=5)
+            parts = out.split()[-1].split(".") if ok and out.split() else []
+            if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
+                return int(parts[0]), int(parts[1])
+    return None
+
+
+def powerdevil_ddcutil_crash():
+    """True when this KDE session is open to the crash: PowerDevil links libddcutil 2.x, Cardwire
+    runs, and the kernel is locked down (Secure Boot) so Cardwire blocks cards without unbinding
+    them. Also True when PowerDevil already died of a crash. None off KDE."""
+    if "KDE" not in os.environ.get("XDG_CURRENT_DESKTOP", "").upper():
+        return None
+    ok, out = run("systemctl", "--user", "show", "plasma-powerdevil.service", "-p", "Result", "--value", timeout=5)
+    if ok and out.strip() == "core-dump":
+        return True
+    version = ddcutil_version()
+    locked = "[none]" not in (_read_lockdown() or "[none]")
+    cardwire = run("systemctl", "is-active", "--quiet", "cardwired", timeout=5)[0]
+    return bool(version and version < (3, 0) and locked and cardwire)
+
+
+def _read_lockdown():
+    try:
+        with open("/sys/kernel/security/lockdown") as f:
+            return f.read()
+    except OSError:
+        return None
+
+
+def set_powerdevil_ddcutil(skip):
+    """skip: PowerDevil starts without ddcutil (a drop-in in the home folder), and is started again."""
+    if skip:
+        os.makedirs(POWERDEVIL_DIR, exist_ok=True)
+        with open(POWERDEVIL_DROPIN, "w") as f:
+            f.write("# Shiftray: PowerDevil without ddcutil, which crashes while Cardwire's Eco hides the NVIDIA\n"
+                    "# GPU (rockowitz/ddcutil#641, fixed in ddcutil 3.0). Undo in Shiftray: Extra -> Changes.\n"
+                    "[Service]\nEnvironment=POWERDEVIL_NO_DDCUTIL=1\n")
+    else:
+        for path in POWERDEVIL_DROPINS:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+    run("systemctl", "--user", "daemon-reload", timeout=10)
+    run("systemctl", "--user", "reset-failed", "plasma-powerdevil.service", timeout=5)
+    return run("systemctl", "--user", "restart", "plasma-powerdevil.service", timeout=20)
+
+
 def _clamshell_key(source):
     return ("--file", "powerdevilrc", "--group", source, "--group", "SuspendAndShutdown",
             "--key", "InhibitLidActionWhenExternalMonitorPresent")

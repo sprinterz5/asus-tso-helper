@@ -67,6 +67,9 @@ def report(cfg, version):
         f"lockdown: {hw._read('/sys/kernel/security/lockdown')}",
         f"lsm: {hw._read('/sys/kernel/security/lsm')}",
         f"nvidia driver: {hw._read('/sys/module/nvidia/version') or 'not loaded'}",
+        f"libddcutil: {hw.ddcutil_version()}; powerdevil: "
+        f"{_cmd('systemctl', '--user', 'show', 'plasma-powerdevil.service', '-p', 'ActiveState,Result', '--value')}"
+        .replace("\n", " "),
     ])
     out += _section("Packages", [f"{p}: {_package(p)}" for p in
                                  ("asusctl", "cardwire", "supergfxctl", "power-profiles-daemon",
