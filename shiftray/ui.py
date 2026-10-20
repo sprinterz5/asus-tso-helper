@@ -23,6 +23,7 @@ from . import system_changes
 from . import changes_window
 from . import conflicts
 from . import setup
+from . import notifications
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
 from . import widgets as w
 from .config import APP, NAME, VERSION, HOMEPAGE, DONATE_URL, AUTOSTART, quit_app, load_config, save_config  # noqa: F401 (ui.VERSION etc. still work)
@@ -273,6 +274,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
             "", "/org/freedesktop/Notifications", "org.freedesktop.Notifications", "ActionInvoked",
             self, QtCore.SLOT("on_notification_action(QDBusMessage)"))
         self.note_actions = {}      # notification id -> what its button does
+        self.notifier = notifications.Notifier(NAME, APP)
         self.games_told = set()     # one hint per game and situation in a session
         self.sleep_mark = None      # (time, Wh, on AC) when the laptop went to sleep
         self.dgpu_seen = {}         # app -> since when it keeps the dGPU awake on battery
@@ -489,15 +491,17 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         if key in self.games_told or not self.cfg.get("game_hints", True):
             return
         self.games_told.add(key)
-
-        def shown(note_id):
-            if note_id is not None:
-                self.note_actions[note_id] = then
-        self.bg(hw.notify_action, "input-gaming", NAME, body, action, then=shown)
+        self.notify("input-gaming", body, action, then)
 
     def tip(self, icon, body, action=None, then=None):
         """A battery tip (Extra: "Battery tips"): a notification, with a button when action is given."""
-        if not self.cfg.get("battery_tips", True):
+        if self.cfg.get("battery_tips", True):
+            self.notify(icon, body, action, then)
+
+    def notify(self, icon, body, action=None, then=None):
+        """From the app's own D-Bus connection, so the desktop keeps the button (notifications.py);
+        without dbus-python through busctl, where a click on the notification does it instead."""
+        if self.notifier.send(icon, NAME, body, action, then):
             return
         if not action:
             self.bg(hw.notify, icon, NAME, body)
