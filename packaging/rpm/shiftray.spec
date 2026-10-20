@@ -1,5 +1,5 @@
 Name:           shiftray
-Version:        0.9.2
+Version:        0.9.3
 Release:        1%{?dist}
 Summary:        asusctl and Cardwire in one small app: modes, GPU, fans and battery for ASUS laptops
 
@@ -61,6 +61,9 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/%{name}.desktop
 %{_udevrulesdir}/70-%{name}.rules
 
 %changelog
+* Tue Oct 20 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.9.3-1
+- The NVIDIA GPU no longer stays awake because of the app; notification buttons show up
+
 * Tue Oct 20 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.9.2-1
 - Setup fixes KDE power management in Eco (PowerDevil crash in ddcutil 2.x)
 

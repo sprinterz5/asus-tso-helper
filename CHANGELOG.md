@@ -1,14 +1,16 @@
 # Changelog
 
-## Unreleased
+## 0.9.3
 - **The NVIDIA GPU no longer stays awake because of the app.** Each temperature read (nvidia-smi)
   wakes the dGPU for about 17 seconds, and with the window open it was read every 12, so in Standard
   the dGPU never slept again, on battery too (about 8 W). It is now read only while an app such as
   a game keeps the dGPU awake anyway. nvidia-smi is no longer named as what keeps it awake, nor
   offered for closing before Eco.
-- **Notification buttons show up.** "Switch to Eco", "Switch to Turbo" and the others were sent as
-  the click-on-notification action, which KDE and GNOME draw no button for; they are buttons now, and
-  a click on the notification still does the same.
+- **Notification buttons show up.** "Switch to Eco", "Switch to Turbo" and the others never
+  appeared: the tips were sent by a busctl call that ended at once, and Plasma drops the buttons of
+  a notification whose sender is gone. The app now sends them from its own D-Bus connection and
+  handles the button itself (a click on the notification does the same); they also carry the app's
+  icon now.
 
 ## 0.9.2
 - **KDE power management in Eco**: PowerDevil crashed at start while Eco hid the NVIDIA GPU (Secure
