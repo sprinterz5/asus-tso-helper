@@ -44,8 +44,11 @@
   ([details](#what-it-changes-on-your-system)).
 - **G-Helper's design.** Small windows that open at the tray icon, the same layout and defaults.
   The interface is [seerge's](https://github.com/seerge) work.
-- **Lightweight.** A single 50 MB AppImage, or a 250 KB package on the system's Python and Qt. In
+- **Lightweight.** A single 29 MB AppImage, or a 250 KB package on the system's Python and Qt. In
   the tray it starts no background processes, only reads a few system files every 2 seconds.
+- **Notices things and says so.** When the battery drained in sleep, when an app keeps the NVIDIA
+  GPU awake on battery, when a game runs in Eco or Silent, a notification says it once, with a
+  button to fix it. Nothing changes unless you press it.
 - **Eco without a logout.** GPU modes go through [Cardwire](https://opengamingcollective.github.io/cardwire/):
   Eco and Standard switch in a moment, and HDMI keeps working.
 - **One password, once.** On first start a Setup window installs what the laptop still needs
@@ -62,18 +65,20 @@
 - Fan curves for CPU and GPU, calibrated to real RPM, with factory defaults
 - CPU power limits (SPL, sPPT, fPPT), NVIDIA Dynamic Boost and temperature target
 - CPU Boost and the CPU's power mode (EPP) per mode
-- Situations (experimental): On the go, Desk, Gaming, Quiet, each setting the mode, GPU, screen and
-  keyboard light with one click
+- Situations (experimental, [below](#situations)): On the go, Desk, Gaming, Quiet, each setting the
+  mode, GPU, screen and keyboard light with one click
 
 **GPU**
 - Eco, Standard, Ultimate (MUX) and Optimized (Eco on battery)
-- The tray tooltip names the apps keeping the dGPU awake
+- The tray tooltip names the apps keeping the dGPU awake; on battery a notification names them too
+- A game started in Eco or Silent gets a hint to switch
 
 **Screen, keyboard, battery**
 - 60 Hz, max Hz or automatic by power source, panel overdrive
 - Aura effects, colour, speed, brightness, backlight timeout, lighting on boot and sleep
 - Charge limit (only the values the firmware keeps, on models that take just 60 / 80 / 100),
-  one-time charge to 100%, battery health, time left
+  one-time charge to 100%, battery health, time left or time to the limit
+- Battery history, what each mode drew, how much a night's sleep cost
 
 **Keys and system**
 - Actions for Fn+F4, the Armoury key and other laptop keys, plus any keyboard shortcut
@@ -82,6 +87,24 @@
   Cardwire and firmware updates in one window
 - Light and dark theme following the desktop, optionally in the desktop's accent colour
 - English and Russian; a translation is one JSON file
+
+<br clear="right">
+
+## Situations
+
+<img src="docs/situations.png" width="425" align="right" alt="Situations: four tiles and the picked one's settings">
+
+An experimental layout, off by default: **Extra → Other → Situations**. Four tiles take the place
+of the Mode, GPU Mode and Screen blocks:
+
+- **On the go**: Silent, Eco, 60 Hz, dim keyboard light
+- **Desk**: Balanced, Standard, max Hz
+- **Gaming**: Turbo, Standard, max Hz, bright keyboard light
+- **Quiet**: Silent, Optimized, automatic Hz, keyboard light off
+
+One click sets all four, so a tile always gives the same result. Under the tiles the picked
+situation's settings can be changed (Ultimate included) and then folded away. Turn it off and the
+classic layout is back.
 
 <br clear="right">
 
@@ -224,6 +247,15 @@ the mode you want on battery once, and it comes back every time you unplug.
 </details>
 
 <details>
+<summary><b>The battery charges past the limit</b></summary>
+
+Most TUF and some ROG models stop charging only at 60-80% or at 100%; any other limit charges to
+full, so the slider offers only 60, 80 and 100 there. Also, while the laptop is switched off and
+plugged in, the firmware forgets the limit and charges to 100%; the limit is back once asusd
+starts. In sleep it holds.
+</details>
+
+<details>
 <summary><b>CPU Boost is greyed out</b></summary>
 
 Writing the boost switch needs a one-time permission: open **Extra → Setup**, row "CPU Boost switch".
@@ -238,9 +270,11 @@ command it runs. [docs/DEBUGGING.md](docs/DEBUGGING.md) maps symptoms to the cod
 
 ### Reporting a problem
 
-**Extra → Diagnostics** saves a text report: laptop model, kernel, package versions, services,
-what asusd and Cardwire report, and their recent logs. Your home folder and computer name are
-removed. Attach it to an [issue](https://github.com/sprinterz5/shiftray/issues).
+**Extra → Diagnostics → Report a problem on GitHub** copies a text report and opens a new
+[issue](https://github.com/sprinterz5/shiftray/issues) that says where to paste it: laptop model,
+kernel, package versions, services, what asusd and Cardwire report, and their recent logs. Your
+home folder, serial numbers and computer name are left out. "Save the report to a file" is there
+too.
 
 ## Contributing
 
