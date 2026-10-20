@@ -15,7 +15,7 @@ provides=(asus-tso-helper)
 conflicts=(asus-tso-helper)
 replaces=(asus-tso-helper)  # the old name, up to 0.6.1
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('3845886e15995d81a1b19777f0769e2a32e4b91134444f978f2fd53d45704adb')
+sha256sums=('f576bbdbd85fd0462847d97e84c6316969e81a105f7e773caccf44368650eb87')
 
 package() {
     cd "$pkgname-$pkgver"
