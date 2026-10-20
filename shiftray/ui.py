@@ -511,7 +511,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
     @QtCore.Slot(QtDBus.QDBusMessage)
     def on_notification_action(self, msg):
         args = msg.arguments()
-        if len(args) == 2 and args[1] == "default":
+        if len(args) == 2 and args[1] in hw.NOTIFY_ACTIONS:
             action = self.note_actions.pop(int(args[0]), None)
             if action:
                 action()

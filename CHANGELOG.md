@@ -6,6 +6,9 @@
   the dGPU never slept again, on battery too (about 8 W). It is now read only while an app such as
   a game keeps the dGPU awake anyway. nvidia-smi is no longer named as what keeps it awake, nor
   offered for closing before Eco.
+- **Notification buttons show up.** "Switch to Eco", "Switch to Turbo" and the others were sent as
+  the click-on-notification action, which KDE and GNOME draw no button for; they are buttons now, and
+  a click on the notification still does the same.
 
 ## 0.9.2
 - **KDE power management in Eco**: PowerDevil crashed at start while Eco hid the NVIDIA GPU (Secure

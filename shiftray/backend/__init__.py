@@ -152,6 +152,7 @@ from .desktop import (  # noqa: F401
     set_clamshell,
     notify,
     notify_action,
+    NOTIFY_ACTIONS,
 )
 from .system import (  # noqa: F401
     MEM_SLEEP,

@@ -229,10 +229,15 @@ def notify(icon, title, body):
                title, body, "0", "0", "15000", timeout=5)
 
 
+NOTIFY_ACTIONS = ("run", "default")  # the button, and a click on the notification itself
+
+
 def notify_action(icon, title, body, action):
-    """A desktop notification with one button -> its id (for ActionInvoked), or None."""
+    """A desktop notification with one button -> its id (for ActionInvoked), or None. "default" alone
+    is only the click on the notification (KDE and GNOME draw no button for it), so the button is
+    its own action and a click does the same."""
     ok, out = run("busctl", "--user", "call", "org.freedesktop.Notifications", "/org/freedesktop/Notifications",
                   "org.freedesktop.Notifications", "Notify", "susssasa{sv}i", "Shiftray", "0", icon,
-                  title, body, "2", "default", action, "0", "15000", timeout=5)
+                  title, body, "4", "run", action, "default", action, "0", "15000", timeout=5)
     words = out.split() if ok else []
     return int(words[1]) if len(words) == 2 and words[1].isdigit() else None
