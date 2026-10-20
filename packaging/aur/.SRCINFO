@@ -1,6 +1,6 @@
 pkgbase = shiftray
 	pkgdesc = asusctl and Cardwire in one small app: modes, GPU, fans and battery for ASUS laptops
-	pkgver = 0.9.1
+	pkgver = 0.9.2
 	pkgrel = 1
 	url = https://github.com/sprinterz5/shiftray
 	arch = any
@@ -19,7 +19,7 @@ pkgbase = shiftray
 	optdepends = cardwire: Eco / Standard GPU modes (AUR)
 	optdepends = swayidle: keyboard backlight timeout
 	optdepends = libkscreen: refresh rate on KDE Plasma
-	source = shiftray-0.9.1.tar.gz::https://github.com/sprinterz5/shiftray/archive/v0.9.1.tar.gz
+	source = shiftray-0.9.2.tar.gz::https://github.com/sprinterz5/shiftray/archive/v0.9.2.tar.gz
 	sha256sums = 3845886e15995d81a1b19777f0769e2a32e4b91134444f978f2fd53d45704adb
 
 pkgname = shiftray

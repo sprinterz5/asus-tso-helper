@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.2
 - **KDE power management in Eco**: PowerDevil crashed at start while Eco hid the NVIDIA GPU (Secure
   Boot and ddcutil 2.x, Fedora 44 among them: ddcutil#641), leaving KDE without the battery icon,
   dimming and the lid action. Setup finds it and starts PowerDevil without ddcutil (no password;
