@@ -202,6 +202,8 @@ def gpu_apps():
             exe = os.path.basename(os.readlink(f"/proc/{pid}/exe"))
         except OSError:
             exe = name
+        if exe in OWN_GPU_PROBES:
+            continue
         is_desktop = name in DESKTOP_GPU_USERS or exe in DESKTOP_GPU_USERS
         (desktop if is_desktop else apps).append((int(pid), exe if not is_desktop else name))
     return apps, desktop
@@ -270,7 +272,9 @@ def cardwire_dgpu():
     return _cardwire_dgpu[0] if _cardwire_dgpu else None
 
 
-DGPU_SYSTEM_USERS = DESKTOP_GPU_USERS | {"cardwired", "nvidia-powerd", "systemd", "systemd-logind"}
+# the app's own temperature and power reads: never the reason to name, or to close
+OWN_GPU_PROBES = {"nvidia-smi"}
+DGPU_SYSTEM_USERS = DESKTOP_GPU_USERS | OWN_GPU_PROBES | {"cardwired", "nvidia-powerd", "systemd", "systemd-logind"}
 
 
 def dgpu_users():

@@ -125,6 +125,15 @@ class Games(unittest.TestCase):
         self.assertIsNone(gpu.game_name(p.pid))
 
 
+class DgpuUsers(unittest.TestCase):
+    def test_own_nvidia_smi_is_not_named(self):
+        """The app's own temperature read must never be shown as what keeps the dGPU awake."""
+        out = 'a{sas} 1 "/dev/nvidia0" 3 "nvidia-smi" "steam" "kwin_wayland"'
+        with mock.patch.object(gpu, "cardwire_dgpu", return_value="/gpu/1"), \
+                mock.patch.object(gpu, "run", return_value=(True, out)):
+            self.assertEqual(gpu.dgpu_users(), ["steam"])
+
+
 class Battery(unittest.TestCase):
     def test_history_parses_upower(self):
         out = "a(udu) 3 1700000300 13 2 1700000200 57.2 2 1700000100 0 0"

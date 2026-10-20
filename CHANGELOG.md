@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **The NVIDIA GPU no longer stays awake because of the app.** Each temperature read (nvidia-smi)
+  wakes the dGPU for about 17 seconds, and with the window open it was read every 12, so in Standard
+  the dGPU never slept again, on battery too (about 8 W). It is now read only while an app such as
+  a game keeps the dGPU awake anyway. nvidia-smi is no longer named as what keeps it awake, nor
+  offered for closing before Eco.
+
 ## 0.9.2
 - **KDE power management in Eco**: PowerDevil crashed at start while Eco hid the NVIDIA GPU (Secure
   Boot and ddcutil 2.x, Fedora 44 among them: ddcutil#641), leaving KDE without the battery icon,

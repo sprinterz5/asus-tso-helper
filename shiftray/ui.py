@@ -42,8 +42,9 @@ GPU_MODES = [("Integrated", tr("Eco"), "leaf", ECO, tr("iGPU only"),
               tr("Enables dGPU for standard use")),
              ("AsusMuxDgpu", tr("Ultimate"), "gamepad-2", TURBO, tr("dGPU exclusive"),
               tr("Routes laptop screen to dGPU, maximizing FPS"))]
-# nvidia-smi keeps the dGPU awake for a few seconds (it sleeps ~5 s after the last use); asking
-# every 2 s kept it awake forever. G-Helper falls back to the EC's GPU sensor, which Linux lacks.
+# Each nvidia-smi wakes the dGPU, which then stays up ~17 s (FA507NV): asked on a timer, it would
+# never sleep again. So it is asked only while an app (a game) keeps the dGPU awake anyway, every
+# DGPU_TEMP_EVERY s. G-Helper falls back to the EC's GPU sensor, which Linux lacks.
 DGPU_TEMP_EVERY = 12
 DGPU_APPS_EVERY = 30
 # in the tray, fan speeds and the keyboard light are read every TRAY_SLOW-th refresh only: each read
@@ -819,14 +820,14 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         else:
             name = next((m[1] for m in MODES if m[0] == profile), profile or "?")
         self.perf_head.title.setText(tr("Mode: {name}", name=name))
-        # dGPU temperature only while the window is open and the dGPU is awake anyway; asleep it
-        # shows the last one (G-Helper 0.248, issue #5290), in Eco none
+        # dGPU temperature only while the window is open and an app keeps the dGPU awake anyway;
+        # asleep it shows the last one (G-Helper 0.248, issue #5290), in Eco none
         now = time.monotonic()
         eco = self.gpu_current == "Integrated"
         power = None if eco else hw.dgpu_power()  # in Eco it sleeps; asking Cardwire costs a process
         if power is None or eco:
             self.dgpu_temp = None
-        query = (power == "active" and not eco and self.isVisible()
+        query = (power == "active" and not eco and self.isVisible() and self.dgpu_apps
                  and now - self.dgpu_temp_at >= DGPU_TEMP_EVERY)
         if query:
             self.dgpu_temp_at = now
