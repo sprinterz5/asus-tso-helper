@@ -118,5 +118,25 @@ class SteamTitle(unittest.TestCase):
             title.assert_called_once_with(2)
 
 
+class ChargedWhileOff(unittest.TestCase):
+    def run_check(self, before, now, limit=80):
+        from shiftray import ui
+        tips = []
+        win = mock.Mock(cfg={"off_mark": {"time": 0, "percent": before, "limit": limit}})
+        win.tip = lambda icon, body: tips.append(body)
+        with mock.patch.object(ui.hw, "battery_status", return_value={"percent": now}):
+            ui.MainWindow.check_charged_while_off(win)
+        self.assertNotIn("off_mark", win.cfg)  # said once
+        return tips
+
+    def test_past_the_limit(self):
+        self.assertEqual(len(self.run_check(60, 98)), 1)
+
+    def test_held_or_a_quick_reboot(self):
+        self.assertEqual(self.run_check(60, 61), [])
+        self.assertEqual(self.run_check(80, 81), [])
+        self.assertEqual(self.run_check(60, 99, limit=100), [])
+
+
 if __name__ == "__main__":
     unittest.main()

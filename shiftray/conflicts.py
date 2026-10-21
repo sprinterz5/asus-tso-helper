@@ -58,6 +58,23 @@ def _ghelper_linux():
                                            "/etc/systemd/system/ghelper-gpu-boot.service"))
 
 
+def _upower_limit():
+    """UPower's own charge limit (GNOME's "Preserve Battery Health", or any desktop through UPower)
+    is on and stops at another value than asusd's: each writes its own at boot or on a change."""
+    ok, out = hw.run("upower", "-e", timeout=5)
+    for path in (out.split() if ok else []):
+        if "/battery_" not in path:
+            continue
+        def prop(name):
+            return hw.run("busctl", "--system", "get-property", "org.freedesktop.UPower", path,
+                          "org.freedesktop.UPower.Device", name, timeout=5)[1].split()[-1:]
+        if prop("ChargeThresholdEnabled") == ["true"]:
+            end = prop("ChargeEndThreshold")
+            limit = hw.get_charge_limit()
+            return not (end and limit and end[0] == str(limit))
+    return False
+
+
 CONFLICTS = [
     Conflict("supergfxd", "supergfxd",
              tr("Switches the GPU too, so it fights Cardwire: the dGPU may stay on or not come back."),
@@ -78,6 +95,10 @@ CONFLICTS = [
     Conflict("system76-power", "system76-power",
              tr("Switches the GPU and power profiles too."),
              lambda: _running("com.system76.PowerDaemon"), service="com.system76.PowerDaemon"),
+    Conflict("upower-limit", tr("The desktop's own charge limit"),
+             tr("UPower keeps another charge limit than this app's (on GNOME: Settings → Power → Battery "
+                "Charging), so the limit changes after a restart or a change in either."),
+             _upower_limit, manual=tr("turn the desktop's charge limit off, or set it to the same value")),
     Conflict("envycontrol", "EnvyControl",
              tr("Its GPU setting (Xorg or modprobe files) can keep the NVIDIA driver from loading, so "
              "Cardwire cannot turn the dGPU on."),

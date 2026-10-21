@@ -168,6 +168,26 @@ class ChargeLimit6080(unittest.TestCase):
         self.assertEqual(battery.firmware_limit(85, None), 85)
 
 
+class UpowerLimit(unittest.TestCase):
+    """GNOME's "Preserve Battery Health" (UPower) next to asusd's limit."""
+
+    def found(self, enabled, end, limit=80):
+        from shiftray import conflicts
+
+        def fake_run(*cmd, timeout=None):
+            if cmd[:2] == ("upower", "-e"):
+                return True, "/org/freedesktop/UPower/devices/line_power_ACAD\n/org/freedesktop/UPower/devices/battery_BAT1"
+            return True, {"ChargeThresholdEnabled": f"b {enabled}", "ChargeEndThreshold": f"u {end}"}[cmd[-1]]
+        with mock.patch.object(conflicts.hw, "run", side_effect=fake_run), \
+                mock.patch.object(conflicts.hw, "get_charge_limit", return_value=limit):
+            return conflicts._upower_limit()
+
+    def test_only_a_different_limit_is_a_conflict(self):
+        self.assertFalse(self.found("false", 60))
+        self.assertFalse(self.found("true", 80))
+        self.assertTrue(self.found("true", 60))
+
+
 class PowerdevilDdcutil(unittest.TestCase):
     """PowerDevil crashes in libddcutil 2.x while Cardwire's Eco blocks the card (ddcutil#641)."""
 

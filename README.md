@@ -259,9 +259,15 @@ the mode you want on battery once, and it comes back every time you unplug.
 <summary><b>The battery charges past the limit</b></summary>
 
 Most TUF and some ROG models stop charging only at 60-80% or at 100%; any other limit charges to
-full, so the slider offers only 60, 80 and 100 there. Also, while the laptop is switched off and
-plugged in, the firmware forgets the limit and charges to 100%; the limit is back once asusd
-starts. In sleep it holds.
+full, so the slider offers only 60, 80 and 100 there.
+
+ASUS firmware also sets the limit back to 100% at every power-on (the same on Windows); asusd puts
+yours back a few seconds after Linux starts, so the battery can gain a little while booting or
+sitting in the BIOS. Some models do not hold the limit while switched off either: if the battery
+came back above the limit after a shutdown on the charger, the app says so once. In sleep the
+limit always holds, so a laptop that lives on the charger is better put to sleep than shut down.
+If GNOME's "Preserve Battery Health" (or another UPower limit) is on with a different value, the
+two overwrite each other: Setup shows it.
 </details>
 
 <details>

@@ -6,6 +6,14 @@
   notification names Steam games by their name. When the last game quits, the mode you had comes
   back; picking a mode yourself during a game wins until it ends. The charger's and the battery's
   remembered modes are never overwritten by a game's.
+- **Situations in the tray menu** while that layout is on: right-click, pick Gaming, no window.
+- **The desktop's own charge limit** (UPower; GNOME's "Preserve Battery Health") set to another
+  value than the app's shows up as a conflict in Setup and the main window: the two overwrote each
+  other after a restart.
+- **Charged past the limit while off**: ASUS firmware puts the limit back to 100% at power-on, and
+  some models do not hold it while switched off either. The app notes the charge at shutdown and,
+  if the battery came back above the limit, says so once (sleep keeps the limit).
+- AppStream metainfo, so Discover and GNOME Software show the app with screenshots (packages).
 
 ## 0.10.0
 - **GNOME support.** Vanilla GNOME shows no tray icons; Setup now installs GNOME's AppIndicator

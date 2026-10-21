@@ -291,6 +291,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         QtDBus.QDBusConnection.systemBus().connect(
             "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
             "PrepareForSleep", self, QtCore.SLOT("on_sleep(QDBusMessage)"))
+        QtDBus.QDBusConnection.systemBus().connect(
+            "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager",
+            "PrepareForShutdown", self, QtCore.SLOT("on_shutdown(QDBusMessage)"))
         # the portal announces a theme change; Qt without the desktop's plugin (the AppImage) does not
         QtDBus.QDBusConnection.sessionBus().connect(
             "", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings", "SettingChanged",
@@ -639,6 +642,34 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
             self.sleep_mark = (time.time(), energy, hw.ac_online()) if energy else None
         elif msg.arguments():                        # False: resumed
             QtCore.QTimer.singleShot(3000, self.after_resume)  # let the firmware settle first
+
+    @QtCore.Slot(QtDBus.QDBusMessage)
+    def on_shutdown(self, msg):
+        """Shutting down: the charge and limit now, to see at the next start whether the battery
+        charged past the limit while the laptop was off (check_charged_while_off)."""
+        bat = hw.battery_status() if msg.arguments() and msg.arguments()[0] else None
+        if bat and bat.get("percent") is not None:
+            self.cfg["off_mark"] = {"time": time.time(), "percent": bat["percent"], "limit": self.charge_limit}
+            self.save()
+
+    def check_charged_while_off(self):
+        """ASUS firmware sets the limit back to 100% at power-on, and on some models it does not hold
+        it while off either; asusd puts it back only once Linux runs. Said once per occurrence."""
+        mark = self.cfg.pop("off_mark", None)
+        if not mark:
+            return
+        self.save()
+        bat = hw.battery_status()
+        limit = mark.get("limit", 100)
+        if not bat or bat.get("percent") is None or limit >= 100:
+            return
+        before, now = mark["percent"], bat["percent"]
+        log.info(f"off: {before}% -> {now}% (limit {limit}%)")
+        if now >= max(before, limit) + 3:
+            self.tip("battery-full-charging", tr(
+                "While the laptop was off, the battery charged from {before}% to {now}%, past the {limit}% "
+                "limit: this laptop's firmware holds the limit only while Linux runs. Sleep keeps it.",
+                before=before, now=now, limit=limit))
 
     def after_resume(self):
         """Puts back what this laptop should have after sleep: the charger may have changed while
@@ -1432,6 +1463,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         """Opens Setup at start when something required or recommended is missing (until 'Later'
         for this version)."""
         self.check_conflicts()
+        self.check_charged_while_off()
         if hw.remove_kwin_limits() and self.tray:
             self.tray.showMessage(NAME, tr("Log out once to get the HDMI / USB-C video ports back: "
                                   "\"Eco without logout\" is not needed with Cardwire."),
