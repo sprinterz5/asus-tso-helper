@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.0
+- **GNOME support.** Vanilla GNOME shows no tray icons; Setup now installs GNOME's AppIndicator
+  extension (the one Ubuntu ships) and turns it on, and the tray icon appears without restarting the
+  app (a fresh install of the extension shows after the next login). Undo in Changes.
+- On GNOME: mode toasts are short notifications that replace each other and stay out of the list;
+  "Log out to finish" opens GNOME's own dialog; the keyboard light timeout works through GNOME's idle
+  monitor (swayidle cannot work there); the screen-off key turns the panel off through Mutter.
+- The window title no longer runs under GNOME's close button, and the app uses Noto Sans where it is
+  installed (as on KDE): GNOME's wider font pushed the GPU header into its readout.
+- "Keep app window always on top" is hidden where it cannot work (Wayland outside KDE).
+
 ## 0.9.3
 - **The NVIDIA GPU no longer stays awake because of the app.** Each temperature read (nvidia-smi)
   wakes the dGPU for about 17 seconds, and with the window open it was read every 12, so in Standard
