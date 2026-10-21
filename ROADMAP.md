@@ -145,6 +145,7 @@ protocols are readable in G-Helper's source (GPL-3.0, same as this app); credit 
 | 42 | CPU undervolt (Curve Optimizer), CPU temperature limit | Needs `ryzenadj` plus the `ryzen_smu` kernel module (not in Fedora, must be signed for Secure Boot). Bad values cause hangs. |
 | 43 | Hibernate after N minutes of sleep | Needs a swap partition (Fedora ships zram only), and with Secure Boot the kernel's lockdown forbids hibernation |
 | 44 | Temperatures in the tray icon, °F | Small; not in G-Helper |
+| 45 | Small tray process | The tray icon and the background work (power source, games, keys, sleep) in a process without Qt (Python with dbus-python, about 12 MB; or Rust with ksni, about 3 MB); the Qt window starts on a click and quits when closed. Today Python and Qt hold about 60 MB (package) or 100 MB (AppImage) all the time. The background parts move off Qt timers, and the window takes about half a second to open |
 
 ## Not possible or not applicable
 

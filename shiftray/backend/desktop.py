@@ -37,6 +37,7 @@ def autostart_entry():
 
 DESKTOP_FILE = os.path.expanduser("~/.local/share/applications/shiftray.desktop")
 ICON_FILE = os.path.expanduser("~/.local/share/icons/hicolor/256x256/apps/shiftray.png")
+AUTOSTART = os.path.expanduser("~/.config/autostart/shiftray.desktop")
 
 
 def integrate_desktop():
@@ -44,6 +45,7 @@ def integrate_desktop():
     (the GlobalShortcuts portal and notifications also need the .desktop file). Rewritten only
     when something changed, e.g. the file was moved."""
     if not APPIMAGE:
+        drop_appimage_entries()
         return
     with open(os.path.join(ASSETS, "shiftray.png"), "rb") as f:
         icon = f.read()
@@ -60,6 +62,32 @@ def integrate_desktop():
         with open(path, "wb") as f:
             f.write(data)
 
+
+def installed():
+    """Run from a distribution package (/usr/bin/shiftray), not an AppImage or a source checkout."""
+    return not APPIMAGE and os.path.realpath(sys.argv[0]).startswith("/usr/")
+
+
+def drop_appimage_entries():
+    """Moved from the AppImage to a package: the menu entry and icon the AppImage wrote would hide
+    the package's own, and autostart would still start the AppImage. Points both at the package."""
+    if not installed():
+        return
+    try:
+        with open(DESKTOP_FILE) as f:
+            if ".AppImage" in f.read():
+                os.remove(DESKTOP_FILE)
+                os.remove(ICON_FILE)
+    except OSError:
+        pass
+    try:
+        with open(AUTOSTART) as f:
+            stale = ".AppImage" in f.read()
+        if stale:
+            with open(AUTOSTART, "w") as f:
+                f.write(autostart_entry())
+    except OSError:
+        pass
 
 def kwin_place_window(keep_above=False):
     """Loads (again, so an updated script counts) the KWin script that opens the main window

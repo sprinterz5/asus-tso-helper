@@ -50,6 +50,8 @@
   GNOME's own ways ([details](#requirements-and-support)).
 - **Lightweight.** A single 30 MB AppImage, or a 250 KB package on the system's Python and Qt. In
   the tray it starts no background processes, only reads a few system files every 2 seconds.
+  Memory is the weak spot: Python and Qt cost about 60 MB with the package and about 100 MB with
+  the AppImage ([why](#it-uses-100-mb-of-memory)).
 - **Notices things and says so.** When the battery drained in sleep, when an app keeps the NVIDIA
   GPU awake on battery, when a game runs in Eco or Silent, a notification says it once, with a
   button to fix it. Nothing changes unless you press it.
@@ -116,6 +118,9 @@ classic layout is back.
 
 ## Install
 
+On Fedora and Arch, the package is the better choice: it uses about 40% less memory than the AppImage
+and updates with the system. The AppImage runs anywhere and needs no terminal.
+
 ### AppImage (any distribution)
 
 Download [`shiftray-x86_64.AppImage`](https://github.com/sprinterz5/shiftray/releases/latest/download/shiftray-x86_64.AppImage),
@@ -144,6 +149,9 @@ sudo dnf copr enable thesecondone/shiftray
 ```bash
 sudo dnf install shiftray
 ```
+
+Coming from the AppImage: settings carry over. Start the installed Shiftray once and it points the
+menu entry and autostart at itself; then delete the `.AppImage` file.
 
 ### Arch (AUR)
 
@@ -224,6 +232,16 @@ Setup and as a line in the main window; Set up stops the services (Undo starts t
 says how to remove the rest. See [`conflicts.py`](shiftray/conflicts.py).
 
 ## Troubleshooting
+
+<details>
+<summary><b>It uses 100 MB of memory</b></summary>
+
+That is the AppImage. Most of it is Python and Qt: an empty Qt window with a tray icon
+already takes about 40 MB. The AppImage carries its own copies of both, so nothing is
+shared with the desktop, and its runtime adds a second process of about 20 MB. The Fedora and Arch
+packages use the system's Qt, which KDE has loaded anyway: about 60 MB of real memory. A smaller
+tray part without Qt is on the [roadmap](ROADMAP.md).
+</details>
 
 <details>
 <summary><b>The Fn keys do nothing</b></summary>
