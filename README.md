@@ -31,8 +31,9 @@
 > **Formerly asus-tso-helper.** Same app, new name since 0.7.0; installs update and keep their settings.
 >
 > **Early release.** Built and tested every day on an ASUS TUF Gaming A15 (FA507NV), Fedora 44,
-> KDE Plasma 6 on Wayland. Other ASUS laptops supported by asusctl should work, but nobody has
-> confirmed them yet. If you try one, a [report](#reporting-a-problem) helps a lot.
+> KDE Plasma 6 on Wayland; GNOME is supported since 0.10.0. Other ASUS laptops supported by asusctl
+> should work, but nobody has confirmed them yet. If you try one, a [report](#reporting-a-problem)
+> helps a lot.
 
 ## Why
 
@@ -44,7 +45,10 @@
   ([details](#what-it-changes-on-your-system)).
 - **G-Helper's design.** Small windows that open at the tray icon, the same layout and defaults.
   The interface is [seerge's](https://github.com/seerge) work.
-- **Lightweight.** A single 29 MB AppImage, or a 250 KB package on the system's Python and Qt. In
+- **KDE and GNOME.** On GNOME, which shows no tray icons by itself, Setup turns on the AppIndicator
+  extension so the icon is there; toasts, the logout prompt and the keyboard light timeout use
+  GNOME's own ways ([details](#requirements-and-support)).
+- **Lightweight.** A single 30 MB AppImage, or a 250 KB package on the system's Python and Qt. In
   the tray it starts no background processes, only reads a few system files every 2 seconds.
 - **Notices things and says so.** When the battery drained in sleep, when an app keeps the NVIDIA
   GPU awake on battery, when a game runs in Eco or Silent, a notification says it once, with a
@@ -52,7 +56,8 @@
 - **Eco without a logout.** GPU modes go through [Cardwire](https://opengamingcollective.github.io/cardwire/):
   Eco and Standard switch in a moment, and HDMI keeps working.
 - **One password, once.** On first start a Setup window installs what the laptop still needs
-  (asusd, Cardwire, the key rule) behind a single prompt. No terminal steps.
+  (asusd, Cardwire, the key rule, the tray extension on GNOME) behind a single prompt. No terminal
+  steps.
 - **Updates in one click.** A red version label means a new release: one click downloads it,
   checks GitHub's SHA-256 and restarts into it.
 
@@ -264,6 +269,15 @@ starts. In sleep it holds.
 PowerDevil, KDE's power manager, crashes at start while Eco hides the NVIDIA GPU, on Secure Boot
 systems with ddcutil 2.x (Fedora 44 among them; fixed in ddcutil 3.0). **Extra → Setup** has a row
 for it: PowerDevil then starts without ddcutil, losing only external monitors' brightness over DDC.
+</details>
+
+<details>
+<summary><b>No tray icon on GNOME</b></summary>
+
+GNOME shows tray icons only with the AppIndicator extension. **Extra → Setup**, row "Tray icon on
+GNOME", installs and turns it on. If it was just installed, log out and back in once: GNOME loads
+new extensions at login. If all extensions are switched off in the Extensions app, switch them on.
+Until then the window stays open as a normal app, and closing it quits.
 </details>
 
 <details>
