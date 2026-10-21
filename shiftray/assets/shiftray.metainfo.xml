@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.sprinterz5.shiftray</id>
+  <launchable type="desktop-id">shiftray.desktop</launchable>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+
+  <name>Shiftray</name>
+  <summary>Modes, fans and GPU for ASUS laptops</summary>
+  <developer id="io.github.sprinterz5">
+    <name>sprinterz5</name>
+  </developer>
+
+  <description>
+    <p>
+      Shiftray is a tray app for ASUS laptops. It is a window for asusctl (asusd) and Cardwire, which
+      do the hardware work, and its windows follow the design of G-Helper. It is unofficial and not
+      affiliated with ASUS or the G-Helper project.
+    </p>
+    <ul>
+      <li>Silent, Balanced, Turbo and custom performance modes, remembered per power source</li>
+      <li>Fan curves for CPU and GPU, CPU power limits and Dynamic Boost</li>
+      <li>GPU modes: Eco, Standard, Ultimate and Optimized</li>
+      <li>Screen refresh rate, keyboard lighting and battery charge limit</li>
+      <li>Actions for Fn keys and the Armoury key</li>
+      <li>BIOS, driver and firmware updates in one window</li>
+    </ul>
+    <p>
+      It needs asusctl (asusd) and Cardwire; a Setup window installs what the laptop still needs.
+      It runs on KDE Plasma and GNOME.
+    </p>
+  </description>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/sprinterz5/shiftray/main/docs/main.png</image>
+      <caption>The main window in a dark and a light theme</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/sprinterz5/shiftray/main/docs/fans.png</image>
+      <caption>Fan curves and power limits</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/sprinterz5/shiftray/main/docs/situations.png</image>
+      <caption>Situations: one-click sets of mode, GPU, screen and keyboard light</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/sprinterz5/shiftray</url>
+  <url type="bugtracker">https://github.com/sprinterz5/shiftray/issues</url>
+
+  <categories>
+    <category>System</category>
+    <category>Settings</category>
+    <category>HardwareSettings</category>
+  </categories>
+  <keywords>
+    <keyword>ASUS</keyword>
+    <keyword>ROG</keyword>
+    <keyword>TUF</keyword>
+    <keyword>G-Helper</keyword>
+    <keyword>asusctl</keyword>
+    <keyword>fan</keyword>
+    <keyword>battery</keyword>
+    <keyword>GPU</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <provides>
+    <binary>shiftray</binary>
+  </provides>
+
+  <releases>
+    <release version="0.11.0" date="2026-10-21">
+      <description>
+        <p>A game can switch the performance mode (off by default): one mode for the charger, one for battery. The previous mode comes back when the last game quits.</p>
+      </description>
+    </release>
+    <release version="0.10.0" date="2026-10-21">
+      <description>
+        <p>GNOME support: Setup installs and enables the AppIndicator extension for the tray icon, and notifications, logout and the keyboard light timeout use GNOME's own mechanisms.</p>
+      </description>
+    </release>
+    <release version="0.9.3" date="2026-10-20">
+      <description>
+        <p>The NVIDIA GPU no longer stays awake because of the app, and notification buttons now show up.</p>
+      </description>
+    </release>
+  </releases>
+</component>

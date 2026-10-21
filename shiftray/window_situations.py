@@ -105,6 +105,8 @@ class SituationsMixin:
         self.cfg["situations_on"] = on
         self.save()
         self.apply_situations_layout()
+        if self.tray:
+            self.tray.build_menu()
 
     def current_situation(self):
         """The picked situation while the laptop is still in it, else None."""

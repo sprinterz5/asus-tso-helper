@@ -9,13 +9,14 @@ PYTHON ?= /usr/bin/python3
 UDEVDIR ?= $(PREFIX)/lib/udev/rules.d
 
 APP = shiftray
+METAID = io.github.sprinterz5.shiftray
 SHARE = $(PREFIX)/share/$(APP)
 ASSETS = shiftray/assets
 
 .PHONY: install uninstall
 
 install:
-	install -d $(DESTDIR)$(SHARE) $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/share/applications \
+	install -d $(DESTDIR)$(SHARE) $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/share/applications $(DESTDIR)$(PREFIX)/share/metainfo \
 		$(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps \
 		$(DESTDIR)$(UDEVDIR)
 	cp -r shiftray $(DESTDIR)$(SHARE)/
@@ -25,6 +26,7 @@ install:
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/$(APP)
 	sed -e 's|@EXEC@|$(APP)|; s|@ICON@|$(APP)|' $(ASSETS)/$(APP).desktop \
 		> $(DESTDIR)$(PREFIX)/share/applications/$(APP).desktop
+	install -m 644 $(ASSETS)/$(APP).metainfo.xml $(DESTDIR)$(PREFIX)/share/metainfo/$(METAID).metainfo.xml
 	install -m 644 $(ASSETS)/$(APP).png $(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps/$(APP).png
 	install -m 644 $(ASSETS)/app-icon.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/$(APP).svg
 	install -m 644 $(ASSETS)/70-$(APP).rules $(DESTDIR)$(UDEVDIR)/70-$(APP).rules
@@ -32,5 +34,6 @@ install:
 uninstall:
 	rm -rf $(DESTDIR)$(SHARE)
 	rm -f $(DESTDIR)$(PREFIX)/bin/$(APP) $(DESTDIR)$(PREFIX)/share/applications/$(APP).desktop \
+		$(DESTDIR)$(PREFIX)/share/metainfo/$(METAID).metainfo.xml \
 		$(DESTDIR)$(PREFIX)/share/icons/hicolor/256x256/apps/$(APP).png \
 		$(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/$(APP).svg $(DESTDIR)$(UDEVDIR)/70-$(APP).rules

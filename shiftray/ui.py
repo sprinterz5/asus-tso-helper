@@ -24,6 +24,7 @@ from . import changes_window
 from . import conflicts
 from . import setup
 from . import notifications
+from . import situations
 from .fans import FansWindow, fan_max, restore_after_calibration, snapshot_factory_curves, INADEQUATE_RPM
 from . import widgets as w
 from .config import APP, NAME, VERSION, HOMEPAGE, DONATE_URL, AUTOSTART, quit_app, load_config, save_config  # noqa: F401 (ui.VERSION etc. still work)
@@ -1583,6 +1584,7 @@ class Tray(QtWidgets.QSystemTrayIcon):
         self.gpu = None
         self.menu = QtWidgets.QMenu()
         self.mode_actions = {}
+        self.situation_actions = {}
         self.build_menu()
         self.menu.aboutToShow.connect(self.sync_menu)
         self.setContextMenu(self.menu)
@@ -1591,9 +1593,19 @@ class Tray(QtWidgets.QSystemTrayIcon):
         self.apply_theme()
 
     def build_menu(self):
-        """Settings.SetContextMenu: modes (custom ones too), GPU modes, Quit."""
+        """Settings.SetContextMenu: modes (custom ones too), GPU modes, Quit; the situations first
+        while that layout is on."""
         window = self.window
         self.menu.clear()
+        self.situation_actions = {}
+        if window.cfg.get("situations_on"):
+            title = self.menu.addAction(tr("Situation"))
+            title.setEnabled(False)
+            for key in situations.KEYS:
+                act = self.menu.addAction(situations.title(key), lambda k=key: window.pick_situation(k))
+                act.setCheckable(True)
+                self.situation_actions[key] = act
+            self.menu.addSeparator()
         title = self.menu.addAction(tr("Mode"))
         title.setEnabled(False)
         self.mode_actions = {}
@@ -1620,6 +1632,9 @@ class Tray(QtWidgets.QSystemTrayIcon):
         current = self.window.cfg.get("active_mode") or hw.get_profile()
         for key, act in self.mode_actions.items():
             act.setChecked(key == current)
+        situation = self.window.current_situation()
+        for key, act in self.situation_actions.items():
+            act.setChecked(key == situation)
 
     def set_gpu(self, mode):
         if mode == self.gpu or mode not in self.ICONS:

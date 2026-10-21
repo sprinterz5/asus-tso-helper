@@ -12,6 +12,7 @@ BuildArch:      noarch
 BuildRequires:  make
 BuildRequires:  python3-devel
 BuildRequires:  desktop-file-utils
+BuildRequires:  libappstream-glib
 BuildRequires:  systemd-rpm-macros
 
 Requires:       python3
@@ -49,6 +50,7 @@ or with ASUS.
 
 %check
 desktop-file-validate %{buildroot}%{_datadir}/applications/%{name}.desktop
+appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 
 %files
 %license LICENSE shiftray/assets/icons/LICENSE
@@ -56,6 +58,7 @@ desktop-file-validate %{buildroot}%{_datadir}/applications/%{name}.desktop
 %{_bindir}/%{name}
 %{_datadir}/%{name}/
 %{_datadir}/applications/%{name}.desktop
+%{_metainfodir}/io.github.sprinterz5.shiftray.metainfo.xml
 %{_datadir}/icons/hicolor/256x256/apps/%{name}.png
 %{_datadir}/icons/hicolor/scalable/apps/%{name}.svg
 %{_udevrulesdir}/70-%{name}.rules
