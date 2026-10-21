@@ -134,9 +134,9 @@ protocols are readable in G-Helper's source (GPL-3.0, same as this app); credit 
 | # | Feature | How | Notes |
 |---|---|---|---|
 | 38 | ~~Clamshell mode toggle~~ | **Done in 0.4.0**: Extra checkbox for KDE's `InhibitLidActionWhenExternalMonitorPresent` | On by default on both; a checkbox only makes it visible |
-| 39 | **GNOME tray** | vanilla GNOME has no tray: needs the AppIndicator extension | Setup should detect it and say so; without a tray the window just stays open |
-| 40 | **Toasts, logout prompt, window at the tray outside KDE** | GNOME: notifications via the portal; logout via `gnome-session-quit`; window placement is the compositor's choice | KDE-only today |
-| 41 | **Screen off, lock and screenshot key actions outside KDE** | `loginctl lock-session` works everywhere; screen off and screenshot need the desktop's own commands | Today they call KDE tools |
+| 39 | ~~GNOME tray~~ | **Done in 0.10.0**: Setup installs and turns on the AppIndicator extension; the icon appears without a restart of the app | A new install shows up after the next login (GNOME loads extensions at login) |
+| 40 | ~~Toasts, logout prompt outside KDE~~ | **Done in 0.10.0**: GNOME gets transient notifications and its SessionManager logout dialog; keyboard light timeout through Mutter's IdleMonitor (swayidle cannot work on Mutter) | Window placement stays the compositor's choice on GNOME: Wayland apps cannot place themselves, and a Shell extension of our own would need upkeep for each GNOME version |
+| 41 | **Screen off, lock and screenshot key actions outside KDE** | Lock: `loginctl lock-session` everywhere. Screen off: Mutter's PowerSaveMode on GNOME (**done in 0.10.0**). Screenshot / calculator fall back to GNOME's apps | wlroots desktops still lack screen off |
 
 ### Priority 4: possible, but risky or of little use
 | # | Feature | Why it is low |

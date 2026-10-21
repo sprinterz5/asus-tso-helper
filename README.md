@@ -168,11 +168,12 @@ Needs Python 3 with PySide6, python-evdev and dbus-python. Build the AppImage wi
 | Desktop | Status |
 |---|---|
 | **KDE Plasma 6** | Main target, everything works: on-screen toasts, the logout prompt, windows opening at the tray icon |
-| **GNOME** | Should work; the tray needs the AppIndicator extension. Refresh rate goes through Mutter |
+| **GNOME** | Supported: Setup installs and turns on the AppIndicator extension for the tray icon (no logout when it was already installed). Toasts are short notifications, the logout prompt and screen-off key are GNOME's, the keyboard light timeout uses GNOME's idle monitor. Windows open where GNOME places them, not at the tray icon |
 | **Sway, Hyprland, other wlroots** | Should work; refresh rate through `wlr-randr` |
 | **X11** | Refresh rate through `xrandr` |
 
-GNOME and wlroots support was tested in containers, not on real desktops yet.
+GNOME 50 was tested in a nested GNOME Shell on the same laptop, wlroots in containers; neither on a
+real desktop session yet. A [report](#reporting-a-problem) from one helps.
 
 ## GPU modes
 
@@ -204,6 +205,7 @@ Undo (the root ones together, one password):
 | Cardwire instead of supergfxd | Setup | medium | shown: re-enable supergfxd |
 | Kernel option `mem_sleep_default=deep` | Extra → Deep sleep (S3 laptops only) | high | Undo |
 | KDE's PowerDevil starts without ddcutil (a drop-in in your home folder) | Setup, on KDE with Secure Boot and ddcutil 2.x, where PowerDevil crashes in Eco ([ddcutil#641](https://github.com/rockowitz/ddcutil/issues/641)) | low | Undo |
+| GNOME's AppIndicator extension installed (if missing) and turned on | Setup, on GNOME, for the tray icon | low | Undo turns it off; the package is in "Installed packages" |
 | Autostart, menu entry, KWin placement script (home folder) | first start | low | Undo |
 
 The list lives in [`system_changes.py`](shiftray/system_changes.py); a change that is not
