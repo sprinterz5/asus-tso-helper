@@ -153,6 +153,12 @@ from .desktop import (  # noqa: F401
     notify,
     notify_action,
     NOTIFY_ACTIONS,
+    logout_prompt,
+    APPINDICATOR_PACKAGE,
+    is_gnome,
+    appindicator_installed,
+    gnome_tray,
+    set_gnome_appindicator,
 )
 from .system import (  # noqa: F401
     MEM_SLEEP,

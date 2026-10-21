@@ -25,6 +25,7 @@ class Notifier(QtCore.QObject):
         super().__init__()
         self.app_name, self.desktop_entry = app_name, desktop_entry
         self.actions = {}  # notification id -> what its button does
+        self.last_toast = 0
         self.iface = None
         if dbus is None:
             return
@@ -53,6 +54,20 @@ class Notifier(QtCore.QObject):
             self.actions[int(note_id)] = then
             for old in list(self.actions)[:-KEEP]:
                 del self.actions[old]
+        return True
+
+    def toast(self, icon, title, body):
+        """A short note in place of the last one, kept out of the notification list (transient)."""
+        if self.iface is None:
+            return False
+        try:
+            self.last_toast = int(self.iface.Notify(
+                self.app_name, dbus.UInt32(self.last_toast), icon, title, body, dbus.Array([], signature="s"),
+                dbus.Dictionary({"desktop-entry": self.desktop_entry, "transient": dbus.Boolean(True)},
+                                signature="sv"),  # not low urgency: GNOME shows those without a banner
+                dbus.Int32(1500)))
+        except dbus.DBusException:
+            return False
         return True
 
     def _invoked(self, note_id, key):

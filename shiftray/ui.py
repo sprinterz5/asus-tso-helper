@@ -29,7 +29,7 @@ from . import widgets as w
 from .config import APP, NAME, VERSION, HOMEPAGE, DONATE_URL, AUTOSTART, quit_app, load_config, save_config  # noqa: F401 (ui.VERSION etc. still work)
 from .window_keys import KeysMixin
 from .window_update import UpdateMixin
-from .window_idle import IdleMixin
+from .window_idle import IdleMixin, idle_available
 from .window_situations import SituationsMixin
 from .widgets import ECO, STANDARD, TURBO, CUSTOM, GRAY
 
@@ -191,7 +191,10 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         self.full_hover = False
 
         model = hw.model_name()
-        self.setWindowTitle(f"{NAME} - {model}" if model else NAME)
+        # G-Helper's title with the model on KDE (its script finds the window by it); elsewhere just the
+        # name, which Qt does not repeat: GNOME's narrow title bar ran the long one under its close button
+        self.setWindowTitle(f"{NAME} - {model}" if model and "KDE" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
+                            else NAME)
         self.setWindowIcon(QtGui.QIcon(w.APP_ICON))
         self.setFixedWidth(425)  # ClientSize 849 at 192 DPI
         self.setObjectName("root")
@@ -254,7 +257,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         self.portal_busy = False
         if self.cfg.get("shortcuts") and self.portal.ok:
             self.portal.bind([(sid, self.shortcut_description(sid)) for sid in self.cfg["shortcuts"]])
-        self.idle_available = bool(shutil.which("swayidle"))
+        self.idle_available = idle_available()
         self.idle_proc = None
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.stop_idle)
         self.apply_theme()
@@ -1079,10 +1082,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
     def on_gpu_tip_clicked(self):
         if self.gpu_tip.objectName() != "pending":
             return
-        method = "promptReboot" if getattr(self, "gpu_logout_reboot", False) else "promptLogout"
-        ok, _ = hw.run("busctl", "--user", "call", "org.kde.LogoutPrompt", "/LogoutPrompt",
-                       "org.kde.LogoutPrompt", method, timeout=5)
-        if not ok:
+        if not hw.logout_prompt(getattr(self, "gpu_logout_reboot", False)):
             QtWidgets.QMessageBox.information(self, NAME, tr("Log out (or restart) to finish the GPU mode change."))
 
     def show_screen(self, data):
@@ -1212,9 +1212,11 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         self.toast(icon, modes.name_of(self.cfg, key))
 
     def toast(self, icon, text):
-        """Program.toast.RunToast: KDE's OSD, or a tray notification elsewhere."""
+        """Program.toast.RunToast: KDE's OSD, or a short notification elsewhere (GNOME has no OSD for apps)."""
         def fallback(ok):
-            if not ok and self.tray:
+            if ok or self.notifier.toast(icon, text, ""):  # the app name is already in its header
+                return
+            if self.tray:
                 self.tray.showMessage(NAME, text, QtWidgets.QSystemTrayIcon.Information, 1500)
         self.bg(hw.osd, icon, text, then=fallback)
 
@@ -1460,6 +1462,16 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         self.hotkeys.start()
         if self.extra is not None:
             self.extra.refresh()
+        self.add_tray()
+
+    def add_tray(self):
+        """The tray icon, once the desktop has a tray: at start, or when GNOME's AppIndicator
+        extension came on later (Setup turns it on during the session)."""
+        if self.tray is None and QtWidgets.QSystemTrayIcon.isSystemTrayAvailable():
+            self.tray_available = True
+            self.tray = Tray(self)
+            self.tray.show()
+            self.apply_theme()
 
     def on_extra(self):
         if self.extra is None:
@@ -1633,6 +1645,10 @@ def main():
     hw.integrate_desktop()
     app.setStyle("Fusion")
     font = app.font()
+    # the windows are measured in Noto Sans (KDE's font, as wide as G-Helper's Segoe UI); GNOME's
+    # Adwaita Sans is wider and ran headers into their readouts
+    if "Noto Sans" in QtGui.QFontDatabase.families():
+        font.setFamily("Noto Sans")
     font.setPointSizeF(9)  # Segoe UI 9pt
     app.setFont(font)
     # one instance, like G-Helper: a second launch only brings the running window up
@@ -1668,10 +1684,7 @@ def main():
             conn.disconnectFromServer()
         conn.readyRead.connect(on_data)
     server.newConnection.connect(on_connection)
-    if tray_ok:
-        window.tray = Tray(window)
-        window.tray.show()
-        window.apply_theme()
+    window.add_tray()
     if "--minimized" not in sys.argv or not tray_ok:
         window.show()
     QtCore.QTimer.singleShot(1500, window.first_run_setup)

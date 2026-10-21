@@ -184,13 +184,19 @@ class KeysMixin:
             if action[5:] in [m[0] for m in modes.all_modes(self.cfg)]:
                 self.on_profile(action[5:], notify=True)
         elif action == "screen":
-            spawn("kscreen-doctor", "--dpms", "off")
+            if hw.is_gnome():  # Mutter's power save "off"; the first input turns it back on
+                spawn("busctl", "--user", "set-property", "org.gnome.Mutter.DisplayConfig",
+                      "/org/gnome/Mutter/DisplayConfig", "org.gnome.Mutter.DisplayConfig", "PowerSaveMode", "i", "3")
+            else:
+                spawn("kscreen-doctor", "--dpms", "off")
         elif action == "lock":
             spawn("loginctl", "lock-session")
-        elif action == "screenshot":
-            spawn("spectacle")
-        elif action == "calculator":
-            spawn("kcalc")
+        elif action in ("screenshot", "calculator"):  # the desktop's own app: KDE's, else GNOME's
+            for cmd in {"screenshot": (["spectacle"], ["gnome-screenshot", "-i"]),
+                        "calculator": (["kcalc"], ["gnome-calculator"])}[action]:
+                if shutil.which(cmd[0]):
+                    spawn(*cmd)
+                    break
         elif action == "ghelper":
             if self.isVisible():
                 self.hide()

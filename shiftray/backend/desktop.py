@@ -1,4 +1,4 @@
-"""Desktop integration: menu entry, KWin script, theme, OSD, notifications, KDE settings."""
+"""Desktop integration: menu entry, KWin script, theme, OSD, notifications, KDE and GNOME settings."""
 import os
 import shutil
 import sys
@@ -241,3 +241,66 @@ def notify_action(icon, title, body, action):
                   title, body, "4", "run", action, "default", action, "0", "15000", timeout=5)
     words = out.split() if ok else []
     return int(words[1]) if len(words) == 2 and words[1].isdigit() else None
+
+
+def logout_prompt(reboot=False):
+    """The desktop's own log out (or restart) dialog: KDE's, else GNOME's (mode 0 asks first)."""
+    ok, _ = run("busctl", "--user", "call", "org.kde.LogoutPrompt", "/LogoutPrompt", "org.kde.LogoutPrompt",
+                "promptReboot" if reboot else "promptLogout", timeout=5)
+    if not ok:
+        ok, _ = run("busctl", "--user", "call", "org.gnome.SessionManager", "/org/gnome/SessionManager",
+                    "org.gnome.SessionManager", *(["Reboot"] if reboot else ["Logout", "u", "0"]), timeout=5)
+    return ok
+
+
+# GNOME shows no tray icons by itself; the AppIndicator extension adds them (Ubuntu ships its own copy)
+APPINDICATOR = "appindicatorsupport@rgcjonas.gmail.com"
+APPINDICATOR_UUIDS = (APPINDICATOR, "ubuntu-appindicators@ubuntu.com")
+APPINDICATOR_PACKAGE = "gnome-shell-extension-appindicator"  # Fedora, Arch, Debian / Ubuntu, openSUSE
+
+
+def is_gnome():
+    return "GNOME" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
+
+
+def _appindicator_dir():
+    for uuid in APPINDICATOR_UUIDS:
+        for base in (os.path.expanduser("~/.local/share"), "/usr/share", "/usr/local/share"):
+            path = os.path.join(base, "gnome-shell", "extensions", uuid)
+            if os.path.isdir(path):
+                return path
+    return None
+
+
+def appindicator_installed():
+    return _appindicator_dir() is not None
+
+
+def _enabled_extensions():
+    ok, out = run("gsettings", "get", "org.gnome.shell", "enabled-extensions", timeout=3)
+    return __import__("re").findall(r"'([^']+)'", out) if ok else []
+
+
+def gnome_tray():
+    """None off GNOME; else "on" (tray icons shown), "login" (turned on, shown after the next login),
+    "off" (installed, not turned on) or "missing"."""
+    if not is_gnome():
+        return None
+    if run("busctl", "--user", "status", "org.kde.StatusNotifierWatcher", timeout=3)[0]:
+        return "on"
+    if not appindicator_installed():
+        return "missing"
+    return "login" if set(_enabled_extensions()) & set(APPINDICATOR_UUIDS) else "off"
+
+
+def set_gnome_appindicator(on):
+    """Turns the extension on or off for this user. GNOME loads one installed during the session
+    only at the next login, so the setting is written directly when gnome-extensions does not know it."""
+    path = _appindicator_dir()
+    uuid = os.path.basename(path) if path else APPINDICATOR
+    ok, out = run("gnome-extensions", "enable" if on else "disable", uuid, timeout=10)
+    if ok:
+        return ok, out
+    names = [n for n in _enabled_extensions() if n not in APPINDICATOR_UUIDS] + ([uuid] if on else [])
+    return run("gsettings", "set", "org.gnome.shell", "enabled-extensions",
+               "[" + ", ".join(f"'{n}'" for n in names) + "]" if names else "@as []", timeout=5)

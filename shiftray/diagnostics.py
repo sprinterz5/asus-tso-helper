@@ -70,6 +70,7 @@ def report(cfg, version):
         f"libddcutil: {hw.ddcutil_version()}; powerdevil: "
         f"{_cmd('systemctl', '--user', 'show', 'plasma-powerdevil.service', '-p', 'ActiveState,Result', '--value')}"
         .replace("\n", " "),
+        f"gnome tray: {hw.gnome_tray()}",
     ])
     out += _section("Packages", [f"{p}: {_package(p)}" for p in
                                  ("asusctl", "cardwire", "supergfxctl", "power-profiles-daemon",

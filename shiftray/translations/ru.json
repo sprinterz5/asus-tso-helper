@@ -161,7 +161,6 @@
  "Later": "Позже",
  "Set up": "Настроить",
  "Close": "Закрыть",
- "Running on {desktop}: toasts, the logout prompt and the window at the tray icon use KDE.": "Сейчас {desktop}: всплывающие подсказки, окно выхода из сеанса и окно у значка в трее используют KDE.",
  "All set": "Всё готово",
  "The password prompt was cancelled.": "Запрос пароля отменён.",
  "optional": "необязательно",
@@ -370,7 +369,6 @@
  "Cardwire instead of supergfxd": "Cardwire вместо supergfxd",
  "GPU modes are switched by Cardwire; supergfxd is turned off so the two never fight over the GPU. On Fedora Cardwire also replaces switcheroo-control.": "Режимы видеокарты переключает Cardwire; supergfxd выключен, чтобы они не спорили за видеокарту. В Fedora Cardwire также заменяет switcheroo-control.",
  "Installed packages": "Установленные пакеты",
- "asusctl, python3-evdev / python3-dbus, swayidle, as needed. Nothing else depends on the app.": "asusctl, python3-evdev / python3-dbus, swayidle — по необходимости. От приложения больше ничего не зависит.",
  "Autostart, menu entry and window placement script": "Автозапуск, ярлык в меню и скрипт размещения окон",
  "In your home folder only: start with the session, an app menu entry (AppImage) and a KWin script that opens windows at the tray icon.": "Только в вашей домашней папке: запуск вместе с сеансом, ярлык в меню (AppImage) и скрипт KWin, который открывает окна у иконки в трее.",
  "KDE power profile on plug / unplug": "Профиль питания KDE при подключении зарядки",
@@ -466,5 +464,13 @@
  "KDE power management in Eco": "Управление питанием KDE в Eco",
  "KDE power management without ddcutil": "Управление питанием KDE без ddcutil",
  "PowerDevil crashed at start while Eco hides the NVIDIA GPU (a ddcutil bug, fixed in ddcutil 3.0), leaving no battery icon, dimming or lid action. It now starts without ddcutil; only external monitors' brightness over DDC is lost.": "PowerDevil падал при запуске, пока Eco прячет видеокарту NVIDIA (ошибка ddcutil, исправлена в ddcutil 3.0): не было значка батареи, затемнения и реакции на крышку. Теперь он запускается без ddcutil; теряется только яркость внешних мониторов по DDC.",
- "PowerDevil crashes at start while Eco hides the NVIDIA GPU (a ddcutil bug, fixed in ddcutil 3.0): no battery icon, dimming or lid action. Starts it without ddcutil; only external monitors' brightness over DDC is lost. No password.": "PowerDevil падает при запуске, пока Eco прячет видеокарту NVIDIA (ошибка ddcutil, исправлена в ddcutil 3.0): нет значка батареи, затемнения и реакции на крышку. Запускает его без ddcutil; теряется только яркость внешних мониторов по DDC. Без пароля."
+ "PowerDevil crashes at start while Eco hides the NVIDIA GPU (a ddcutil bug, fixed in ddcutil 3.0): no battery icon, dimming or lid action. Starts it without ddcutil; only external monitors' brightness over DDC is lost. No password.": "PowerDevil падает при запуске, пока Eco прячет видеокарту NVIDIA (ошибка ddcutil, исправлена в ddcutil 3.0): нет значка батареи, затемнения и реакции на крышку. Запускает его без ddcutil; теряется только яркость внешних мониторов по DDC. Без пароля.",
+ "Running on {desktop}: windows open where {desktop} places them, not at the tray icon.": "Сейчас {desktop}: окна открываются там, где их ставит {desktop}, а не у значка в трее.",
+ "asusctl, python3-evdev / python3-dbus, swayidle, GNOME's AppIndicator extension, as needed. Nothing else depends on the app.": "asusctl, python3-evdev / python3-dbus, swayidle, расширение AppIndicator для GNOME — по необходимости. От приложения больше ничего не зависит.",
+ "Tray icon on GNOME": "Значок в трее GNOME",
+ "Tray icons on GNOME": "Значки в трее GNOME",
+ "Shown after the next login.": "Появится после следующего входа в систему.",
+ "GNOME shows no tray icons by itself; the AppIndicator extension (the one Ubuntu ships) adds them. Turned on for you; a new install shows up after the next login.": "Сам GNOME значки в трее не показывает, их добавляет расширение AppIndicator (то же, что в Ubuntu). Включается само; после установки появится со следующего входа в систему.",
+ "GNOME's AppIndicator extension is turned on, so the app (and others) can show an icon in the top bar.": "Включено расширение AppIndicator для GNOME, чтобы приложение (и другие) могли показывать значок в верхней панели.",
+ "Log out and back in once to see the icon in the top bar.": "Выйдите из сеанса и войдите снова, чтобы значок появился в верхней панели."
 }

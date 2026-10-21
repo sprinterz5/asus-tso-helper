@@ -234,6 +234,9 @@ class ExtraWindow(QtWidgets.QWidget):
         self.topmost.setChecked(bool(self.cfg.get("topmost")))
         self.topmost.toggled.connect(self.on_topmost)
         ol.addWidget(self.topmost)
+        # on Wayland only KWin (through the app's script) keeps a window on top; GNOME ignores the hint
+        self.topmost.setVisible(not os.environ.get("WAYLAND_DISPLAY")
+                                or "KDE" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper())
         self.no_overdrive = None
         if hw.get_overdrive() is not None:
             self.no_overdrive = check(tr("Disable screen overdrive"), 2)

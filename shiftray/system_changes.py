@@ -123,6 +123,11 @@ def _clamshell_undo():
     return True, ""
 
 
+def _gnome_tray_undo():
+    forget("gnome_tray")
+    return hw.set_gnome_appindicator(False)
+
+
 def _desktop_files_undo():
     for path in (AUTOSTART, hw.DESKTOP_FILE, hw.ICON_FILE):
         try:
@@ -176,7 +181,7 @@ def changes():
                MEDIUM, True, _cardwire_applied,
                manual="sudo systemctl disable --now cardwired && sudo systemctl enable --now supergfxd"),
         Change("packages", tr("Installed packages"),
-               tr("asusctl, python3-evdev / python3-dbus, swayidle, as needed. Nothing else depends on the app."),
+               tr("asusctl, python3-evdev / python3-dbus, swayidle, GNOME's AppIndicator extension, as needed. Nothing else depends on the app."),
                LOW, True, lambda: "packages" in journal(),
                manual=lambda: "sudo dnf remove " + " ".join(journal().get("packages", {}).get("names", []))),
     ]
@@ -196,6 +201,12 @@ def changes():
                    tr("KDE setting you can turn on in Extra."),
                    LOW, False, lambda: bool(hw.clamshell()) and "clamshell" in journal(), undo_user=_clamshell_undo),
         ]
+    if hw.is_gnome():
+        rows.append(Change("gnome_tray", tr("Tray icons on GNOME"),
+                           tr("GNOME's AppIndicator extension is turned on, so the app (and others) can show "
+                              "an icon in the top bar."),
+                           LOW, False, lambda: "gnome_tray" in journal() and hw.gnome_tray() in ("on", "login"),
+                           undo_user=_gnome_tray_undo))
     # services Setup stopped because they fight asusd / Cardwire (conflicts.py)
     for c in conflicts.CONFLICTS:
         if c.service:

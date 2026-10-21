@@ -19,7 +19,7 @@ from . import system_changes
 from . import conflicts
 
 REQUIRED, RECOMMENDED, OPTIONAL, INFO = "required", "recommended", "optional", "info"
-USER_STEPS = {"powerdevil"}  # done as the user, in the home folder: no password
+USER_STEPS = {"powerdevil", "tray"}  # done as the user, in the home folder: no password
 OLD_COPR = "/etc/yum.repos.d/_copr:copr.fedorainfracloud.org:lukenukem:asus-linux.repo"
 TERRA_INSTALL = ("dnf install -y --nogpgcheck --repofrompath "
                  "'terra,https://repos.fyralabs.com/terra$releasever' terra-release")
@@ -136,21 +136,34 @@ def checks():
                           "PowerDevil crashes at start while Eco hides the NVIDIA GPU (a ddcutil bug, fixed in "
                           "ddcutil 3.0): no battery icon, dimming or lid action. Starts it without ddcutil; "
                           "only external monitors' brightness over DDC is lost. No password."))
+    tray = hw.gnome_tray()
+    if tray is not None:
+        rows.append(check("tray", "Tray icon on GNOME", tray in ("on", "login"), RECOMMENDED,
+                          "Shown after the next login." if tray == "login" else
+                          "GNOME shows no tray icons by itself; the AppIndicator extension (the one Ubuntu "
+                          "ships) adds them. Turned on for you; a new install shows up after the next login."))
     desktop = os.environ.get("XDG_CURRENT_DESKTOP", "")
-    rows.append(check("kde", "KDE Plasma", "KDE" in desktop.upper(), INFO,
-                      "" if "KDE" in desktop.upper() else
-                      tr("Running on {desktop}: toasts, the logout prompt and the window at the tray icon "
-                         "use KDE.", desktop=desktop or tr("another desktop")), fix=False))
+    if "KDE" not in desktop.upper():
+        rows.append(check("kde", "KDE Plasma", False, INFO,
+                          tr("Running on {desktop}: windows open where {desktop} places them, not at the tray icon.",
+                             desktop=desktop or tr("another desktop")), fix=False))
     return rows
 
 
 def todo_changes(todo):
     """Setup rows to fix -> the system_changes keys they make."""
     keys = {k for k in todo if k in ("terra", "cardwire", "ppd", "keys", "boost")}
+    if "tray" in todo:
+        keys.add("gnome_tray")
     keys |= {"stopped:" + k.split(":", 1)[1] for k in todo if k.startswith("conflict:")}
     if todo & {"asusd", "python", "swayidle"}:
         keys.add("packages")
     return keys
+
+
+def tray_package(todo):
+    """The AppIndicator extension, when the tray row is fixed and it is not installed yet."""
+    return [hw.APPINDICATOR_PACKAGE] if "tray" in todo and not hw.appindicator_installed() else []
 
 
 def packages_of(todo):
@@ -177,7 +190,7 @@ def script(rows):
             pkgs.append("asusctl")
         if "python" in todo:
             pkgs += ["python3-evdev", "python3-dbus"]
-        pkgs += [p for p in ("swayidle",) if p in todo]
+        pkgs += [p for p in ("swayidle",) if p in todo] + tray_package(todo)
         if pkgs:
             lines += [f"step 'Installing {' '.join(pkgs)}'", f"dnf install -y {' '.join(pkgs)}"]
         if "cardwire" in todo:
@@ -189,7 +202,7 @@ def script(rows):
                       "systemctl enable --now power-profiles-daemon"]
     elif family == "arch":
         pkgs = (["asusctl"] if "asusd" in todo else []) + (["python-evdev", "python-dbus"] if "python" in todo else [])
-        pkgs += [p for p in ("swayidle",) if p in todo]
+        pkgs += [p for p in ("swayidle",) if p in todo] + tray_package(todo)
         if pkgs:
             lines += [f"step 'Installing {' '.join(pkgs)}'", f"pacman -S --needed --noconfirm {' '.join(pkgs)}"]
         if "cardwire" in todo:
@@ -199,6 +212,7 @@ def script(rows):
     elif family in ("debian", "suse"):
         tool = "apt-get install -y" if family == "debian" else "zypper --non-interactive install"
         pkgs = (["python3-evdev", "python3-dbus"] if "python" in todo else []) + [p for p in ("swayidle",) if p in todo]
+        pkgs += tray_package(todo)
         if pkgs:
             lines += [f"step 'Installing {' '.join(pkgs)}'", f"{tool} {' '.join(pkgs)}"]
         if "asusd" in todo:
@@ -338,7 +352,11 @@ class SetupWindow(QtWidgets.QWidget):
         if "powerdevil" in self.todo:
             ok, out = hw.set_powerdevil_ddcutil(True)
             self.log.appendPlainText("== " + tr("KDE power management in Eco") + "\n" + (out or ("OK" if ok else "")))
-        if not self.todo - USER_STEPS:
+        self.packages = packages_of(self.todo) + tray_package(self.todo)  # before the install
+        if "tray" in self.todo:  # GNOME takes the setting before the extension is installed
+            ok, out = hw.set_gnome_appindicator(True)
+            self.log.appendPlainText("== " + tr("Tray icon on GNOME") + "\n" + (out or ("OK" if ok else "")))
+        if not self.todo - USER_STEPS and not tray_package(self.todo):
             self.done(0, None)
             return
         self.proc = QtCore.QProcess(self)
@@ -352,8 +370,10 @@ class SetupWindow(QtWidgets.QWidget):
     def done(self, code, _status):
         self.proc = None
         if code == 0:  # into the journal, so Extra -> System changes can list and undo them
-            for key in todo_changes(self.todo) - {"keys", "boost"}:  # those two are seen on disk
-                system_changes.record(key, **({"names": packages_of(self.todo)} if key == "packages" else {}))
+            for key in (todo_changes(self.todo) | ({"packages"} if self.packages else set())) - {"keys", "boost"}:
+                system_changes.record(key, **({"names": self.packages} if key == "packages" else {}))
+            if "tray" in self.todo and hw.gnome_tray() != "on":
+                self.log.appendPlainText("\n" + tr("Log out and back in once to see the icon in the top bar."))
         self.later.setEnabled(True)
         self.later.setText(tr("Close"))
         if code in (126, 127):
