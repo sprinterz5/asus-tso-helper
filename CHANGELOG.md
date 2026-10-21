@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.12.0
+- **Five more languages**: German, Spanish, Polish, Brazilian Portuguese and Simplified Chinese
+  (Extra → Language, or the system's language). Machine-assisted; corrections from native speakers
+  are welcome as pull requests.
+- **Battery wear over months**: the app notes the battery's health once a day, and after two weeks
+  the Battery window shows the change, e.g. "−1.0% in 3.0 months".
+
 ## 0.11.0
 - **A game switches the mode** (Extra → Other, off by default): pick a mode for the charger and one
   for battery, or "Don't change". Steam, Proton, Wine, Lutris and Heroic games are recognised; the

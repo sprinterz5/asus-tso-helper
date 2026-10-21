@@ -92,7 +92,7 @@
 - BIOS for your model (the ASUS source G-Helper uses), kernel, NVIDIA driver, asusctl,
   Cardwire and firmware updates in one window
 - Light and dark theme following the desktop, optionally in the desktop's accent colour
-- English and Russian; a translation is one JSON file
+- English, Russian, German, Spanish, Polish, Brazilian Portuguese and Simplified Chinese; a translation is one JSON file (fixes from native speakers welcome)
 
 <br clear="right">
 

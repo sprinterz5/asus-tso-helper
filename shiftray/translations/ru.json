@@ -483,5 +483,7 @@
  "The desktop's own charge limit": "Собственный лимит заряда рабочего стола",
  "UPower keeps another charge limit than this app's (on GNOME: Settings → Power → Battery Charging), so the limit changes after a restart or a change in either.": "UPower держит другой лимит заряда, чем это приложение (в GNOME: Настройки → Питание → Зарядка батареи), поэтому лимит меняется после перезагрузки или изменения в любом из них.",
  "turn the desktop's charge limit off, or set it to the same value": "выключите лимит заряда рабочего стола или поставьте такой же",
- "While the laptop was off, the battery charged from {before}% to {now}%, past the {limit}% limit: this laptop's firmware holds the limit only while Linux runs. Sleep keeps it.": "Пока ноутбук был выключен, батарея зарядилась с {before}% до {now}%, выше лимита {limit}%: прошивка этого ноутбука держит лимит, только пока работает Linux. Во сне лимит держится."
+ "While the laptop was off, the battery charged from {before}% to {now}%, past the {limit}% limit: this laptop's firmware holds the limit only while Linux runs. Sleep keeps it.": "Пока ноутбук был выключен, батарея зарядилась с {before}% до {now}%, выше лимита {limit}%: прошивка этого ноутбука держит лимит, только пока работает Linux. Во сне лимит держится.",
+ "{change}% in {days} days": "{change}% за {days} дн.",
+ "{change}% in {months} months": "{change}% за {months} мес."
 }

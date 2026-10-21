@@ -127,12 +127,12 @@ class BatteryWindow(QtWidgets.QWidget):
 
         def job():
             data = (hw.battery_history("charge", span), hw.battery_history("rate", span),
-                    hw.battery_capacity(), hw.watts_per_mode(span))
+                    hw.battery_capacity(), hw.watts_per_mode(span), hw.health_change())
             self.loaded.emit((span, data))
         self.main.bg(job)
 
     def show_data(self, result):
-        span, (charge, rate, health, per_mode) = result
+        span, (charge, rate, health, per_mode, wear) = result
         if span != self.seconds:
             return
         self.chart.set_data(charge, rate, span)
@@ -142,6 +142,11 @@ class BatteryWindow(QtWidgets.QWidget):
                       full=f"{health['full']:.1f}", design=f"{health['design']:.1f}")
             if health["cycles"]:
                 text += ", " + tr("{count} cycles", count=health["cycles"])
+            if wear:
+                change, days = wear
+                text += ", " + tr("{change}% in {months} months", change=f"{change:+.1f}",
+                                  months=f"{days / 30.4:.1f}") if days >= 60 else \
+                    ", " + tr("{change}% in {days} days", change=f"{change:+.1f}", days=days)
             lines.append(text)
         on_battery = [v for ts, v, s in rate if s == 2 and v > 0]
         if on_battery and health:

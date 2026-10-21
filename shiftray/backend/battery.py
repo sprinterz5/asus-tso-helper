@@ -213,6 +213,47 @@ def mode_log_lines():
         return []
 
 
+HEALTH_LOG = os.path.expanduser("~/.local/state/shiftray/health.log")
+
+
+def log_health():
+    """Appends "time health%" at most once a day, for the wear over months (Battery window)."""
+    cap = battery_capacity()
+    if not cap:
+        return
+    now = int(time.time())
+    lines = health_log_lines()
+    if lines and now - lines[-1][0] < 86400:
+        return
+    try:
+        os.makedirs(os.path.dirname(HEALTH_LOG), exist_ok=True)
+        with open(HEALTH_LOG, "a") as f:
+            f.write(f"{now} {cap['health']:.2f}\n")
+    except OSError:
+        pass
+
+
+def health_log_lines():
+    try:
+        with open(HEALTH_LOG) as f:
+            return [(int(t), float(h)) for t, h in (l.split() for l in f if len(l.split()) == 2)]
+    except (OSError, ValueError):
+        return []
+
+
+def health_change(min_days=14):
+    """(change in health points, days) since the first sample, once there are min_days of them; the
+    battery's own estimate wobbles a little after each full charge, so the first and the last week's
+    averages are compared. None before that."""
+    lines = health_log_lines()
+    if len(lines) < 2 or lines[-1][0] - lines[0][0] < min_days * 86400:
+        return None
+    week = 7 * 86400
+    first = [h for t, h in lines if t < lines[0][0] + week]
+    last = [h for t, h in lines if t > lines[-1][0] - week]
+    return sum(last) / len(last) - sum(first) / len(first), (lines[-1][0] - lines[0][0]) // 86400
+
+
 def watts_per_mode(seconds):
     """{mode: (average discharge W, hours on battery)} from UPower's rate history and the mode log."""
     log = mode_log_lines()

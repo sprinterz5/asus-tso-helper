@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from shiftray import setup, system_changes as sc, updates
+from shiftray import i18n, setup, system_changes as sc, updates
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "shiftray")
 
@@ -113,14 +113,19 @@ class Translations(unittest.TestCase):
                     found.add(node.args[0].value)
         return found
 
-    def test_russian_is_complete_and_placeholders_match(self):
-        with open(os.path.join(ROOT, "translations", "ru.json")) as f:
-            ru = json.load(f)
-        missing = sorted(s for s in self.strings() if s not in ru)
-        self.assertEqual(missing, [], "add these to translations/ru.json")
-        for en, text in ru.items():
-            if text:
-                self.assertEqual(set(re.findall(r"{(\w+)}", en)), set(re.findall(r"{(\w+)}", text)), en)
+    def test_translations_are_complete_and_placeholders_match(self):
+        files = sorted(glob.glob(os.path.join(ROOT, "translations", "*.json")))
+        self.assertEqual({os.path.basename(f)[:-5] for f in files}, set(i18n.LANGUAGES) - {"en"})
+        for path in files:
+            name = os.path.basename(path)
+            with open(path, encoding="utf-8") as f:
+                table = json.load(f)
+            missing = sorted(s for s in self.strings() if s not in table)
+            self.assertEqual(missing, [], f"add these to translations/{name}")
+            for en, text in table.items():
+                if text:
+                    self.assertEqual(set(re.findall(r"{(\w+)}", en)), set(re.findall(r"{(\w+)}", text)),
+                                     f"{name}: {en}")
 
 
 if __name__ == "__main__":

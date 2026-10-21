@@ -168,6 +168,20 @@ class ChargeLimit6080(unittest.TestCase):
         self.assertEqual(battery.firmware_limit(85, None), 85)
 
 
+class HealthLog(unittest.TestCase):
+    def test_wear_from_first_and_last_week(self):
+        day = 86400
+        lines = [(i * day, 98.0 if i < 7 else 97.0) for i in range(0, 90)]
+        with mock.patch.object(battery, "health_log_lines", return_value=lines):
+            change, days = battery.health_change()
+        self.assertAlmostEqual(change, -1.0)
+        self.assertEqual(days, 89)
+
+    def test_too_early(self):
+        with mock.patch.object(battery, "health_log_lines", return_value=[(0, 98.0), (86400, 97.9)]):
+            self.assertIsNone(battery.health_change())
+
+
 class UpowerLimit(unittest.TestCase):
     """GNOME's "Preserve Battery Health" (UPower) next to asusd's limit."""
 

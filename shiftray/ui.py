@@ -299,6 +299,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
             "", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings", "SettingChanged",
             self, QtCore.SLOT("on_portal_setting(QDBusMessage)"))
 
+        # battery health once a day, for the wear over months in the Battery window
+        self.health_timer = QtCore.QTimer(self, interval=6 * 3600 * 1000, timeout=lambda: self.bg(hw.log_health))
+        self.health_timer.start()
         self.fast = QtCore.QTimer(self, interval=2000, timeout=self.refresh_fast)
         self.slow = QtCore.QTimer(self, interval=5000, timeout=self.refresh_slow)
         self.fast.start()
@@ -1464,6 +1467,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         for this version)."""
         self.check_conflicts()
         self.check_charged_while_off()
+        self.bg(hw.log_health)
         if hw.remove_kwin_limits() and self.tray:
             self.tray.showMessage(NAME, tr("Log out once to get the HDMI / USB-C video ports back: "
                                   "\"Eco without logout\" is not needed with Cardwire."),

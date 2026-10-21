@@ -9,7 +9,8 @@ restart, as in G-Helper.
 import json
 import os
 
-LANGUAGES = {"en": "English", "ru": "Русский"}
+LANGUAGES = {"en": "English", "de": "Deutsch", "es": "Español", "pl": "Polski", "pt": "Português (Brasil)",
+             "ru": "Русский", "zh": "简体中文"}
 DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "translations")
 CONFIG = os.path.join(os.path.expanduser("~/.config"), "shiftray", "config.json")
 
