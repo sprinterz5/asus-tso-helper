@@ -1,5 +1,5 @@
 Name:           shiftray
-Version:        0.11.0
+Version:        0.12.0
 Release:        1%{?dist}
 Summary:        asusctl and Cardwire in one small app: modes, GPU, fans and battery for ASUS laptops
 
@@ -64,6 +64,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_metainfodir}/*.metainfo.xml
 %{_udevrulesdir}/70-%{name}.rules
 
 %changelog
+* Wed Oct 21 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.12.0-1
+- Five more languages; battery wear over months
+
 * Wed Oct 21 2026 sprinterz5 <63397324+sprinterz5@users.noreply.github.com> - 0.11.0-1
 - A game switches the mode; situations in the tray menu; UPower charge limit conflict; AppStream metainfo
 
