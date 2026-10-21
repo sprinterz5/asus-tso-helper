@@ -139,13 +139,74 @@ def game_name(pid):
             comm = f.read().strip()
     except (OSError, ValueError):
         return None
-    if comm.lower() in ("steam", "steamwebhelper", "pressure-vessel", "reaper", "wineserver", "lutris", "heroic"):
+    if comm.lower() in ("steam", "steamwebhelper", "pressure-vessel", "reaper", "wineserver", "lutris", "heroic",
+                        "fossilize_repla"):  # Steam's shader pre-caching carries the game's id too
         return None
     app = env.get(b"SteamAppId") or env.get(b"SteamGameId") or b"0"
     if app not in (b"0", b"") or b"STEAM_COMPAT_DATA_PATH" in env or b"WINEPREFIX" in env \
             or comm.lower().endswith(".exe"):
         return comm
     return None
+
+
+# Wine's own processes, running next to every Windows game
+WINE_HELPERS = {"services.exe", "winedevice.exe", "plugplay.exe", "explorer.exe", "rpcss.exe", "svchost.exe",
+                "tabtip.exe", "conhost.exe", "start.exe", "wineboot.exe", "rundll32.exe", "steam.exe",
+                "winemenubuilder", "iexplore.exe"}
+STEAM_ROOTS = ("~/.local/share/Steam", "~/.steam/steam", "~/.var/app/com.valvesoftware.Steam/.local/share/Steam")
+_steam_titles = {}
+
+
+def steam_title(app_id):
+    """A Steam game's name from its appmanifest in any Steam library, or None."""
+    if app_id in _steam_titles:
+        return _steam_titles[app_id]
+    title = None
+    libraries = []
+    for root in STEAM_ROOTS:
+        try:
+            with open(os.path.join(os.path.expanduser(root), "steamapps", "libraryfolders.vdf")) as f:
+                libraries += re.findall(r'"path"\s+"([^"]+)"', f.read())
+        except OSError:
+            pass
+        libraries.append(os.path.expanduser(root))
+    for lib in dict.fromkeys(libraries):
+        try:
+            with open(os.path.join(lib, "steamapps", f"appmanifest_{app_id}.acf"), errors="replace") as f:
+                found = re.search(r'"name"\s+"([^"]+)"', f.read())
+        except OSError:
+            continue
+        if found:
+            title = found.group(1)
+            break
+    _steam_titles[app_id] = title
+    return title
+
+
+def game_title(pid):
+    """What to call the game this process belongs to: its Steam name, else the program's name;
+    None for anything that is not a game, Wine's own helpers included."""
+    name = game_name(pid)
+    if not name or name.lower() in WINE_HELPERS:
+        return None
+    try:
+        with open(f"/proc/{pid}/environ", "rb") as f:
+            env = dict(v.split(b"=", 1) for v in f.read().split(b"\0") if b"=" in v)
+    except (OSError, ValueError):
+        return name
+    app = (env.get(b"SteamAppId") or env.get(b"SteamGameId") or b"").decode(errors="replace")
+    return (steam_title(app) if app.isdigit() and app != "0" else None) or name
+
+
+def scan_games(known):
+    """{pid: game title or None} for the running processes; only pids not in known (the last scan)
+    are looked at, so a scan every few seconds reads a handful of files."""
+    now = {}
+    for entry in os.listdir("/proc"):
+        if entry.isdigit():
+            pid = int(entry)
+            now[pid] = known[pid] if pid in known else game_title(pid)
+    return now
 
 
 def cardwire_last_blocked():

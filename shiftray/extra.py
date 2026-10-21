@@ -16,6 +16,7 @@ from . import modes
 from . import system_changes
 from . import widgets as w
 from .widgets import ECO, STANDARD
+from .window_games import GAME_DEFAULTS, KEEP
 from .config import HOMEPAGE
 from .i18n import tr
 
@@ -265,6 +266,7 @@ class ExtraWindow(QtWidgets.QWidget):
                 hw.platform_set, "DisableNvidiaPowerdOnBattery", "b", on,
                 then=lambda r: self.main.report(r, tr("NVIDIA power daemon"))))
             ol.addWidget(self.powerd)
+        self.build_game_mode(ol)
         hints = check(tr("Tell me when a game runs in Eco or Silent"), 2)
         hints.setChecked(self.cfg.get("game_hints", True))
         hints.toggled.connect(lambda on: (self.cfg.__setitem__("game_hints", on), self.main.save()))
@@ -664,6 +666,44 @@ class ExtraWindow(QtWidgets.QWidget):
     def on_clamshell(self, on):
         system_changes.record("clamshell", on=on)
         self.main.bg(hw.set_clamshell, on, then=lambda r: self.main.report(r, tr("Clamshell mode")))
+
+    def build_game_mode(self, ol):
+        """"When a game runs, switch the mode": on the charger [mode], on battery [mode] (window_games)."""
+        self.game_mode = check(tr("When a game runs, switch the mode"), 2)
+        self.game_mode.setChecked(bool(self.cfg.get("game_mode_on")))
+        self.game_mode.setToolTip(tr("Steam, Proton, Wine, Lutris and Heroic games. When the last one quits, "
+                                     "the mode you had comes back. Picking a mode during a game wins."))
+        self.game_mode.toggled.connect(self.on_game_mode)
+        ol.addWidget(self.game_mode)
+        self.game_combos = {}
+        for key, label in (("game_mode_ac", tr("On the charger")), ("game_mode_bat", tr("On battery"))):
+            row = QtWidgets.QHBoxLayout()
+            row.setContentsMargins(24, 2, 0, 2)
+            row.addWidget(QtWidgets.QLabel(label))
+            row.addStretch()
+            combo = w.RComboBox()
+            combo.setFixedWidth(146)
+            combo.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+            combo.addItem(tr("Don't change"), KEEP)
+            for mode, name, _ in modes.all_modes(self.cfg):
+                combo.addItem(name, mode)
+            combo.setCurrentIndex(max(0, combo.findData(self.cfg.get(key) or GAME_DEFAULTS[key])))
+            combo.activated.connect(lambda _, k=key, c=combo: (self.cfg.__setitem__(k, c.currentData()),
+                                                              self.main.save()))
+            row.addWidget(combo)
+            ol.addLayout(row)
+            self.game_combos[key] = combo
+        self.show_game_mode()
+
+    def show_game_mode(self):
+        for combo in self.game_combos.values():
+            combo.setEnabled(self.game_mode.isChecked())
+
+    def on_game_mode(self, on):
+        self.cfg["game_mode_on"] = on
+        self.main.save()
+        self.show_game_mode()
+        self.main.apply_game_mode()
 
     def on_topmost(self, on):
         self.cfg["topmost"] = on

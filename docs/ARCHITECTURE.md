@@ -22,7 +22,8 @@ Setup, the deep sleep option and Undo, and every such change is listed in `syste
 | `shiftray/ui.py` | The main window: layout, refresh loops, mode / GPU / screen actions, tray icon, `main()` |
 | `shiftray/window_keys.py` | Main window part: key bindings (laptop keys and desktop shortcuts) |
 | `shiftray/window_update.py` | Main window part: the app's own update, the Updates window |
-| `shiftray/window_idle.py` | Main window part: keyboard backlight timeout (swayidle) |
+| `shiftray/window_idle.py` | Main window part: keyboard backlight timeout (swayidle, or GNOME's IdleMonitor) |
+| `shiftray/window_games.py` | Main window part: a running game switches the mode (Extra, opt-in) and the old one comes back |
 | `shiftray/config.py` | App name, version, links; the settings file |
 | `shiftray/fans.py` | Fans + Power window: fan curves, power limits, CPU boost, EPP |
 | `shiftray/extra.py` | Extra window: lighting, other options, language, theme, Setup / Diagnostics / System changes |

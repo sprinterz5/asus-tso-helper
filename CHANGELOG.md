@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0
+- **A game switches the mode** (Extra → Other, off by default): pick a mode for the charger and one
+  for battery, or "Don't change". Steam, Proton, Wine, Lutris and Heroic games are recognised; the
+  notification names Steam games by their name. When the last game quits, the mode you had comes
+  back; picking a mode yourself during a game wins until it ends. The charger's and the battery's
+  remembered modes are never overwritten by a game's.
+
 ## 0.10.0
 - **GNOME support.** Vanilla GNOME shows no tray icons; Setup now installs GNOME's AppIndicator
   extension (the one Ubuntu ships) and turns it on, and the tray icon appears without restarting the

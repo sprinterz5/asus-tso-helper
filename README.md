@@ -76,7 +76,8 @@
 **GPU**
 - Eco, Standard, Ultimate (MUX) and Optimized (Eco on battery)
 - The tray tooltip names the apps keeping the dGPU awake; on battery a notification names them too
-- A game started in Eco or Silent gets a hint to switch
+- A game started in Eco or Silent gets a hint to switch; or, if you turn it on in Extra, the mode
+  switches by itself (say Turbo on the charger, Balanced on battery) and comes back when you quit
 
 **Screen, keyboard, battery**
 - 60 Hz, max Hz or automatic by power source, panel overdrive

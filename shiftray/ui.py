@@ -30,6 +30,7 @@ from .config import APP, NAME, VERSION, HOMEPAGE, DONATE_URL, AUTOSTART, quit_ap
 from .window_keys import KeysMixin
 from .window_update import UpdateMixin
 from .window_idle import IdleMixin, idle_available
+from .window_games import GamesMixin
 from .window_situations import SituationsMixin
 from .widgets import ECO, STANDARD, TURBO, CUSTOM, GRAY
 
@@ -156,7 +157,7 @@ class HoverTip(QtCore.QObject):
         return False
 
 
-class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.QWidget):
+class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin, QtWidgets.QWidget):
     def __init__(self, tray_available):
         super().__init__()
         self.cfg = load_config()
@@ -279,6 +280,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         self.note_actions = {}      # notification id -> what its button does
         self.notifier = notifications.Notifier(NAME, APP)
         self.games_told = set()     # one hint per game and situation in a session
+        self.init_games()           # Extra: a game switches the mode
         self.sleep_mark = None      # (time, Wh, on AC) when the laptop went to sleep
         self.dgpu_seen = {}         # app -> since when it keeps the dGPU awake on battery
         self.dgpu_told = {}         # app -> when the last "dGPU awake on battery" named it
@@ -1106,11 +1108,14 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         self.show_situations()  # the "Max" button and tiles say the real rate
 
     # -- actions ----------------------------------------------------------------
-    def on_profile(self, key, notify=False):
+    def on_profile(self, key, notify=False, remember=True):
         """A base mode (quiet / balanced / performance) or a custom mode id.
-        notify: show the toast (mode picked by a key, not in the window)."""
+        notify: show the toast (mode picked by a key, not in the window).
+        remember: kept as the power source's mode (not for a game's, which ends with the game)."""
         log.info(f"mode -> {key}")
-        self.remember_mode(key)
+        if remember:
+            self.remember_mode(key)
+            self.game_mode_picked()
         if notify:
             self.toast_mode(key)
         if modes.get(self.cfg, key):
@@ -1184,6 +1189,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, SituationsMixin, QtWidgets.Q
         """Charger plugged or unplugged: the mode last used on this source comes back
         (custom modes too); with none remembered asusd's own choice stays."""
         log.info(f"power source -> {'AC' if ac else 'battery'}")
+        if self.games and self.switch_for_game():  # a game runs: its mode for this source
+            return
+        self.game_set = None
         target = self.cfg.get("mode_ac" if ac else "mode_bat")
         self.mode_busy = True
 

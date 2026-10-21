@@ -472,5 +472,12 @@
  "Shown after the next login.": "Появится после следующего входа в систему.",
  "GNOME shows no tray icons by itself; the AppIndicator extension (the one Ubuntu ships) adds them. Turned on for you; a new install shows up after the next login.": "Сам GNOME значки в трее не показывает, их добавляет расширение AppIndicator (то же, что в Ubuntu). Включается само; после установки появится со следующего входа в систему.",
  "GNOME's AppIndicator extension is turned on, so the app (and others) can show an icon in the top bar.": "Включено расширение AppIndicator для GNOME, чтобы приложение (и другие) могли показывать значок в верхней панели.",
- "Log out and back in once to see the icon in the top bar.": "Выйдите из сеанса и войдите снова, чтобы значок появился в верхней панели."
+ "Log out and back in once to see the icon in the top bar.": "Выйдите из сеанса и войдите снова, чтобы значок появился в верхней панели.",
+ "Don't change": "Не менять",
+ "On battery": "На батарее",
+ "On the charger": "На зарядке",
+ "Steam, Proton, Wine, Lutris and Heroic games. When the last one quits, the mode you had comes back. Picking a mode during a game wins.": "Игры из Steam, Proton, Wine, Lutris и Heroic. Когда закроется последняя, вернётся прежний режим. Если выбрать режим во время игры, останется он.",
+ "When a game runs, switch the mode": "Когда запущена игра, переключать режим",
+ "{game} closed: back to {mode}": "{game} закрыта: снова {mode}",
+ "{game} started: {mode}": "{game} запущена: {mode}"
 }
