@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.0
+- **Laptops without a discrete GPU** (Strix Halo, Zenbook, Vivobook): the GPU mode block, its tray
+  entries and the GPU part of situations are gone, and Setup no longer asks for Cardwire. Before,
+  four GPU buttons that did nothing sat in the middle of the window.
+- **From the AppImage to the package**: the installed Fedora or Arch package points the menu entry
+  and autostart at itself the first time it starts, so the old AppImage stops coming back.
+- **Memory, honestly**: the README says what the app takes (about 60 MB as a package, 100 MB as
+  an AppImage) and why.
+
 ## 0.12.0
 - **Five more languages**: German, Spanish, Polish, Brazilian Portuguese and Simplified Chinese
   (Extra → Language, or the system's language). Machine-assisted; corrections from native speakers
