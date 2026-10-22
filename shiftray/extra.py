@@ -309,8 +309,8 @@ class ExtraWindow(QtWidgets.QWidget):
             self.apu = w.RComboBox()
             self.apu.setFixedWidth(146)
             self.apu.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
-            for value in apu:
-                self.apu.addItem(tr("Auto") if value == "0" else f"{value} GB", value)
+            for value in apu:  # the driver's index: 0 is the firmware's Auto (its minimum), then index + 1 GB
+                self.apu.addItem(tr("Auto") if value == "0" else f"{int(value) + 1} GB", value)
             self.apu.setCurrentIndex(max(0, self.apu.findData(hw._read(f"{hw.ARMOURY}/apu_mem/current_value"))))
             self.apu.activated.connect(lambda _: self.main.bg(
                 hw.run, "asusctl", "armoury", "set", "apu_mem", self.apu.currentData(),
