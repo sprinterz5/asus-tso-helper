@@ -345,7 +345,7 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         self.gpu_tip.setFixedHeight(TIP_LINE)
         self.gpu_tip.setWordWrap(True)
         self.gpu_tip.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
-        supported = hw.gpu_supported() or [m[0] for m in GPU_MODES]
+        supported = hw.gpu_supported()  # none without a dGPU: the panel stays hidden
         self.gpu_buttons = {}
         tips = {}
         col = 0
@@ -934,6 +934,8 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
     def refresh_gpu(self, key=None):
         """key: from the timer. After a switch or Cardwire's signal it always runs, so the state it
         reads is newer than the change."""
+        if not self.gpu_buttons:
+            return
         eco = self.gpu_current == "Integrated"
         self.bg(lambda: (hw.gpu_mode(), hw.gpu_pending(), hw.dgpu_power(blocked=eco)), then=self.show_gpu,
                 key=key)
@@ -1650,14 +1652,15 @@ class Tray(QtWidgets.QSystemTrayIcon):
             act.setCheckable(True)
             self.mode_actions[key] = act
         self.menu.addSeparator()
-        title = self.menu.addAction(tr("GPU Mode"))
-        title.setEnabled(False)
-        for key, label, *_ in GPU_MODES:
-            if key in window.gpu_buttons:
-                self.menu.addAction(label, lambda k=key: window.on_gpu(k))
-        if window.optimized:
-            self.menu.addAction(tr("Optimized"), window.on_optimized)
-        self.menu.addSeparator()
+        if window.gpu_buttons:
+            title = self.menu.addAction(tr("GPU Mode"))
+            title.setEnabled(False)
+            for key, label, *_ in GPU_MODES:
+                if key in window.gpu_buttons:
+                    self.menu.addAction(label, lambda k=key: window.on_gpu(k))
+            if window.optimized:
+                self.menu.addAction(tr("Optimized"), window.on_optimized)
+            self.menu.addSeparator()
         self.menu.addAction(tr("Battery"), window.on_battery)
         self.menu.addAction(tr("Quit"), quit_app)
 

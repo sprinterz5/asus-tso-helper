@@ -61,6 +61,7 @@ from .gpu import (  # noqa: F401
     mux_dgpu,
     gpu_mode,
     gpu_supported,
+    has_dgpu,
     gpu_pending,
     set_gpu_mode,
     KWIN_ENV,

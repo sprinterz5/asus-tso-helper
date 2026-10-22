@@ -43,19 +43,22 @@ def icon(key):
     return next(d[2] for d in DEFAULTS if d[0] == key)
 
 
-def summary(cfg, key, screen_max=None):
-    """The tile's grey line: 'Silent · Eco · 60Hz · lights low'."""
+def summary(cfg, key, screen_max=None, gpu_modes=True):
+    """The tile's grey line: 'Silent · Eco · 60Hz · lights low' (no GPU mode without a dGPU)."""
     s = get(cfg, key)
     screen = screen_max if s["screen"] == "max" and screen_max else dict(SCREENS)[s["screen"]]
-    return " · ".join((dict(MODES)[s["mode"]], dict(GPUS)[s["gpu"]], screen, LIGHTS[s["kbd"]]))
+    parts = (dict(MODES)[s["mode"]],) + ((dict(GPUS)[s["gpu"]],) if gpu_modes else ()) + (screen, LIGHTS[s["kbd"]])
+    return " · ".join(parts)
 
 
-def matches(cfg, key, profile, gpu, gpu_auto):
+def matches(cfg, key, profile, gpu, gpu_auto, gpu_modes=True):
     """Whether the laptop is still in this situation: its mode and GPU mode. A mode changed with Fn+F5
     or another app ends it."""
     s = get(cfg, key)
     if s["mode"] != profile or cfg.get("active_mode"):
         return False
+    if not gpu_modes:
+        return True
     if s["gpu"] == "auto":
         return bool(gpu_auto)
     return s["gpu"] == gpu and not gpu_auto

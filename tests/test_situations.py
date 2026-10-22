@@ -33,6 +33,10 @@ class Situations(unittest.TestCase):
         self.assertTrue(sit.matches({}, "quiet", "quiet", "Hybrid", True))             # Optimized, plugged in
         self.assertFalse(sit.matches({"active_mode": "x"}, "go", "quiet", "Integrated", False))  # a custom mode
 
+    def test_without_a_dgpu_the_gpu_mode_is_left_out(self):
+        self.assertEqual(sit.summary({}, "go", gpu_modes=False), "Silent · 60Hz · lights low")
+        self.assertTrue(sit.matches({}, "go", "quiet", None, False, gpu_modes=False))
+
 
 if __name__ == "__main__":
     unittest.main()

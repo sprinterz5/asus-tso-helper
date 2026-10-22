@@ -97,6 +97,8 @@ class SituationsMixin:
         self.sit_panel.setVisible(on)
         for panel in (self.perf_panel, self.gpu_panel, self.screen_panel):
             panel.setVisible(not on)
+        if not self.gpu_buttons:  # no dGPU
+            self.gpu_panel.hide()
         if on:
             self.show_situations()
         QtCore.QTimer.singleShot(0, lambda: self.setFixedHeight(self.root_layout.sizeHint().height()))
@@ -112,7 +114,7 @@ class SituationsMixin:
         """The picked situation while the laptop is still in it, else None."""
         key = self.cfg.get("situation")
         if key in sit.KEYS and sit.matches(self.cfg, key, self.last_profile, self.gpu_current,
-                                           self.cfg.get("gpu_auto")):
+                                           self.cfg.get("gpu_auto"), bool(self.gpu_buttons)):
             return key
         return None
 
@@ -124,10 +126,10 @@ class SituationsMixin:
         screen_max = self.screen_max.text() if self.screen_max.text() != tr("Max") else None
         for key, b in self.sit_tiles.items():
             b.set_activated(key == active)
-            b.set_line(sit.summary(self.cfg, key, screen_max))
+            b.set_line(sit.summary(self.cfg, key, screen_max, bool(self.gpu_buttons)))
         self.sit_head.title.setText(tr("Situation: {name}", name=sit.title(active)) if active else tr("Situation"))
         self.sit_fold.title.setText(tr("{name} is", name=sit.title(shown)))
-        self.sit_fold.summary.setText(sit.summary(self.cfg, shown, screen_max))
+        self.sit_fold.summary.setText(sit.summary(self.cfg, shown, screen_max, bool(self.gpu_buttons)))
         settings = sit.get(self.cfg, shown)
         for (setting, value), b in self.sit_buttons.items():
             b.set_activated(settings.get(setting) == value)
@@ -160,7 +162,7 @@ class SituationsMixin:
         mode = settings.get("mode")
         if mode and (mode != self.last_profile or self.cfg.get("active_mode")):
             self.on_profile(mode)
-        gpu = settings.get("gpu")
+        gpu = settings.get("gpu") if self.gpu_buttons else None
         if gpu == "auto" and not self.cfg.get("gpu_auto"):
             self.on_optimized()
         elif gpu in ("Integrated", "Hybrid", "AsusMuxDgpu") and (gpu != self.gpu_current or self.cfg.get("gpu_auto")):

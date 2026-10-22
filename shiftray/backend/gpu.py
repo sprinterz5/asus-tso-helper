@@ -75,7 +75,27 @@ def gpu_mode():
     return cardwire_mode()
 
 
+def _display_devices():
+    """PCI display controllers (class 0x03xxxx) whose files can be read: Cardwire hides the dGPU's
+    while it blocks it, so in Eco this misses it."""
+    found = 0
+    for path in glob.glob("/sys/bus/pci/devices/*/class"):
+        if (_read(path) or "").startswith("0x03"):
+            found += 1
+    return found
+
+
+def has_dgpu():
+    """A second GPU to switch to (NVIDIA or AMD), or the firmware's dGPU switch or MUX. Strix Halo,
+    Zenbooks and Vivobooks have the integrated GPU only, and then GPU modes have nothing to do."""
+    return (_display_devices() >= 2 or has_mux() or os.path.exists(os.path.join(ARMOURY, "dgpu_disable"))
+            or dgpu_power() is not None or cardwire_dgpu() is not None)
+
+
 def gpu_supported():
+    """GPU modes to offer; none without a dGPU."""
+    if not has_dgpu():
+        return []
     return ["Integrated", "Hybrid"] + (["AsusMuxDgpu"] if has_mux() else [])
 
 

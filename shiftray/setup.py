@@ -55,9 +55,8 @@ def is_asus():
 
 
 def has_dgpu():
-    """A discrete GPU for Eco / Standard (NVIDIA, or the dGPU switch in the firmware)."""
-    return (hw.dgpu_power() is not None or hw.cardwire_dgpu() is not None
-            or os.path.exists(f"{hw.ARMOURY}/dgpu_disable"))
+    """A discrete GPU for Eco / Standard (NVIDIA or AMD, or the dGPU switch in the firmware)."""
+    return hw.has_dgpu()
 
 
 def service_active(name):
