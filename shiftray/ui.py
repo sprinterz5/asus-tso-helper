@@ -310,6 +310,11 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         self.update_timer = QtCore.QTimer(self, interval=24 * 3600 * 1000, timeout=self.check_app_update)
         self.update_timer.start()
         QtCore.QTimer.singleShot(10000, self.check_app_update)
+        # a monitor on the dGPU's port that KDE does not drive (it started in Eco): a few sysfs reads
+        self.monitors_told = set()
+        self.monitor_timer = QtCore.QTimer(self, interval=10000, timeout=self.check_monitors)
+        if self.gpu_buttons:
+            self.monitor_timer.start()
         self.refresh_fast()
         self.refresh_gpu()  # the tray icon shows the GPU mode; the rest comes when the window opens
 
@@ -1376,6 +1381,8 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
                 self.gpu_target = mode
                 if reboot:
                     subprocess.Popen(["systemctl", "reboot"])
+            elif mode == "Hybrid":
+                QtCore.QTimer.singleShot(3000, self.check_monitors)  # a monitor waiting on the dGPU
             self.refresh_slow()
 
         def job():
@@ -1383,6 +1390,24 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
                 self.terminate(list(close))
             return hw.set_gpu_mode(mode)
         self.bg(job, then=done)
+
+    def check_monitors(self):
+        def found(result):
+            card, dark = result
+            if not dark:
+                self.monitors_told.clear()  # unplugged or showing: tell again next time
+                return
+            new = [p for p in dark if p not in self.monitors_told]
+            if not new:
+                return
+            self.monitors_told.update(dark)
+            log.info(f"monitor without picture on the dGPU: {dark}")
+            self.notify("video-display", tr(
+                "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE "
+                "started while it was off (Eco). Turn it on without logging out?", port=", ".join(dark)),
+                tr("Turn on"), lambda: self.bg(hw.announce_gpu, card,
+                                               then=lambda r: self.report(r, tr("External monitor"))))
+        self.bg(hw.dark_monitors, then=found, key="monitors")
 
     def offer_cardwire_restart(self, mode, done):
         """Cardwire started before the NVIDIA driver (first boot after a kernel update) and does not
@@ -1408,6 +1433,9 @@ class MainWindow(KeysMixin, UpdateMixin, IdleMixin, GamesMixin, SituationsMixin,
         plugged = hw.ac_online() and not (self.cfg.get("optimized_usbc") and hw.usb_c_charger())
         want = "Hybrid" if plugged else "Integrated"
         if self.gpu_current not in ("Integrated", "Hybrid") or self.gpu_current == want or self.gpu_busy:
+            return
+        if want == "Integrated" and hw.dgpu_monitors()[1]:  # Eco would turn that monitor off
+            log.info("Optimized: staying in Standard, a monitor is on the dGPU's port")
             return
         close = []
         if want == "Integrated" and self.cfg.get("kill_gpu_apps"):

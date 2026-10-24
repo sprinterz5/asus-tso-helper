@@ -485,5 +485,8 @@
  "turn the desktop's charge limit off, or set it to the same value": "关闭桌面的充电上限，或将其设为相同的值",
  "While the laptop was off, the battery charged from {before}% to {now}%, past the {limit}% limit: this laptop's firmware holds the limit only while Linux runs. Sleep keeps it.": "笔记本关机期间，电池从 {before}% 充到了 {now}%，超过了 {limit}% 的上限：此笔记本的固件只在 Linux 运行时才保持上限。睡眠则会保持。",
  "{change}% in {days} days": "{days} 天 {change}%",
- "{change}% in {months} months": "{months} 个月 {change}%"
+ "{change}% in {months} months": "{months} 个月 {change}%",
+ "External monitor": "外接显示器",
+ "Turn on": "开启",
+ "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "{port} 上的显示器没有画面：该接口连接在 NVIDIA 显卡上，而 KDE 启动时它处于关闭状态（Eco）。无需注销即可开启？"
 }

@@ -234,6 +234,16 @@ says how to remove the rest. See [`conflicts.py`](shiftray/conflicts.py).
 ## Troubleshooting
 
 <details>
+<summary><b>A monitor on HDMI shows nothing</b></summary>
+
+On many ASUS laptops the HDMI port is wired to the NVIDIA GPU. In Eco that GPU is off, so the port
+is dead; Optimized stays in Standard while a monitor is plugged in there. If KDE started in Eco and
+you switched to Standard later, KDE has not picked up the NVIDIA GPU yet: Shiftray notices and
+offers **Turn on**, which announces the GPU to KDE again (one password, no logout). While a monitor
+is on that port, the NVIDIA GPU stays awake.
+</details>
+
+<details>
 <summary><b>It uses 100 MB of memory</b></summary>
 
 That is the AppImage. Most of it is Python and Qt: an empty Qt window with a tray icon

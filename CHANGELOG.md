@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- **HDMI on the NVIDIA GPU**: when KDE started in Eco and a monitor on the dGPU's port shows nothing
+  in Standard, a notification offers **Turn on**: the GPU is announced to KDE again, no logout.
+  Optimized no longer switches to Eco while a monitor is plugged in there.
+
 ## 0.13.0
 - **Laptops without a discrete GPU** (Strix Halo, Zenbook, Vivobook): the GPU mode block, its tray
   entries and the GPU part of situations are gone, and Setup no longer asks for Cardwire. Before,

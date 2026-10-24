@@ -1,5 +1,6 @@
 """GPU modes (Cardwire, MUX through asusd), who uses the dGPU, games, dGPU sensors."""
 import glob
+import json
 import os
 import re
 import shlex
@@ -90,6 +91,56 @@ def has_dgpu():
     Zenbooks and Vivobooks have the integrated GPU only, and then GPU modes have nothing to do."""
     return (_display_devices() >= 2 or has_mux() or os.path.exists(os.path.join(ARMOURY, "dgpu_disable"))
             or dgpu_power() is not None or cardwire_dgpu() is not None)
+
+
+def dgpu_card():
+    """/sys/class/drm/cardN of the discrete GPU (not the one the firmware booted on), or None.
+    Cardwire hides its files in Eco, so then there is none."""
+    for card in sorted(glob.glob("/sys/class/drm/card[0-9]*")):
+        if "-" not in os.path.basename(card) and _read(os.path.join(card, "device", "boot_vga")) == "0":
+            return card
+    return None
+
+
+def dgpu_monitors():
+    """Monitors plugged into the dGPU's own ports (on many laptops HDMI is wired to the NVIDIA GPU),
+    as connector names like "HDMI-A-1". The kernel's cached status: reading it wakes nothing."""
+    card = dgpu_card()
+    if not card:
+        return card, []
+    name = os.path.basename(card)
+    found = [os.path.basename(c)[len(name) + 1:] for c in sorted(glob.glob(f"{card}-*"))
+             if _read(os.path.join(c, "status")) == "connected"]
+    return card, found
+
+
+def desktop_outputs():
+    """Outputs the desktop drives (KDE, kscreen-doctor), or None where it cannot be asked."""
+    ok, out = run("kscreen-doctor", "-j", timeout=5)
+    if not ok:
+        return None
+    try:
+        return {o["name"] for o in json.loads(out).get("outputs", []) if o.get("connected")}
+    except (ValueError, AttributeError, KeyError, TypeError):
+        return None
+
+
+def dark_monitors():
+    """(card, ports): monitors on the dGPU the desktop does not drive. KWin opens the GPUs it can
+    when it starts; one that came back later (KDE started in Eco, then Standard) stays unused until
+    the kernel announces it again, and the monitor shows nothing."""
+    card, plugged = dgpu_monitors()
+    if not plugged:
+        return card, []
+    outputs = desktop_outputs()
+    if outputs is None:
+        return card, []
+    return card, [p for p in plugged if p not in outputs]
+
+
+def announce_gpu(card):
+    """Announces the dGPU again (a udev "add" event), so KWin picks it up without a logout (one password)."""
+    return run("pkexec", "udevadm", "trigger", "--action=add", card, timeout=120)
 
 
 def gpu_supported():

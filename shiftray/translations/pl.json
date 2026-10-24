@@ -485,5 +485,8 @@
  "turn the desktop's charge limit off, or set it to the same value": "wyłącz limit ładowania pulpitu albo ustaw taką samą wartość",
  "While the laptop was off, the battery charged from {before}% to {now}%, past the {limit}% limit: this laptop's firmware holds the limit only while Linux runs. Sleep keeps it.": "Gdy laptop był wyłączony, bateria naładowała się z {before}% do {now}%, ponad limit {limit}%: firmware tego laptopa utrzymuje limit tylko wtedy, gdy działa Linux. Uśpienie go zachowuje.",
  "{change}% in {days} days": "{change}% w {days} dni",
- "{change}% in {months} months": "{change}% w {months} mies."
+ "{change}% in {months} months": "{change}% w {months} mies.",
+ "External monitor": "Monitor zewnętrzny",
+ "Turn on": "Włącz",
+ "The monitor on {port} shows nothing: that port is wired to the NVIDIA GPU, and KDE started while it was off (Eco). Turn it on without logging out?": "Monitor na {port} nic nie pokazuje: to złącze jest podłączone do GPU NVIDIA, a KDE uruchomiło się, gdy była wyłączona (Eco). Włączyć bez wylogowania?"
 }

@@ -232,5 +232,21 @@ class PowerdevilDdcutil(unittest.TestCase):
         self.assertIsNone(self.run_with(desktop="GNOME"))
 
 
+class DarkMonitors(unittest.TestCase):
+    """A monitor on the dGPU's HDMI that KDE does not drive (it started in Eco)."""
+
+    def test_monitor_kde_does_not_drive(self):
+        with mock.patch.object(gpu, "dgpu_monitors", return_value=("/sys/class/drm/card0", ["HDMI-A-1"])), \
+                mock.patch.object(gpu, "desktop_outputs", return_value={"eDP-1"}):
+            self.assertEqual(gpu.dark_monitors(), ("/sys/class/drm/card0", ["HDMI-A-1"]))
+
+    def test_monitor_showing_or_unknown(self):
+        with mock.patch.object(gpu, "dgpu_monitors", return_value=("/sys/class/drm/card0", ["HDMI-A-1"])):
+            with mock.patch.object(gpu, "desktop_outputs", return_value={"eDP-1", "HDMI-A-1"}):
+                self.assertEqual(gpu.dark_monitors()[1], [])
+            with mock.patch.object(gpu, "desktop_outputs", return_value=None):  # not KDE
+                self.assertEqual(gpu.dark_monitors()[1], [])
+
+
 if __name__ == "__main__":
     unittest.main()
